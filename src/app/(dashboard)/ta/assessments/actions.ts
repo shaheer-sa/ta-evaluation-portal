@@ -38,3 +38,26 @@ export async function deleteAssessment(formData: FormData) {
   if (error) throw new Error(error.message);
   revalidatePath("/ta/assessments");
 }
+
+export async function updateAssessment(formData: FormData) {
+  const supabase = await createClient();
+
+  const assessmentId = formData.get("assessmentId") as string;
+  const type = formData.get("type") as string;
+  const title = formData.get("title") as string;
+  const maxMarks = parseFloat(formData.get("maxMarks") as string);
+  const weight = parseFloat(formData.get("weight") as string);
+
+  const { error } = await supabase
+    .from("assessments")
+    .update({
+      type,
+      title,
+      max_marks: maxMarks,
+      weight,
+    })
+    .eq("id", assessmentId);
+
+  if (error) throw new Error(error.message);
+  revalidatePath("/ta/assessments");
+}

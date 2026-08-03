@@ -97,7 +97,7 @@ export default function DashboardLayout({
       </header>
 
       {/* ── Main Content ───────────────────────────────────────── */}
-      <main className="container py-8">{children}</main>
+      <main className="container mx-auto max-w-5xl py-8">{children}</main>
     </div>
   );
 }

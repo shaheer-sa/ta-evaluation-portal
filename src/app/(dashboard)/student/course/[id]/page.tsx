@@ -9,6 +9,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -134,6 +140,14 @@ export default async function CourseDetailPage({ params }: PageProps) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const section = enrollment.sections as any;
 
+  // Group rows by assessment type
+  const groupedRows = rows.reduce((acc, r) => {
+    const typeLabel = r.type.charAt(0).toUpperCase() + r.type.slice(1);
+    if (!acc[typeLabel]) acc[typeLabel] = [];
+    acc[typeLabel].push(r);
+    return acc;
+  }, {} as Record<string, typeof rows>);
+
   return (
     <div className="space-y-8">
       <div className="flex items-center gap-4">
@@ -180,7 +194,7 @@ export default async function CourseDetailPage({ params }: PageProps) {
         </CardContent>
       </Card>
 
-      {/* Marks Table */}
+      {/* Marks Accordion */}
       <Card>
         <CardHeader>
           <CardTitle>Assessment Breakdown</CardTitle>
@@ -191,51 +205,58 @@ export default async function CourseDetailPage({ params }: PageProps) {
               No assessments have been created for this course yet.
             </p>
           ) : (
-            <div className="overflow-x-auto rounded-md border">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b bg-muted/50">
-                    <th className="p-3 text-left font-medium">Assessment</th>
-                    <th className="p-3 text-left font-medium">Type</th>
-                    <th className="p-3 text-right font-medium">Score</th>
-                    <th className="p-3 text-right font-medium">Max</th>
-                    <th className="p-3 text-right font-medium">%</th>
-                    <th className="p-3 text-right font-medium">Class Avg</th>
-                    <th className="p-3 text-right font-medium">Weight</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map((r) => (
-                    <tr
-                      key={r.id}
-                      className="border-b last:border-0 hover:bg-muted/30"
-                    >
-                      <td className="p-3 font-medium">{r.title}</td>
-                      <td className="p-3 capitalize text-muted-foreground">
-                        {r.type}
-                      </td>
-                      <td className="p-3 text-right font-mono">
-                        {r.score !== null ? r.score : "—"}
-                      </td>
-                      <td className="p-3 text-right font-mono text-muted-foreground">
-                        {r.maxMarks}
-                      </td>
-                      <td className="p-3 text-right font-mono">
-                        {r.pct !== null ? `${Math.round(r.pct * 10) / 10}%` : "—"}
-                      </td>
-                      <td className="p-3 text-right font-mono text-muted-foreground">
-                        {r.classAvg !== null
-                          ? `${Math.round(r.classAvg * 10) / 10} (${Math.round((r.classAvgPct ?? 0) * 10) / 10}%)`
-                          : "—"}
-                      </td>
-                      <td className="p-3 text-right text-muted-foreground">
-                        {r.weight}%
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <Accordion type="multiple" className="w-full" defaultValue={Object.keys(groupedRows)}>
+              {Object.entries(groupedRows).map(([type, items]) => (
+                <AccordionItem key={type} value={type}>
+                  <AccordionTrigger className="text-lg font-semibold capitalize hover-float px-2 rounded-md">
+                    {type} ({items.length})
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <div className="overflow-x-auto rounded-md border mt-2">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b bg-muted/50">
+                            <th className="p-3 text-left font-medium">Assessment</th>
+                            <th className="p-3 text-right font-medium">Score</th>
+                            <th className="p-3 text-right font-medium">Max</th>
+                            <th className="p-3 text-right font-medium">%</th>
+                            <th className="p-3 text-right font-medium">Class Avg</th>
+                            <th className="p-3 text-right font-medium">Weight</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {items.map((r) => (
+                            <tr
+                              key={r.id}
+                              className="border-b last:border-0 hover:bg-muted/30 transition-colors"
+                            >
+                              <td className="p-3 font-medium">{r.title}</td>
+                              <td className="p-3 text-right font-mono">
+                                {r.score !== null ? r.score : "—"}
+                              </td>
+                              <td className="p-3 text-right font-mono text-muted-foreground">
+                                {r.maxMarks}
+                              </td>
+                              <td className="p-3 text-right font-mono">
+                                {r.pct !== null ? `${Math.round(r.pct * 10) / 10}%` : "—"}
+                              </td>
+                              <td className="p-3 text-right font-mono text-muted-foreground">
+                                {r.classAvg !== null
+                                  ? `${Math.round(r.classAvg * 10) / 10} (${Math.round((r.classAvgPct ?? 0) * 10) / 10}%)`
+                                  : "—"}
+                              </td>
+                              <td className="p-3 text-right text-muted-foreground">
+                                {r.weight}%
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
           )}
         </CardContent>
       </Card>

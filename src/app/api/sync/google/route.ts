@@ -359,8 +359,8 @@ export async function POST(request: Request) {
               if (!rollNo) continue;
 
               const email = generateEmail(rollNo);
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
               const enrollment = currentEnrollments.find(e => {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 const p = e.profiles as any;
                 return p?.roll_number?.toLowerCase() === rollNo.toLowerCase() || p?.email === email;
               });

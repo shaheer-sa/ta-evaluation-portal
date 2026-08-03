@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { DeleteAssessmentButton } from "@/components/delete-assessment-button";
+import { EditAssessmentDialog } from "@/components/edit-assessment-dialog";
 import {
   Card,
   CardContent,
@@ -186,11 +187,14 @@ export default async function AssessmentsPage() {
                           {termName} — Sec {sectionName} ({courseCode}) · {a.type} · {a.max_marks} marks · {a.weight}%
                         </div>
                       </div>
-                      <DeleteAssessmentButton
-                        assessmentId={a.id}
-                        assessmentLabel={`${a.title} — Sec ${sectionName} (${courseCode})`}
-                        deleteAction={deleteAssessment}
-                      />
+                      <div className="flex gap-2">
+                        <EditAssessmentDialog assessment={a} />
+                        <DeleteAssessmentButton
+                          assessmentId={a.id}
+                          assessmentLabel={`${a.title} — Sec ${sectionName} (${courseCode})`}
+                          deleteAction={deleteAssessment}
+                        />
+                      </div>
                     </div>
                   );
                 })}

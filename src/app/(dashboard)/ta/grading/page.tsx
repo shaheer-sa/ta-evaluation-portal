@@ -14,6 +14,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Search } from "lucide-react";
 
 interface StudentMark {
   enrollmentId: string;
@@ -31,6 +32,7 @@ export default function GradingPage() {
   const [assessments, setAssessments] = useState<any[]>([]);
   const [selectedAssessment, setSelectedAssessment] = useState("");
   const [studentMarks, setStudentMarks] = useState<StudentMark[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [maxMarks, setMaxMarks] = useState(0);
@@ -110,13 +112,17 @@ export default function GradingPage() {
     loadMarks();
   }, [loadMarks]);
 
-  function handleScoreChange(index: number, value: string) {
-    setStudentMarks((prev) => {
-      const next = [...prev];
-      next[index] = { ...next[index], score: value };
-      return next;
-    });
+  function handleScoreChange(enrollmentId: string, value: string) {
+    setStudentMarks((prev) => 
+      prev.map(s => s.enrollmentId === enrollmentId ? { ...s, score: value } : s)
+    );
   }
+
+  const filteredMarks = studentMarks.filter(
+    (s) =>
+      s.rollNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      s.fullName.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   async function handleSave() {
     setIsSaving(true);
@@ -211,7 +217,21 @@ export default function GradingPage() {
               Save All
             </Button>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
+            {/* Search Bar */}
+            <div className="relative w-full max-w-sm">
+              <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                <Search className="h-4 w-4 text-muted-foreground" />
+              </div>
+              <Input
+                type="text"
+                placeholder="Search by roll number or name..."
+                className="pl-10 h-10 transition-shadow focus-visible:shadow-md focus-visible:shadow-primary/10"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+            
             {isLoading ? (
               <div className="flex justify-center p-8">
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -234,7 +254,7 @@ export default function GradingPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {studentMarks.map((s, i) => (
+                    {filteredMarks.map((s, i) => (
                       <tr
                         key={s.enrollmentId}
                         className="border-b last:border-0 hover:bg-muted/30"
@@ -250,7 +270,7 @@ export default function GradingPage() {
                             max={maxMarks}
                             value={s.score}
                             onChange={(e) =>
-                              handleScoreChange(i, e.target.value)
+                              handleScoreChange(s.enrollmentId, e.target.value)
                             }
                             className="h-8 w-24"
                           />
