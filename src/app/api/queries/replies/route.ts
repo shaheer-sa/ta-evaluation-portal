@@ -1,0 +1,136 @@
+import { NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
+
+/**
+ * GET /api/queries/replies?queryId=xxx
+ * Fetch all replies for a specific query. Both TAs and the query's
+ * student can read replies (RLS handles this at the database level).
+ */
+export async function GET(request: Request) {
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user)
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    const url = new URL(request.url);
+    const queryId = url.searchParams.get("queryId");
+
+    if (!queryId) {
+      return NextResponse.json({ error: "queryId is required" }, { status: 400 });
+    }
+
+    const { data: replies, error } = await supabase
+      .from("replies")
+      .select(`
+        id,
+        query_id,
+        author_id,
+        body,
+        created_at,
+        profiles:author_id ( full_name, role )
+      `)
+      .eq("query_id", queryId)
+      .order("created_at", { ascending: true });
+
+    if (error) throw error;
+
+    return NextResponse.json({ replies: replies || [] });
+  } catch (err: unknown) {
+    console.error("Replies fetch error:", err);
+    return NextResponse.json(
+      { error: "An unexpected error occurred" },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * POST /api/queries/replies
+ * Create a reply on a query. Both TAs and the query's student can post.
+ * Body: { queryId, body }
+ */
+export async function POST(request: Request) {
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user)
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    const { queryId, body: replyBody } = await request.json();
+
+    if (!queryId || !replyBody?.trim()) {
+      return NextResponse.json(
+        { error: "queryId and body are required" },
+        { status: 400 }
+      );
+    }
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role, full_name")
+      .eq("id", user.id)
+      .single();
+
+    // Insert the reply (RLS ensures only authorized users can write)
+    const { error } = await supabase.from("replies").insert({
+      query_id: queryId,
+      author_id: user.id,
+      body: replyBody.trim(),
+    });
+
+    if (error) throw error;
+
+    // Notify the other party
+    const { data: queryData } = await supabase
+      .from("queries")
+      .select("student_id, title")
+      .eq("id", queryId)
+      .single();
+
+    if (queryData) {
+      if (profile?.role === "ta") {
+        // TA replied → notify the student
+        await supabase.from("notifications").insert({
+          recipient_id: queryData.student_id,
+          type: "query_reply",
+          title: `New reply on "${queryData.title}"`,
+          body: `The TA replied to your query.`,
+          related_id: queryId,
+        });
+      } else {
+        // Student replied → notify all TAs
+        const { data: tas } = await supabase
+          .from("profiles")
+          .select("id")
+          .eq("role", "ta");
+
+        if (tas && tas.length > 0) {
+          await supabase.from("notifications").insert(
+            tas.map((ta) => ({
+              recipient_id: ta.id,
+              type: "query_reply",
+              title: `Reply on "${queryData.title}"`,
+              body: `${profile?.full_name || "A student"} replied to their query.`,
+              related_id: queryId,
+            }))
+          );
+        }
+      }
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (err: unknown) {
+    console.error("Reply create error:", err);
+    return NextResponse.json(
+      { error: "An unexpected error occurred" },
+      { status: 500 }
+    );
+  }
+}
