@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -13,6 +13,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { createClient } from "@/lib/supabase/client";
 
 // ── Schema ──────────────────────────────────────────────────────
 const loginSchema = z.object({
@@ -62,6 +63,21 @@ export default function LoginPage() {
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    // If the user lands here with a hash fragment from Supabase (e.g. from an un-redirected password reset link)
+    if (typeof window !== "undefined" && window.location.hash.includes("access_token=")) {
+      setIsLoading(true);
+      const supabase = createClient();
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (session) {
+          router.push("/reset-password");
+        } else {
+          setIsLoading(false);
+        }
+      });
+    }
+  }, [router]);
 
   const {
     register,

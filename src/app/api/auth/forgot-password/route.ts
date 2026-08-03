@@ -42,7 +42,7 @@ export async function POST(request: Request) {
       const { data: profile } = await admin
         .from("profiles")
         .select("email")
-        .eq("roll_number", identifier)
+        .ilike("roll_number", identifier)
         .single();
 
       email = profile?.email ?? null;

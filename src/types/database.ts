@@ -318,30 +318,30 @@ export interface Database {
       }
       replies: {
         Row: {
-          author_id: string
-          body: string
+          sender_id: string
+          message: string
           created_at: string
           id: string
           query_id: string
         }
         Insert: {
-          author_id: string
-          body: string
+          sender_id: string
+          message: string
           created_at?: string
           id?: string
           query_id: string
         }
         Update: {
-          author_id?: string
-          body?: string
+          sender_id?: string
+          message?: string
           created_at?: string
           id?: string
           query_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "replies_author_id_fkey"
-            columns: ["author_id"]
+            foreignKeyName: "replies_sender_id_fkey"
+            columns: ["sender_id"]
             isOneToOne: true
             referencedRelation: "profiles"
             referencedColumns: ["id"]

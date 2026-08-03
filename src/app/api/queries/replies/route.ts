@@ -28,10 +28,10 @@ export async function GET(request: Request) {
       .select(`
         id,
         query_id,
-        author_id,
-        body,
+        sender_id,
+        message,
         created_at,
-        profiles:author_id ( full_name, role )
+        profiles:sender_id ( full_name, role )
       `)
       .eq("query_id", queryId)
       .order("created_at", { ascending: true });
@@ -51,7 +51,7 @@ export async function GET(request: Request) {
 /**
  * POST /api/queries/replies
  * Create a reply on a query. Both TAs and the query's student can post.
- * Body: { queryId, body }
+ * Body: { queryId, message }
  */
 export async function POST(request: Request) {
   try {
@@ -63,11 +63,11 @@ export async function POST(request: Request) {
     if (!user)
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const { queryId, body: replyBody } = await request.json();
+    const { queryId, message } = await request.json();
 
-    if (!queryId || !replyBody?.trim()) {
+    if (!queryId || !message?.trim()) {
       return NextResponse.json(
-        { error: "queryId and body are required" },
+        { error: "queryId and message are required" },
         { status: 400 }
       );
     }
@@ -81,8 +81,8 @@ export async function POST(request: Request) {
     // Insert the reply (RLS ensures only authorized users can write)
     const { error } = await supabase.from("replies").insert({
       query_id: queryId,
-      author_id: user.id,
-      body: replyBody.trim(),
+      sender_id: user.id,
+      message: message.trim(),
     });
 
     if (error) throw error;

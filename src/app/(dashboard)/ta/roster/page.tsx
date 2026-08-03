@@ -52,6 +52,8 @@ export default function RosterPage() {
         .from("section_courses")
         .select(`
           id,
+          section_id,
+          course_id,
           sections ( name, terms ( name ) ),
           courses ( code, name )
         `);
@@ -93,8 +95,8 @@ export default function RosterPage() {
           profiles:student_id ( roll_number, full_name, email ),
           marks ( assessment_id, score )
         `)
-        .eq("section_id", mapped.sections.id)
-        .eq("course_id", mapped.courses.id);
+        .eq("section_id", mapped.section_id)
+        .eq("course_id", mapped.course_id);
 
       if (data) setRoster(data);
       setIsLoadingRoster(false);

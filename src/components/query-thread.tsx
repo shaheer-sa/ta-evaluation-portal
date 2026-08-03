@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 
 interface ReplyItem {
   id: string;
-  body: string;
+  message: string;
   created_at: string;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   profiles: any;
@@ -50,7 +50,7 @@ export function QueryThread({ queryId, isOpen }: QueryThreadProps) {
       const res = await fetch("/api/queries/replies", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ queryId, body: newReply }),
+        body: JSON.stringify({ queryId, message: newReply }),
       });
       if (!res.ok) {
         const data = await res.json();
@@ -105,7 +105,7 @@ export function QueryThread({ queryId, isOpen }: QueryThreadProps) {
                     {isTA ? "TA" : "Student"}
                   </span>
                 </div>
-                <p className="whitespace-pre-wrap">{r.body}</p>
+                <p className="whitespace-pre-wrap">{r.message}</p>
                 <span className="text-[10px] text-muted-foreground">
                   {formatTime(r.created_at)}
                 </span>

@@ -40,7 +40,7 @@ export default function GradingPage() {
     async function load() {
       const { data } = await supabase
         .from("section_courses")
-        .select(`id, sections ( name, terms ( name ) ), courses ( code, name )`);
+        .select(`id, section_id, course_id, sections ( name, terms ( name ) ), courses ( code, name )`);
       if (data) setSectionCourses(data);
     }
     load();
@@ -83,8 +83,8 @@ export default function GradingPage() {
         profiles:student_id ( roll_number, full_name ),
         marks ( assessment_id, score )
       `)
-      .eq("section_id", sc.sections.id)
-      .eq("course_id", sc.courses.id);
+      .eq("section_id", sc.section_id)
+      .eq("course_id", sc.course_id);
 
     if (enrollments) {
       const mapped: StudentMark[] = enrollments.map((e) => {
