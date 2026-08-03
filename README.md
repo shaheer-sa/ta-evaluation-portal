@@ -6,12 +6,14 @@ This is a comprehensive management system built for Teaching Assistants to strea
 
 - Role-Based Access: Secure dashboards for both TAs and Students.
 - Term and Section Management: Activate specific terms and scope all data (grades, queries, etc.) to the currently active term.
-- Google Sheets Syncing: Automated batch synchronization to import student rosters directly from Google Sheets.
-- Assessment Tracking: Create assignments, quizzes, and exams with custom weighting.
-- Grading System: Input and track student grades with automatic class average calculations.
+- Google Sheets Syncing (Smart Memory): Robust two-way synchronization engine that imports student rosters from Google Sheets. Features a "Safe Mode" to prevent accidental data deletion and gracefully handles email domain migrations.
+- Assessment Tracking: Create, rename, edit, and manage assignments, quizzes, and exams with custom weighting directly from the dashboard.
+- Grading System: Input and track student grades with a lightning-fast search filter and automatic class average calculations.
 - Query Management: Students can submit queries regarding their assessments, and TAs can resolve them through threaded conversations.
 - Automated Email Notifications: Uses Resend to automatically notify TAs of new queries and notify students when their queries are updated.
 - Analytics Dashboard: Visualizations using Recharts for grade distributions and class average comparisons.
+- Student Portal (Accordion UI): Clean, categorized student dashboard grouping grades by assessment type for easy tracking.
+- Global UI/UX: Premium layout centering and dynamic hover-float micro-interactions.
 
 ## Tech Stack
 
