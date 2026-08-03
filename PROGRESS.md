@@ -42,6 +42,19 @@ what's actually been verified and fixed vs. what's still open.
 5. **Forgot-password lacked roll-number parity with login**
    (`src/app/(auth)/forgot-password/page.tsx`,
    `src/app/api/auth/forgot-password/route.ts`)
+
+6. **Google Sheets Sync - Smart Memory & Resilience**
+   (`src/app/api/sync/google/route.ts`)
+   - Re-architected the sync engine to process students in batches, handle errors gracefully, and report per-student success/failure metrics to the UI.
+   - Introduced a Smart Memory system (`sheet_synced_score`) that powers robust two-way syncing.
+   - Added a "Safe Mode" that prevents destructive grade deletions from TAMS if a TA accidentally wipes a column in the Google Sheet (it now restores the grades back to the sheet instead).
+   - Replaced UUID column headers with human-readable Assessment Names to keep the Google Sheet clean.
+   - Hardened the student lookup logic to map heavily by `roll_number` instead of just generated emails, preventing sync breaks during email format migrations (e.g. switching to `@cfd.nu.edu.pk`).
+
+7. **Auth Callback Hash-Fragment Bug**
+   (`src/app/auth/callback/page.tsx` — new Client component)
+   - Fixed a critical login lockout loop where Supabase sent legacy `#access_token` hash fragments for password resets that the server-side Next.js router couldn't read.
+   - Replaced the server `route.ts` with a Client-Side Component `page.tsx` that natively hooks into `@supabase/ssr`'s hash fragment detection, instantly establishing the session and redirecting the user safely to the New Password screen.
    - Now accepts a roll number or an email, resolved to the account's
      email via the same admin-client lookup pattern `login/route.ts`
      already used. Enumeration protection preserved (same generic
@@ -149,13 +162,6 @@ what's actually been verified and fixed vs. what's still open.
 
 ## Verified as real, NOT yet fixed
 
-- **#2/#3 — Google Sheets sync** (`src/app/api/sync/google/route.ts`):
-  processes students serially with a 300ms delay per invite (risks
-  timeout for 40-50 students), and always returns
-  `{ success: true, message: "Sync complete!" }` even when individual
-  invites failed (errors are only `console.error`'d, never surfaced).
-  This is the most architecturally involved item left — deserves a
-  dedicated pass rather than a rushed fix.
 - **#7 — Database typing**: `src/types/database.ts` is hand-written,
   not generated. 28 occurrences of `@ts-expect-error`/`any` across the
   codebase (mostly around Supabase's nested join return types) confirmed
@@ -180,3 +186,12 @@ This zip does **not** include `node_modules` (regenerate with
 `npm install`) or `.env.local` (contains live secrets — copy your own
 local copy back in, and see the security note above about rotating
 the service role key). `.env.local.example` shows the required shape.
+
+## Future Requirements Logged (Pending Next Phase)
+
+- **Forget Password Polish**: Verify the entire password reset flow from end-to-end (email delivery, link click, session establishment, and password update submission) and ensure edge case errors are handled.
+- **Grading Section Search**: Implement a dynamic search bar in the grading section allowing TAs to quickly filter students by Roll Number or Name.
+- **Edit Assessments**: Add a "Rename/Edit" feature to the assessment section so TAs can rename existing quizzes and assignments directly in the dashboard without deleting them.
+- **Categorized Dropdowns (Student Portal)**: Separate the student grades view into distinct sections (Assignments, Quizzes, Class Participation) using accordion/dropdown components to unclutter the interface.
+- **Global UI/UX Layout Centralization**: Center and align all major content `div` containers across the app to achieve a cleaner, more professional desktop and mobile layout.
+- **Micro-interactions (Floating Hover)**: Inject dynamic CSS micro-animations to all interactive elements. Buttons, icons, and cards should gently "float" or elevate (`transform: translateY(-2px)`) when hovered, reinforcing a premium, dynamic feel.
