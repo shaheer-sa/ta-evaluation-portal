@@ -12,8 +12,8 @@
 
   --tams-glass: hsl(252 40% 14% / 0.55);
   --tams-glass-strong: hsl(252 42% 12% / 0.78);
-  --tams-glass-border: hsl(258 60% 78% / 0.14);
-  --tams-glass-border-hover: hsl(268 90% 76% / 0.34);
+  --tams-glass-border: hsl(38 92% 50% / 0.25);
+  --tams-glass-border-hover: hsl(38 92% 50% / 0.7);
 
   --tams-text: hsl(250 30% 96%);
   --tams-text-muted: hsl(250 16% 68%);

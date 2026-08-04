@@ -195,7 +195,10 @@ export default async function TADashboardPage() {
         </p>
       </div>
 
-      <MagicBento cards={bentoCards} />
+      <MagicBento 
+        cards={bentoCards} 
+        glowColor="245, 163, 10"
+      />
       
       {/* Recent Queries List */}
       <div className="tams-card tams-glass-strong">
