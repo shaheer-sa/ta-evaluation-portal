@@ -112,6 +112,7 @@ export default function DashboardLayout({
               <LineSidebar 
                 items={navItems.map(n => n.label)}
                 defaultActive={activeIndex >= 0 ? activeIndex : null}
+                accentColor="hsl(38 92% 50%)"
                 onItemClick={(idx) => {
                    router.push(navItems[idx].href);
                    setMobileMenuOpen(false);
