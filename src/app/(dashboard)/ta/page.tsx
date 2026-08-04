@@ -165,12 +165,21 @@ export default async function TADashboardPage() {
     rejected: "bg-red-500/10 text-red-600",
   };
 
-  const bentoCards = stats.map(s => ({
-    label: s.title,
-    value: s.value,
-    title: s.title,
-    description: s.desc,
-  }));
+  const bentoCards = stats.map(s => {
+    let href = "/ta";
+    if (s.title === "Students") href = "/ta/roster";
+    if (s.title === "Courses") href = "/ta/courses";
+    if (s.title === "Assessments") href = "/ta/assessments";
+    if (s.title === "Pending Queries") href = "/ta/queries";
+    
+    return {
+      label: s.title,
+      value: s.value,
+      title: s.title,
+      description: s.desc,
+      href,
+    };
+  });
 
   return (
     <div className="space-y-8">
@@ -186,7 +195,14 @@ export default async function TADashboardPage() {
         </p>
       </div>
 
-      <MagicBento cards={bentoCards} />
+      <MagicBento 
+        cards={bentoCards} 
+        onCardClick={(card) => {
+          if ((card as any).href) {
+            window.location.href = (card as any).href;
+          }
+        }}
+      />
       
       {/* Recent Queries List */}
       <div className="tams-card tams-glass-strong">
