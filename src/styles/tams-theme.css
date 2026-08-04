@@ -46,7 +46,7 @@
 
 /* ============================ base ============================ */
 
-body.tams-body {
+.tams-body {
   background-color: var(--tams-bg);
   color: var(--tams-text);
   font-family: var(--font-body);

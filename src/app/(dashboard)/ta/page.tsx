@@ -195,14 +195,7 @@ export default async function TADashboardPage() {
         </p>
       </div>
 
-      <MagicBento 
-        cards={bentoCards} 
-        onCardClick={(card) => {
-          if ((card as any).href) {
-            window.location.href = (card as any).href;
-          }
-        }}
-      />
+      <MagicBento cards={bentoCards} />
       
       {/* Recent Queries List */}
       <div className="tams-card tams-glass-strong">

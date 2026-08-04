@@ -21,9 +21,10 @@ export default function RootLayout({
     // lint rule three times, and `next/font/google` needs to reach
     // fonts.googleapis.com at BUILD time, which breaks any offline or
     // network-restricted build. The CSS import fetches at runtime instead.
-    <html lang="en" className="light" suppressHydrationWarning>
+    <html lang="en" className="dark" suppressHydrationWarning>
       <body
-        className="min-h-screen bg-background font-sans text-foreground antialiased"
+        className="min-h-screen font-sans text-foreground antialiased"
+        style={{ backgroundColor: "hsl(252 44% 5%)" }}
         suppressHydrationWarning
       >
         {children}

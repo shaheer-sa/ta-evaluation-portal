@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { LogOut, Menu, X } from "lucide-react";
+import { LogOut, Menu, X, GraduationCap } from "lucide-react";
 import { toast } from "sonner";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
@@ -19,7 +19,7 @@ const TA_NAV = [
   { href: "/ta", label: "Overview", exact: true },
   { href: "/ta/courses", label: "Courses & Terms", exact: true },
   { href: "/ta/sections", label: "Sections", exact: true },
-  { href: "/ta/roster", label: "Roster & Sync", exact: false },
+  { href: "/ta/roster", label: "Students", exact: false },
   { href: "/ta/assessments", label: "Assessments", exact: true },
   { href: "/ta/grading", label: "Grading", exact: true },
   { href: "/ta/queries", label: "Queries", exact: true },
@@ -91,7 +91,9 @@ export default function DashboardLayout({
             data-open={mobileMenuOpen}
           >
             <div className="tams-rail__brand">
-              <div className="tams-rail__mark">{isTA ? 'TA' : 'ST'}</div>
+              <div className="tams-rail__mark">
+                <GraduationCap size={20} color="white" />
+              </div>
               <div>
                 <div className="tams-rail__name">TAMS</div>
                 <span className="tams-rail__role">

@@ -2,6 +2,7 @@
 
 import React, { useRef, useEffect, useState, useCallback, CSSProperties } from 'react';
 import { gsap } from 'gsap';
+import { useRouter } from 'next/navigation';
 
 export interface BentoCard {
   label?: string;
@@ -11,6 +12,7 @@ export interface BentoCard {
   delta?: string;
   deltaTone?: 'up' | 'down' | 'flat';
   color?: string;
+  href?: string;
 }
 
 export interface MagicBentoProps {
@@ -378,6 +380,7 @@ const MagicBento: React.FC<MagicBentoProps> = ({
   className = ''
 }) => {
   const gridRef = useRef<HTMLDivElement>(null);
+  const router = useRouter();
   const isMobile = useMobileDetection();
   const shouldDisableAnimations = disableAnimations || isMobile;
 
@@ -433,7 +436,10 @@ const MagicBento: React.FC<MagicBentoProps> = ({
                 enableTilt={enableTilt}
                 clickEffect={clickEffect}
                 enableMagnetism={enableMagnetism}
-                onActivate={onCardClick ? () => onCardClick(card, index) : undefined}
+                onActivate={() => {
+                  if (onCardClick) onCardClick(card, index);
+                  else if (card.href) router.push(card.href);
+                }}
               >
                 {content}
               </ParticleCard>
@@ -445,7 +451,10 @@ const MagicBento: React.FC<MagicBentoProps> = ({
               key={index}
               className={cardClass}
               style={style}
-              onClick={onCardClick ? () => onCardClick(card, index) : undefined}
+              onClick={() => {
+                if (onCardClick) onCardClick(card, index);
+                else if (card.href) router.push(card.href);
+              }}
             >
               {content}
             </div>
