@@ -1,0 +1,505 @@
+/* ============================================================
+   TAMS — theme tokens, glass surfaces, shell layout
+   Plain CSS on purpose: no Tailwind arbitrary values anywhere,
+   which is what was tripping the Turbopack RangeError.
+   ============================================================ */
+
+:root {
+  /* ---- palette (deep indigo / violet, tuned in HSL) ---- */
+  --tams-bg: hsl(252 44% 5%);
+  --tams-bg-elev: hsl(252 38% 8%);
+  --tams-surface: hsl(252 36% 11%);
+
+  --tams-glass: hsl(252 40% 14% / 0.55);
+  --tams-glass-strong: hsl(252 42% 12% / 0.78);
+  --tams-glass-border: hsl(258 60% 78% / 0.14);
+  --tams-glass-border-hover: hsl(268 90% 76% / 0.34);
+
+  --tams-text: hsl(250 30% 96%);
+  --tams-text-muted: hsl(250 16% 68%);
+  --tams-text-faint: hsl(250 14% 50%);
+
+  --tams-accent: hsl(268 90% 66%);
+  --tams-accent-soft: hsl(268 90% 66% / 0.16);
+  --tams-accent-2: hsl(199 89% 62%);
+  --tams-success: hsl(158 70% 48%);
+  --tams-warning: hsl(38 92% 60%);
+  --tams-danger: hsl(0 78% 63%);
+
+  --tams-glow-rgb: 132, 0, 255;
+
+  /* ---- type ---- */
+  --font-display: var(--font-outfit), "Outfit", system-ui, sans-serif;
+  --font-body: var(--font-inter), "Inter", system-ui, sans-serif;
+  --font-mono: var(--font-mono-jet), "JetBrains Mono", ui-monospace, monospace;
+
+  /* ---- geometry ---- */
+  --tams-radius: 18px;
+  --tams-radius-sm: 12px;
+  --tams-rail-w: 268px;
+  --tams-rail-w-collapsed: 84px;
+  --tams-topbar-h: 62px;
+
+  --tams-shadow: 0 18px 48px hsl(252 60% 2% / 0.55);
+  --tams-shadow-lift: 0 22px 60px hsl(252 60% 2% / 0.7), 0 0 34px hsl(268 90% 66% / 0.16);
+}
+
+/* ============================ base ============================ */
+
+body.tams-body {
+  background-color: var(--tams-bg);
+  color: var(--tams-text);
+  font-family: var(--font-body);
+  font-feature-settings: "cv02", "cv03", "cv04", "ss01";
+  -webkit-font-smoothing: antialiased;
+  min-height: 100dvh;
+}
+
+.tams-display {
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: -0.022em;
+}
+
+.tams-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--tams-text-faint);
+}
+
+.tams-numeral {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+/* ============================ glass ============================ */
+
+.tams-glass {
+  background: var(--tams-glass);
+  border: 1px solid var(--tams-glass-border);
+  border-radius: var(--tams-radius);
+  backdrop-filter: blur(18px) saturate(150%);
+  -webkit-backdrop-filter: blur(18px) saturate(150%);
+  box-shadow: inset 0 1px 0 hsl(0 0% 100% / 0.05), var(--tams-shadow);
+}
+
+.tams-glass-strong {
+  background: var(--tams-glass-strong);
+  border: 1px solid var(--tams-glass-border);
+  backdrop-filter: blur(26px) saturate(160%);
+  -webkit-backdrop-filter: blur(26px) saturate(160%);
+}
+
+.tams-card {
+  position: relative;
+  padding: 1.25rem 1.35rem;
+  transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.tams-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--tams-glass-border-hover);
+  box-shadow: inset 0 1px 0 hsl(0 0% 100% / 0.06), var(--tams-shadow-lift);
+}
+
+.tams-card__title {
+  font-family: var(--font-display);
+  font-size: 1.02rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.tams-card__hint {
+  color: var(--tams-text-muted);
+  font-size: 0.85rem;
+  margin: 0.25rem 0 0;
+}
+
+/* thin gradient hairline used to separate header blocks */
+.tams-rule {
+  height: 1px;
+  border: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--tams-glass-border-hover),
+    transparent
+  );
+}
+
+/* ============================ shell ============================ */
+
+.tams-shell {
+  position: relative;
+  min-height: 100dvh;
+  display: flex;
+  isolation: isolate;
+}
+
+.tams-ambient {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.3;
+}
+
+/* vignette so data stays readable over the moving background */
+.tams-ambient::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+      120% 90% at 22% 0%,
+      hsl(252 44% 5% / 0.1) 0%,
+      hsl(252 44% 5% / 0.86) 68%
+    ),
+    linear-gradient(180deg, hsl(252 44% 5% / 0.35), hsl(252 44% 5% / 0.9));
+}
+
+.tams-rail {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  flex: 0 0 auto;
+  width: var(--tams-rail-w);
+  height: 100dvh;
+  padding: 1.4rem 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.4rem;
+  border-radius: 0;
+  border-top: 0;
+  border-bottom: 0;
+  border-left: 0;
+  transition: width 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+  overflow: hidden;
+}
+
+.tams-rail[data-collapsed="true"] {
+  width: var(--tams-rail-w-collapsed);
+  padding-left: 0.7rem;
+  padding-right: 0.7rem;
+}
+
+.tams-rail__brand {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  min-height: 38px;
+}
+
+.tams-rail__mark {
+  flex: 0 0 auto;
+  width: 36px;
+  height: 36px;
+  border-radius: 11px;
+  display: grid;
+  place-items: center;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.92rem;
+  color: var(--tams-text);
+  background: linear-gradient(145deg, var(--tams-accent), var(--tams-accent-2));
+  box-shadow: 0 8px 22px hsl(268 90% 50% / 0.4);
+}
+
+.tams-rail__name {
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+.tams-rail__role {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--tams-text-faint);
+}
+
+.tams-rail__nav {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+}
+
+.tams-rail__footer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.tams-rail__collapsed-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding-top: 0.4rem;
+}
+
+.tams-rail__dot {
+  display: grid;
+  place-items: center;
+  height: 42px;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--tams-text-muted);
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  cursor: pointer;
+  transition: color 0.2s ease, background 0.2s ease, border-color 0.2s ease;
+}
+
+.tams-rail__dot:hover {
+  color: var(--tams-text);
+  background: hsl(268 90% 66% / 0.1);
+  border-color: var(--tams-glass-border);
+}
+
+.tams-rail__dot[data-active="true"] {
+  color: var(--tams-accent);
+  background: var(--tams-accent-soft);
+  border-color: var(--tams-glass-border-hover);
+}
+
+.tams-iconbtn {
+  display: inline-grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 11px;
+  border: 1px solid var(--tams-glass-border);
+  background: hsl(252 40% 18% / 0.5);
+  color: var(--tams-text-muted);
+  cursor: pointer;
+  transition: color 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+
+.tams-iconbtn:hover {
+  color: var(--tams-text);
+  border-color: var(--tams-glass-border-hover);
+  transform: translateY(-1px);
+}
+
+.tams-iconbtn:focus-visible,
+.tams-rail__dot:focus-visible {
+  outline: 2px solid var(--tams-accent);
+  outline-offset: 2px;
+}
+
+.tams-content {
+  position: relative;
+  z-index: 10;
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.tams-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 15;
+  height: var(--tams-topbar-h);
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0 1.15rem;
+  border-radius: 0;
+  border-left: 0;
+  border-right: 0;
+  border-top: 0;
+}
+
+.tams-topbar__title {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.tams-topbar__spacer {
+  flex: 1 1 auto;
+}
+
+.tams-main {
+  flex: 1 1 auto;
+  padding: 1.6rem 1.5rem 3rem;
+  max-width: 1400px;
+  width: 100%;
+}
+
+.tams-page-head {
+  margin-bottom: 1.4rem;
+}
+
+.tams-page-head h1 {
+  font-family: var(--font-display);
+  font-size: clamp(1.5rem, 1.2rem + 1.1vw, 2.1rem);
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  margin: 0.35rem 0 0;
+}
+
+.tams-page-head p {
+  color: var(--tams-text-muted);
+  margin: 0.4rem 0 0;
+  font-size: 0.92rem;
+}
+
+/* mobile drawer */
+.tams-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 18;
+  background: hsl(252 50% 3% / 0.6);
+  backdrop-filter: blur(3px);
+  border: 0;
+  padding: 0;
+}
+
+@media (max-width: 900px) {
+  .tams-rail {
+    position: fixed;
+    left: 0;
+    top: 0;
+    z-index: 19;
+    transform: translateX(-102%);
+    transition: transform 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+    width: var(--tams-rail-w);
+    border-right: 1px solid var(--tams-glass-border);
+  }
+
+  .tams-rail[data-open="true"] {
+    transform: translateX(0);
+  }
+
+  .tams-rail[data-collapsed="true"] {
+    width: var(--tams-rail-w);
+    padding-left: 1.1rem;
+    padding-right: 1.1rem;
+  }
+
+  .tams-main {
+    padding: 1.1rem 1rem 2.4rem;
+  }
+}
+
+.tams-mobile-only {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  .tams-mobile-only {
+    display: inline-grid;
+  }
+
+  .tams-desktop-only {
+    display: none;
+  }
+}
+
+/* ============================ data surfaces ============================ */
+
+.tams-table-wrap {
+  overflow: auto;
+  border-radius: var(--tams-radius);
+}
+
+.tams-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.tams-table thead th {
+  position: sticky;
+  top: 0;
+  text-align: left;
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--tams-text-faint);
+  padding: 0.85rem 1rem;
+  background: var(--tams-glass-strong);
+  backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--tams-glass-border);
+}
+
+.tams-table tbody td {
+  padding: 0.8rem 1rem;
+  border-bottom: 1px solid hsl(258 60% 78% / 0.07);
+  color: var(--tams-text);
+}
+
+.tams-table tbody tr {
+  transition: background 0.18s ease;
+}
+
+.tams-table tbody tr:hover {
+  background: hsl(268 90% 66% / 0.07);
+}
+
+.tams-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.24rem 0.6rem;
+  border-radius: 999px;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border: 1px solid var(--tams-glass-border);
+  color: var(--tams-text-muted);
+  background: hsl(252 40% 18% / 0.5);
+}
+
+.tams-pill[data-tone="open"] {
+  color: var(--tams-warning);
+  border-color: hsl(38 92% 60% / 0.35);
+  background: hsl(38 92% 60% / 0.1);
+}
+
+.tams-pill[data-tone="done"] {
+  color: var(--tams-success);
+  border-color: hsl(158 70% 48% / 0.35);
+  background: hsl(158 70% 48% / 0.1);
+}
+
+.tams-pill[data-tone="late"] {
+  color: var(--tams-danger);
+  border-color: hsl(0 78% 63% / 0.35);
+  background: hsl(0 78% 63% / 0.1);
+}
+
+/* scrollbars */
+.tams-body ::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+
+.tams-body ::-webkit-scrollbar-thumb {
+  background: hsl(258 40% 45% / 0.35);
+  border-radius: 999px;
+}
+
+.tams-body ::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tams-rail,
+  .tams-card,
+  .tams-iconbtn {
+    transition: none;
+  }
+}

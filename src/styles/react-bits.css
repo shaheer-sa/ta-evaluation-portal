@@ -1,0 +1,474 @@
+/* ============================================================
+   react-bits component styles, rewritten as real CSS.
+
+   The upstream components ship their styling as Tailwind
+   arbitrary values like
+     after:left-[calc(-1*var(--marker-length)-var(--marker-gap))]
+     [background:color-mix(in_srgb,var(--x)_calc(var(--y)*100%),transparent)]
+   Nested parens inside arbitrary values are what blew up the
+   Turbopack/Tailwind parser (RangeError). Everything lives here
+   instead, so the class strings in the TSX stay plain.
+   ============================================================ */
+
+/* ===================== LineSidebar ===================== */
+
+.rb-line {
+  position: relative;
+  display: flex;
+  justify-content: flex-start;
+}
+
+.rb-line[data-marker="true"] {
+  padding-left: calc(var(--marker-length) + var(--marker-gap));
+}
+
+.rb-line__list {
+  margin: 0;
+  padding: 0.75rem 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--item-gap);
+}
+
+.rb-line__item {
+  position: relative;
+  cursor: pointer;
+}
+
+/* generous hit area without changing layout */
+.rb-line__item::before {
+  content: "";
+  position: absolute;
+  top: -6px;
+  bottom: -6px;
+  left: -3rem;
+  right: -3rem;
+}
+
+/* connector tick between items */
+.rb-line[data-marker="true"] .rb-line__item::after {
+  content: "";
+  position: absolute;
+  left: calc(-1 * var(--marker-length) - var(--marker-gap));
+  top: calc(100% + var(--item-gap) / 2);
+  height: 1px;
+  opacity: 0.5;
+  background-color: var(--marker-color);
+  width: calc(var(--marker-length) * var(--tick-scale));
+  transform: translateY(-50%);
+}
+
+.rb-line[data-marker="true"] .rb-line__item:last-child::after {
+  content: none;
+}
+
+.rb-line[data-scale-tick="true"] .rb-line__item::after {
+  transform-origin: left;
+  transform: translateY(-50%) scaleX(calc(0.7 + var(--effect, 0) * 0.6));
+}
+
+.rb-line__marker {
+  position: absolute;
+  left: calc(-1 * var(--marker-length) - var(--marker-gap));
+  top: 50%;
+  height: 1px;
+  width: var(--marker-length);
+  transform-origin: left;
+  background-color: color-mix(
+    in srgb,
+    var(--accent-color) calc(var(--effect, 0) * 100%),
+    var(--marker-color)
+  );
+  transform: translateY(-50%) scaleX(calc(0.7 + var(--effect, 0) * 0.5));
+}
+
+.rb-line__label {
+  position: relative;
+  display: inline-flex;
+  align-items: baseline;
+  line-height: 1.2;
+  white-space: nowrap;
+  color: color-mix(
+    in srgb,
+    var(--accent-color) calc(var(--effect, 0) * 100%),
+    var(--text-color)
+  );
+  font-size: var(--font-size);
+  transform: translateX(calc(var(--effect, 0) * var(--max-shift)));
+}
+
+.rb-line__index {
+  margin-right: 0.6rem;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.85em;
+  opacity: calc(0.55 + var(--effect, 0) * 0.45);
+}
+
+.rb-line__item:focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 6px;
+  border-radius: 4px;
+}
+
+/* ===================== ClickSpark ===================== */
+
+.rb-spark {
+  position: relative;
+  width: 100%;
+  min-height: 100dvh;
+}
+
+.rb-spark__canvas {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 40;
+}
+
+/* ===================== SpecularButton ===================== */
+
+.rb-spec {
+  position: relative;
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  outline: none;
+  cursor: pointer;
+  font-family: var(--font-display, inherit);
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: 0.01em;
+  color: var(--sb-text-color);
+  border-radius: var(--sb-radius);
+  background: color-mix(
+    in srgb,
+    var(--sb-tint) calc(var(--sb-tint-opacity) * 100%),
+    transparent
+  );
+  backdrop-filter: blur(var(--sb-blur));
+  -webkit-backdrop-filter: blur(var(--sb-blur));
+  box-shadow: inset 0 1px 0 hsl(0 0% 100% / 0.04), 0 8px 24px hsl(0 0% 0% / 0.25);
+  transition: transform 0.15s ease;
+}
+
+.rb-spec:active {
+  transform: scale(0.97);
+}
+
+.rb-spec:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+.rb-spec:disabled:active {
+  transform: none;
+}
+
+.rb-spec:focus-visible {
+  outline: 2px solid var(--sb-line-color, #fff);
+  outline-offset: 3px;
+}
+
+.rb-spec--sm {
+  font-size: 0.85rem;
+  padding: 10px 22px;
+}
+.rb-spec--md {
+  font-size: 1rem;
+  padding: 14px 30px;
+}
+.rb-spec--lg {
+  font-size: 1.15rem;
+  padding: 18px 40px;
+}
+.rb-spec--block {
+  width: 100%;
+}
+
+.rb-spec__fx {
+  pointer-events: none;
+  position: absolute;
+  inset: -20px;
+  z-index: 1;
+}
+
+.rb-spec__fx canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.rb-spec__label {
+  position: relative;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* ===================== MagicBento ===================== */
+
+.mc-section {
+  --glow-x: 50%;
+  --glow-y: 50%;
+  --glow-intensity: 0;
+  --glow-radius: 220px;
+  position: relative;
+  user-select: none;
+  width: 100%;
+}
+
+.mc-grid {
+  display: grid;
+  gap: 0.85rem;
+  grid-template-columns: 1fr;
+  width: 100%;
+}
+
+@media (min-width: 640px) {
+  .mc-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1100px) {
+  .mc-grid {
+    grid-template-columns: repeat(4, 1fr);
+    grid-auto-rows: minmax(150px, auto);
+  }
+
+  /* asymmetric bento: 3rd tile is the hero, 4th is a wide band */
+  .mc-grid > .mc-card:nth-child(3) {
+    grid-column: span 2;
+    grid-row: span 2;
+  }
+
+  .mc-grid > .mc-card:nth-child(4) {
+    grid-column: 1 / span 2;
+    grid-row: 2 / span 2;
+  }
+
+  .mc-grid > .mc-card:nth-child(6) {
+    grid-column: 4;
+    grid-row: 3;
+  }
+}
+
+.mc-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 1.1rem;
+  min-height: 158px;
+  width: 100%;
+  padding: 1.15rem 1.25rem;
+  overflow: hidden;
+  border-radius: var(--tams-radius, 18px);
+  border: 1px solid var(--mc-border, hsl(258 60% 78% / 0.14));
+  background: var(--mc-bg, hsl(252 40% 14% / 0.55));
+  backdrop-filter: blur(18px) saturate(150%);
+  -webkit-backdrop-filter: blur(18px) saturate(150%);
+  color: var(--tams-text, #fff);
+  font-weight: 300;
+  text-align: left;
+  transition: border-color 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease;
+  will-change: transform;
+}
+
+.mc-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 30px hsl(252 60% 2% / 0.45),
+    0 0 30px rgba(var(--mc-glow), 0.18);
+}
+
+.mc-card:focus-visible {
+  outline: 2px solid rgb(var(--mc-glow));
+  outline-offset: 3px;
+}
+
+.mc-card--glow::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  padding: 5px;
+  border-radius: inherit;
+  background: radial-gradient(
+    var(--glow-radius) circle at var(--glow-x) var(--glow-y),
+    rgba(var(--mc-glow), calc(var(--glow-intensity) * 0.85)) 0%,
+    rgba(var(--mc-glow), calc(var(--glow-intensity) * 0.4)) 30%,
+    transparent 60%
+  );
+  -webkit-mask: linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+  z-index: 1;
+}
+
+.mc-card__head {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.mc-card__label {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.64rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--tams-text-faint, hsl(250 14% 55%));
+}
+
+.mc-card__delta {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.7rem;
+  color: var(--tams-text-muted, hsl(250 16% 68%));
+}
+
+.mc-card__delta[data-tone="up"] {
+  color: var(--tams-success, hsl(158 70% 48%));
+}
+.mc-card__delta[data-tone="down"] {
+  color: var(--tams-danger, hsl(0 78% 63%));
+}
+
+.mc-card__body {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+}
+
+.mc-card__value {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-variant-numeric: tabular-nums;
+  font-size: clamp(1.7rem, 1.2rem + 1.4vw, 2.6rem);
+  font-weight: 500;
+  letter-spacing: -0.04em;
+  line-height: 1;
+  margin: 0 0 0.45rem;
+  background: linear-gradient(
+    140deg,
+    var(--tams-text, #fff),
+    rgb(var(--mc-glow))
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.mc-card__title {
+  font-family: var(--font-display, inherit);
+  font-size: 0.98rem;
+  font-weight: 500;
+  margin: 0 0 0.2rem;
+}
+
+.mc-card__desc {
+  font-size: 0.8rem;
+  line-height: 1.35;
+  color: var(--tams-text-muted, hsl(250 16% 68%));
+  margin: 0;
+}
+
+.mc-clamp-1 {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+  line-clamp: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mc-clamp-2 {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mc-particle {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 3;
+  background: rgba(var(--mc-glow), 1);
+  box-shadow: 0 0 6px rgba(var(--mc-glow), 0.6);
+}
+
+.mc-particle::before {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  background: rgba(var(--mc-glow), 0.2);
+  border-radius: 50%;
+  z-index: -1;
+}
+
+.mc-ripple {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 4;
+  background: radial-gradient(
+    circle,
+    rgba(var(--mc-glow), 0.4) 0%,
+    rgba(var(--mc-glow), 0.2) 30%,
+    transparent 70%
+  );
+}
+
+.mc-spotlight {
+  position: fixed;
+  width: 800px;
+  height: 800px;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 5;
+  opacity: 0;
+  transform: translate(-50%, -50%);
+  mix-blend-mode: screen;
+  background: radial-gradient(
+    circle,
+    rgba(var(--mc-glow), 0.15) 0%,
+    rgba(var(--mc-glow), 0.08) 15%,
+    rgba(var(--mc-glow), 0.04) 25%,
+    rgba(var(--mc-glow), 0.02) 40%,
+    rgba(var(--mc-glow), 0.01) 65%,
+    transparent 70%
+  );
+}
+
+/* ===================== LiquidEther ===================== */
+
+.rb-liquid {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  pointer-events: none;
+  touch-action: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mc-card,
+  .rb-spec,
+  .rb-line__label,
+  .rb-line__marker {
+    transition: none;
+  }
+}
