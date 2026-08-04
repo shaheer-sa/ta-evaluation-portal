@@ -92,7 +92,7 @@ export default function DashboardLayout({
           >
             <div className="tams-rail__brand">
               <div className="tams-rail__mark">
-                <GraduationCap size={20} color="hsl(252 44% 5%)" />
+                <GraduationCap size={20} color="hsl(38 92% 50%)" />
               </div>
               <div>
                 <div className="tams-rail__name">TAMS</div>

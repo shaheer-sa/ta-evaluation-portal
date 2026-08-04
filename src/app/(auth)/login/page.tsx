@@ -145,7 +145,7 @@ export default function LoginPage() {
             boxShadow: "0 4px 14px hsl(252 44% 5% / 0.5)",
           }}
         >
-          <GraduationCap style={{ width: 30, height: 30, color: "hsl(252 44% 5%)" }} />
+          <GraduationCap style={{ width: 30, height: 30, color: "hsl(38 92% 50%)" }} />
         </div>
         <h1
           style={{
