@@ -141,8 +141,9 @@ export default function LoginPage() {
             borderRadius: "16px",
             display: "grid",
             placeItems: "center",
-            background: "white",
-            boxShadow: "0 4px 14px hsl(252 44% 5% / 0.5)",
+            background: "linear-gradient(145deg, hsl(252 44% 12%), hsl(252 44% 6%))",
+            border: "1px solid hsl(38, 92%, 50%, 0.7)",
+            boxShadow: "0 0 16px hsl(38 92% 50% / 0.25), inset 0 1px 2px hsl(38 92% 80% / 0.2)",
           }}
         >
           <GraduationCap style={{ width: 30, height: 30, color: "hsl(38 92% 50%)" }} />
