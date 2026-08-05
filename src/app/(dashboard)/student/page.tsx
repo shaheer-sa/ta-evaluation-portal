@@ -3,7 +3,11 @@ import { StatStrip, GradeCard, CourseGrade, GradesGrid } from "@/components/stud
 import {
   Card,
   CardContent,
+  CardHeader,
 } from "@/components/ui/card";
+import Link from "next/link";
+import { ArrowRight, BarChart2, TrendingUp } from "lucide-react";
+import { ParticleCard } from "@/components/react-bits/MagicBento";
 
 export default async function StudentDashboardPage() {
   const supabase = await createClient();
@@ -119,6 +123,8 @@ export default async function StudentDashboardPage() {
           pendingQueries={pendingQueries || 0}
         />
 
+
+
         {courseCards.length === 0 ? (
           <Card className="border-none bg-white/[0.03] backdrop-blur-xl">
             <CardContent className="py-12 text-center">
@@ -128,7 +134,36 @@ export default async function StudentDashboardPage() {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 mt-4">
+            {/* Performance Entry Card as a MagicBento box */}
+            <Link href="/student/performance" className="block h-full">
+              <ParticleCard 
+                className="mc-card mc-card--glow h-full p-8 flex flex-col group relative overflow-hidden transition-all hover:-translate-y-1" 
+                enableTilt={true}
+                particleCount={25}
+              >
+                <div className="absolute -top-10 -right-10 w-40 h-40 bg-primary/20 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+                
+                <div className="relative z-10 flex flex-col items-center text-center justify-center h-full">
+                  <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-500 border border-primary/20">
+                    <TrendingUp className="w-8 h-8 text-primary" />
+                  </div>
+                  
+                  <h3 className="text-2xl font-bold text-white mb-3 tracking-tight group-hover:text-primary transition-colors">
+                    Performance Analytics
+                  </h3>
+                  
+                  <p className="text-sm text-white/50 leading-relaxed mb-6">
+                    Compare your absolute scores against the class average and track your overall standing.
+                  </p>
+                  
+                  <div className="mt-auto flex items-center gap-2 text-primary text-sm font-medium opacity-80 group-hover:opacity-100 group-hover:translate-x-1 transition-all">
+                    View full report <ArrowRight className="w-4 h-4" />
+                  </div>
+                </div>
+              </ParticleCard>
+            </Link>
+
             {courseCards.map((c) => (
               <GradeCard key={c.code} course={c} />
             ))}

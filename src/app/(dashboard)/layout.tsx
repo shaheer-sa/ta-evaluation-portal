@@ -28,6 +28,7 @@ const TA_NAV = [
 
 const STUDENT_NAV = [
   { href: "/student", label: "My Grades", exact: true },
+  { href: "/student/performance", label: "Performance", exact: true },
   { href: "/student/queries", label: "Queries", exact: false },
 ];
 

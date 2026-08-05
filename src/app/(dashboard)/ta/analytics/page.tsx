@@ -1,8 +1,16 @@
 import { createClient } from "@/lib/supabase/server";
 import { AnalyticsCharts } from "./analytics-charts";
 import { Card, CardContent } from "@/components/ui/card";
+import { StudentPerformance } from "./student-performance";
 
-export default async function AnalyticsPage() {
+export default async function AnalyticsPage(props: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
+  const searchParams = await props.searchParams;
+  const sectionCourseId = typeof searchParams?.sectionCourseId === "string" 
+    ? searchParams.sectionCourseId 
+    : undefined;
+
   const supabase = await createClient();
 
   const { data: activeTerm } = await supabase
@@ -122,7 +130,7 @@ export default async function AnalyticsPage() {
     .sort((a, b) => b.avg - a.avg); // Sort highest to lowest
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-10">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Analytics</h1>
         <p className="text-muted-foreground">
@@ -133,6 +141,12 @@ export default async function AnalyticsPage() {
       <AnalyticsCharts 
         distributionData={distributionData} 
         comparisonData={comparisonData} 
+      />
+
+      {/* New Student Performance Section */}
+      <StudentPerformance 
+        termId={activeTerm.id} 
+        sectionCourseId={sectionCourseId} 
       />
     </div>
   );
