@@ -34,18 +34,30 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // ── Logged in — resolve role ─────────────────────────────────
+  // ── Logged in — resolve role & setup requirements ────────────
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role")
+    .select("role, must_change_password")
     .eq("id", user.id)
     .single();
 
   const role = profile?.role;
   const dashboardPath = role === "ta" ? "/ta" : "/student";
+  const mustChangePassword = profile?.must_change_password;
 
-  // Logged-in user hitting auth pages or root → send to their dashboard
-  if (PUBLIC_ROUTES.includes(pathname) || pathname === "/") {
+  // Enforce mandatory password change flow
+  if (mustChangePassword && pathname !== "/set-password") {
+    const url = request.nextUrl.clone();
+    url.pathname = "/set-password";
+    return NextResponse.redirect(url);
+  }
+
+  // Logged-in user hitting auth pages (or /set-password unnecessarily) or root
+  if (
+    PUBLIC_ROUTES.includes(pathname) || 
+    pathname === "/" || 
+    (pathname === "/set-password" && !mustChangePassword)
+  ) {
     const url = request.nextUrl.clone();
     url.pathname = dashboardPath;
     return NextResponse.redirect(url);

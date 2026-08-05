@@ -239,6 +239,7 @@ export interface Database {
           email: string
           full_name: string
           id: string
+          must_change_password: boolean
           role: "ta" | "student"
           roll_number: string | null
           updated_at: string
@@ -248,6 +249,7 @@ export interface Database {
           email: string
           full_name: string
           id: string
+          must_change_password?: boolean
           role: "ta" | "student"
           roll_number?: string | null
           updated_at?: string
@@ -257,6 +259,7 @@ export interface Database {
           email?: string
           full_name?: string
           id?: string
+          must_change_password?: boolean
           role?: "ta" | "student"
           roll_number?: string | null
           updated_at?: string

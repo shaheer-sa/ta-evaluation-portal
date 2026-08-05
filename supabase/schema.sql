@@ -43,6 +43,7 @@ create table if not exists profiles (
   full_name   text not null default '',
   role        user_role not null default 'student',
   roll_number text unique,
+  must_change_password boolean not null default true,
   created_at  timestamptz not null default now(),
   updated_at  timestamptz not null default now()
 );

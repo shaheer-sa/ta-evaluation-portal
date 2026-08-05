@@ -56,19 +56,6 @@ function generateEmail(rollNo: string): string {
   return `${clean}@${STUDENT_EMAIL_DOMAIN}`;
 }
 
-/**
- * Cryptographically random initial password.
- *
- * This replaces `Tams@${roll_number}` -- a password derived entirely from
- * the roll number, which is printed on every class list and appears in the
- * source Google Sheet. Anyone who knew a classmate's roll number could sign
- * in as them and read their grades. Nobody is ever expected to type this
- * value: students claim their account through "Forgot password", which
- * emails them a reset link.
- */
-function generateInitialPassword(): string {
-  return `${randomBytes(24).toString("base64url")}Aa1!`;
-}
 
 // ── Utility: Match Assessment Type to Sheet Tab ──────────────────────
 
@@ -232,9 +219,8 @@ export async function POST(request: Request) {
         const { data: authData, error: authError } = await admin.auth.admin.createUser({
           email: student.email,
           email_confirm: true,
-          // Random and immediately discarded -- students set their own
-          // password via the "Forgot password" flow on the login page.
-          password: generateInitialPassword(),
+          // predictable default password pattern:
+          password: `Tams@${student.roll_number.replace(/\s/g, "")}`,
           user_metadata: {
             roll_number: student.roll_number,
             full_name: student.full_name,
