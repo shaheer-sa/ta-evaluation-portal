@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
-import { createSection, linkCourseToSection } from "./actions";
+import { createSection, linkCourseToSection, updateSection, deleteSection, unlinkCourseFromSection } from "./actions";
+import { EntityActions } from "@/components/entity-actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -153,9 +154,43 @@ export default async function SectionsPage() {
                       key={section.id}
                       className="rounded-md border p-4 space-y-3"
                     >
-                      <div className="font-semibold">
-                        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                        {(section.terms as any)?.name} — Section {section.name}
+                      <div className="flex justify-between items-start">
+                        <div className="font-semibold">
+                          {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                          {(section.terms as any)?.name} — Section {section.name}
+                        </div>
+                        <EntityActions
+                          id={section.id}
+                          itemName={`Section ${section.name}`}
+                          deleteAction={deleteSection}
+                          editAction={updateSection}
+                          editTitle="Edit Section"
+                          editNode={
+                            <>
+                              <div className="space-y-2">
+                                <Label htmlFor={`edit-term-${section.id}`}>Term</Label>
+                                <select
+                                  id={`edit-term-${section.id}`}
+                                  name="termId"
+                                  defaultValue={section.term_id}
+                                  required
+                                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                >
+                                  {terms?.map((t) => (
+                                    <option key={t.id} value={t.id}>
+                                      {t.name}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+                              <div className="space-y-2">
+                                <Label htmlFor={`edit-name-${section.id}`}>Section Name</Label>
+                                <Input id={`edit-name-${section.id}`} name="name" defaultValue={section.name} required />
+                              </div>
+                              <Button type="submit" className="w-full">Save Changes</Button>
+                            </>
+                          }
+                        />
                       </div>
                       <div className="text-sm text-muted-foreground">
                         <p className="mb-1 font-medium text-foreground">Linked Courses:</p>
@@ -167,8 +202,16 @@ export default async function SectionsPage() {
                             {section.section_courses.map((sc: any) => {
                               const course = Array.isArray(sc.courses) ? sc.courses[0] : sc.courses;
                               return (
-                                <li key={sc.id}>
-                                  {course?.code} — {course?.name}
+                                <li key={sc.id} className="flex items-center justify-between group">
+                                  <span>{course?.code} — {course?.name}</span>
+                                  <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <EntityActions
+                                      id={sc.id}
+                                      itemName={`${course?.code} from Section ${section.name}`}
+                                      deleteAction={unlinkCourseFromSection}
+                                      type="unlink"
+                                    />
+                                  </div>
                                 </li>
                               );
                             })}

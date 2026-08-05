@@ -22,37 +22,19 @@ export default function AuthLayout({
       }}
     >
       {/* LiquidEther animated background */}
-      <div
-        style={{
-          position: "fixed",
-          inset: 0,
-          zIndex: 0,
-          pointerEvents: "none",
-          opacity: 0.35,
-        }}
-      >
+      <div className="tams-ambient" style={{ zIndex: 0 }}>
         <LiquidEther
-          colors={["#5227FF", "#A855F7", "#38BDF8"]}
-          resolution={0.3}
-          mouseForce={12}
-          cursorSize={80}
-          autoDemo
-          autoSpeed={0.3}
-          autoIntensity={1.4}
+          colors={['#f59e0b', '#ec4899', '#8b5cf6']}
+          resolution={0.6}
+          mouseForce={28}
+          cursorSize={110}
+          isViscous={false}
+          autoDemo={false}
+          takeoverDuration={0.15}
+          autoResumeDelay={3000}
+          autoRampDuration={0.3}
         />
       </div>
-
-      {/* Vignette for readability */}
-      <div
-        style={{
-          position: "fixed",
-          inset: 0,
-          zIndex: 1,
-          pointerEvents: "none",
-          background:
-            "radial-gradient(120% 90% at 50% 40%, hsl(252 44% 5% / 0.15) 0%, hsl(252 44% 5% / 0.88) 70%), linear-gradient(180deg, hsl(252 44% 5% / 0.3), hsl(252 44% 5% / 0.92))",
-        }}
-      />
 
       {/* Subtle grid overlay */}
       <div

@@ -110,10 +110,10 @@ export default async function CourseDetailPage({ params }: PageProps) {
   const rows = (assessments || []).map((a) => {
     const score = marksMap.get(a.id);
     const hasScore = score !== undefined;
-    const pct = hasScore && a.max_marks > 0 ? (score / a.max_marks) * 100 : null;
+    const abs = hasScore && a.max_marks > 0 ? (score / a.max_marks) * a.weight : null;
     const classAvg = classAverages.get(a.id) ?? null;
-    const classAvgPct = classAvg !== null && a.max_marks > 0
-      ? (classAvg / a.max_marks) * 100
+    const classAvgAbs = classAvg !== null && a.max_marks > 0
+      ? (classAvg / a.max_marks) * a.weight
       : null;
 
     if (hasScore && a.max_marks > 0) {
@@ -128,9 +128,9 @@ export default async function CourseDetailPage({ params }: PageProps) {
       maxMarks: a.max_marks,
       weight: a.weight,
       score: hasScore ? score : null,
-      pct,
+      abs,
       classAvg,
-      classAvgPct,
+      classAvgAbs,
     };
   });
 
@@ -219,7 +219,7 @@ export default async function CourseDetailPage({ params }: PageProps) {
                             <th className="p-3 text-left font-medium">Assessment</th>
                             <th className="p-3 text-right font-medium">Score</th>
                             <th className="p-3 text-right font-medium">Max</th>
-                            <th className="p-3 text-right font-medium">%</th>
+                            <th className="p-3 text-right font-medium">Absolutes</th>
                             <th className="p-3 text-right font-medium">Class Avg</th>
                             <th className="p-3 text-right font-medium">Weight</th>
                           </tr>
@@ -238,11 +238,11 @@ export default async function CourseDetailPage({ params }: PageProps) {
                                 {r.maxMarks}
                               </td>
                               <td className="p-3 text-right font-mono">
-                                {r.pct !== null ? `${Math.round(r.pct * 10) / 10}%` : "—"}
+                                {r.abs !== null ? `${Math.round(r.abs * 100) / 100}` : "—"}
                               </td>
                               <td className="p-3 text-right font-mono text-muted-foreground">
                                 {r.classAvg !== null
-                                  ? `${Math.round(r.classAvg * 10) / 10} (${Math.round((r.classAvgPct ?? 0) * 10) / 10}%)`
+                                  ? `${Math.round(r.classAvg * 10) / 10} (${Math.round((r.classAvgAbs ?? 0) * 100) / 100} abs)`
                                   : "—"}
                               </td>
                               <td className="p-3 text-right text-muted-foreground">

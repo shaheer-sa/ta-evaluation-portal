@@ -64,7 +64,7 @@ const updateCardGlowProperties = (
   card.style.setProperty('--glow-radius', `${radius}px`);
 };
 
-const ParticleCard: React.FC<{
+export const ParticleCard: React.FC<{
   children: React.ReactNode;
   className?: string;
   style?: CSSProperties;
@@ -249,7 +249,7 @@ const ParticleCard: React.FC<{
   );
 };
 
-const GlobalSpotlight: React.FC<{
+export const GlobalSpotlight: React.FC<{
   gridRef: React.RefObject<HTMLDivElement | null>;
   disableAnimations?: boolean;
   enabled?: boolean;

@@ -16,9 +16,6 @@ import {
 const ASSESSMENT_TYPES = [
   { value: "assignment", label: "Assignment" },
   { value: "quiz", label: "Quiz" },
-  { value: "mid", label: "Midterm" },
-  { value: "final", label: "Final" },
-  { value: "project", label: "Project" },
   { value: "cp", label: "Class Participation" },
 ];
 

@@ -16,6 +16,34 @@ export async function createSection(formData: FormData) {
   revalidatePath("/ta/sections");
 }
 
+export async function updateSection(formData: FormData) {
+  const { supabase } = await requireTA();
+  const id = formData.get("id") as string;
+  const termId = formData.get("termId") as string;
+  const name = formData.get("name") as string;
+
+  const { error } = await supabase
+    .from("sections")
+    .update({ term_id: termId, name })
+    .eq("id", id);
+
+  if (error) throw new Error(error.message);
+  revalidatePath("/ta/sections");
+}
+
+export async function deleteSection(formData: FormData) {
+  const { supabase } = await requireTA();
+  const id = formData.get("id") as string;
+
+  const { error } = await supabase
+    .from("sections")
+    .delete()
+    .eq("id", id);
+
+  if (error) throw new Error(error.message);
+  revalidatePath("/ta/sections");
+}
+
 export async function linkCourseToSection(formData: FormData) {
   const { supabase } = await requireTA();
   const sectionId = formData.get("sectionId") as string;
@@ -27,5 +55,18 @@ export async function linkCourseToSection(formData: FormData) {
 
   // 23505 is unique violation (if it's already linked)
   if (error && error.code !== "23505") throw new Error(error.message);
+  revalidatePath("/ta/sections");
+}
+
+export async function unlinkCourseFromSection(formData: FormData) {
+  const { supabase } = await requireTA();
+  const id = formData.get("id") as string; // The section_courses ID
+
+  const { error } = await supabase
+    .from("section_courses")
+    .delete()
+    .eq("id", id);
+
+  if (error) throw new Error(error.message);
   revalidatePath("/ta/sections");
 }

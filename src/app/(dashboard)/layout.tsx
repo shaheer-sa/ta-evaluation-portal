@@ -69,13 +69,15 @@ export default function DashboardLayout({
         <div className="tams-shell">
           <div className="tams-ambient">
             <LiquidEther
-              colors={["#5227FF", "#A855F7", "#38BDF8"]}
-              resolution={0.3}
-              mouseForce={8}
-              cursorSize={80}
-              autoDemo
-              autoSpeed={0.2}
-              autoIntensity={1.2}
+              colors={['#f59e0b', '#ec4899', '#8b5cf6']}
+              resolution={0.6}
+              mouseForce={28}
+              cursorSize={110}
+              isViscous={false}
+              autoDemo={false}
+              takeoverDuration={0.15}
+              autoResumeDelay={3000}
+              autoRampDuration={0.3}
             />
           </div>
           

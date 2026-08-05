@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
-import { createTerm, createCourse } from "./actions";
+import { createTerm, createCourse, updateTerm, deleteTerm, updateCourse, deleteCourse } from "./actions";
+import { EntityActions } from "@/components/entity-actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -80,15 +81,45 @@ export default async function CoursesPage() {
                       className="flex items-center justify-between rounded-md border p-3"
                     >
                       <span className="font-medium">{term.name}</span>
-                      <span
-                        className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                          term.is_active
-                            ? "bg-green-500/20 text-green-500"
-                            : "bg-muted text-muted-foreground"
-                        }`}
-                      >
-                        {term.is_active ? "Active" : "Inactive"}
-                      </span>
+                      <div className="flex items-center space-x-2">
+                        <span
+                          className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                            term.is_active
+                              ? "bg-green-500/20 text-green-500"
+                              : "bg-muted text-muted-foreground"
+                          }`}
+                        >
+                          {term.is_active ? "Active" : "Inactive"}
+                        </span>
+                        <EntityActions
+                          id={term.id}
+                          itemName={term.name}
+                          deleteAction={deleteTerm}
+                          editAction={updateTerm}
+                          editTitle="Edit Term"
+                          editNode={
+                            <>
+                              <div className="space-y-2">
+                                <Label htmlFor={`edit-term-${term.id}`}>Term Name</Label>
+                                <Input id={`edit-term-${term.id}`} name="name" defaultValue={term.name} required />
+                              </div>
+                              <div className="flex items-center space-x-2">
+                                <input
+                                  type="checkbox"
+                                  id={`edit-term-active-${term.id}`}
+                                  name="isActive"
+                                  defaultChecked={term.is_active}
+                                  className="h-4 w-4 rounded border-gray-300 bg-background text-primary"
+                                />
+                                <Label htmlFor={`edit-term-active-${term.id}`} className="font-normal">
+                                  Active Term
+                                </Label>
+                              </div>
+                              <Button type="submit" className="w-full">Save Changes</Button>
+                            </>
+                          }
+                        />
+                      </div>
                     </li>
                   ))}
                 </ul>
@@ -163,8 +194,56 @@ export default async function CoursesPage() {
                       key={course.id}
                       className="flex flex-col gap-1 rounded-md border p-3 text-sm"
                     >
-                      <div className="font-medium">
-                        {course.code} — {course.name}
+                      <div className="flex justify-between items-start">
+                        <div className="font-medium">
+                          {course.code} — {course.name}
+                        </div>
+                        <EntityActions
+                          id={course.id}
+                          itemName={`${course.code} - ${course.name}`}
+                          deleteAction={deleteCourse}
+                          editAction={updateCourse}
+                          editTitle="Edit Course"
+                          editNode={
+                            <>
+                              <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                  <Label htmlFor={`edit-code-${course.id}`}>Course Code</Label>
+                                  <Input id={`edit-code-${course.id}`} name="code" defaultValue={course.code} required />
+                                </div>
+                                <div className="space-y-2">
+                                  <Label htmlFor={`edit-name-${course.id}`}>Course Name</Label>
+                                  <Input id={`edit-name-${course.id}`} name="name" defaultValue={course.name} required />
+                                </div>
+                              </div>
+                              <div className="space-y-3 pt-2">
+                                <Label>Enable Features</Label>
+                                <div className="grid grid-cols-2 gap-2">
+                                  {[
+                                    { id: `enableCp-${course.id}`, name: "enableCp", label: "Class Participation", checked: course.enable_cp },
+                                    { id: `enableAssignments-${course.id}`, name: "enableAssignments", label: "Assignments", checked: course.enable_assignments },
+                                    { id: `enableQuizzes-${course.id}`, name: "enableQuizzes", label: "Quizzes", checked: course.enable_quizzes },
+                                    { id: `enableReeval-${course.id}`, name: "enableReeval", label: "Re-evaluations", checked: course.enable_reeval },
+                                  ].map((feature) => (
+                                    <div key={feature.id} className="flex items-center space-x-2">
+                                      <input
+                                        type="checkbox"
+                                        id={feature.id}
+                                        name={feature.name}
+                                        defaultChecked={feature.checked}
+                                        className="h-4 w-4 rounded border-gray-300 bg-background text-primary"
+                                      />
+                                      <Label htmlFor={feature.id} className="font-normal text-sm">
+                                        {feature.label}
+                                      </Label>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                              <Button type="submit" className="w-full">Save Changes</Button>
+                            </>
+                          }
+                        />
                       </div>
                       <div className="flex gap-2 text-xs text-muted-foreground">
                         {course.enable_cp && <span>CP</span>}

@@ -58,11 +58,15 @@ const itemVariants = {
   },
 };
 
+import { useRef } from "react";
+import { ParticleCard, GlobalSpotlight } from "@/components/react-bits/MagicBento";
+
 // ── Component ───────────────────────────────────────────────────
 export default function LoginPage() {
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const gridRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     // If the user lands here with a hash fragment from Supabase (e.g. from an un-redirected password reset link)
@@ -116,21 +120,27 @@ export default function LoginPage() {
   }
 
   return (
-    <motion.div
-      variants={containerVariants}
-      initial="hidden"
-      animate="visible"
-      style={{
-        background: "hsl(252 40% 14% / 0.55)",
-        border: "1px solid hsl(258 60% 78% / 0.14)",
-        borderRadius: "18px",
-        backdropFilter: "blur(18px) saturate(150%)",
-        WebkitBackdropFilter: "blur(18px) saturate(150%)",
-        boxShadow:
-          "inset 0 1px 0 hsl(0 0% 100% / 0.05), 0 18px 48px hsl(252 60% 2% / 0.55)",
-        padding: "2.5rem 2rem",
-      }}
-    >
+    <div ref={gridRef} className="mc-section w-full" style={{ '--mc-glow': '245, 163, 10' } as any}>
+      <GlobalSpotlight gridRef={gridRef} glowColor="245, 163, 10" />
+      <motion.div
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+      >
+        <ParticleCard
+          className="mc-card mc-card--glow"
+          enableTilt={true}
+          clickEffect={true}
+          particleCount={15}
+          style={{
+            padding: "2.5rem 2rem",
+            background: "hsl(252 40% 14% / 0.55)",
+            backdropFilter: "blur(18px) saturate(150%)",
+            WebkitBackdropFilter: "blur(18px) saturate(150%)",
+            boxShadow:
+              "inset 0 1px 0 hsl(0 0% 100% / 0.05), 0 18px 48px hsl(252 60% 2% / 0.55)",
+          }}
+        >
       {/* ── Header ─────────────────────────────────────────────── */}
       <motion.div variants={itemVariants} style={{ marginBottom: "2rem", textAlign: "center" }}>
         <div
@@ -330,6 +340,8 @@ export default function LoginPage() {
         <br />
         Contact your TA if you don&apos;t have an account.
       </motion.p>
-    </motion.div>
+        </ParticleCard>
+      </motion.div>
+    </div>
   );
 }
