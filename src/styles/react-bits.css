@@ -268,11 +268,11 @@
   padding: 1.15rem 1.25rem;
   overflow: hidden;
   border-radius: var(--tams-radius, 18px);
-  border: 1px solid var(--mc-border, hsl(38 92% 50% / 0.25));
-  background: var(--mc-bg, hsl(252 40% 14% / 0.55));
+  border: 1px solid var(--mc-border, var(--tams-glass-border));
+  background: var(--mc-bg, var(--tams-glass));
   backdrop-filter: blur(18px) saturate(150%);
   -webkit-backdrop-filter: blur(18px) saturate(150%);
-  color: var(--tams-text, #fff);
+  color: var(--tams-text);
   font-weight: 300;
   text-align: left;
   transition: border-color 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease;
@@ -281,7 +281,7 @@
 
 .mc-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 10px 30px hsl(252 60% 2% / 0.45),
+  box-shadow: var(--tams-shadow-lift),
     0 0 30px rgba(var(--mc-glow), 0.18);
 }
 
@@ -326,20 +326,20 @@
   font-size: 0.64rem;
   letter-spacing: 0.15em;
   text-transform: uppercase;
-  color: var(--tams-text-faint, hsl(250 14% 55%));
+  color: var(--tams-text-faint);
 }
 
 .mc-card__delta {
   font-family: var(--font-mono, ui-monospace, monospace);
   font-size: 0.7rem;
-  color: var(--tams-text-muted, hsl(250 16% 68%));
+  color: var(--tams-text-muted);
 }
 
 .mc-card__delta[data-tone="up"] {
-  color: var(--tams-success, hsl(158 70% 48%));
+  color: var(--tams-success);
 }
 .mc-card__delta[data-tone="down"] {
-  color: var(--tams-danger, hsl(0 78% 63%));
+  color: var(--tams-danger);
 }
 
 .mc-card__body {
@@ -359,8 +359,8 @@
   margin: 0 0 0.45rem;
   background: linear-gradient(
     140deg,
-    var(--tams-text, #fff),
-    rgb(var(--mc-glow))
+    var(--forest),
+    var(--cocoa)
   );
   -webkit-background-clip: text;
   background-clip: text;
@@ -377,7 +377,7 @@
 .mc-card__desc {
   font-size: 0.8rem;
   line-height: 1.35;
-  color: var(--tams-text-muted, hsl(250 16% 68%));
+  color: var(--tams-text-muted);
   margin: 0;
 }
 

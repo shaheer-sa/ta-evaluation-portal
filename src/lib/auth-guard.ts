@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from '@supabase/supabase-js';
+import type { Database } from '@/types/database';
 
 /**
  * Asserts that the current request comes from an authenticated TA.
@@ -16,10 +17,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
  * Call this first in every TA-only Server Action. Defense in depth: keep
  * the RLS policies in supabase/schema.sql as well.
  */
-export async function requireTA(): Promise<{
-  supabase: SupabaseClient;
-  userId: string;
-}> {
+export async function requireTA() {
   const supabase = await createClient();
 
   const {
@@ -40,5 +38,6 @@ export async function requireTA(): Promise<{
     throw new Error("Only teaching assistants can perform this action.");
   }
 
-  return { supabase, userId: user.id };
+  return { supabase: supabase as SupabaseClient<Database>, userId: user.id };
 }
+

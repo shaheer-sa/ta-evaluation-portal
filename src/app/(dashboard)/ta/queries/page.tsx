@@ -35,18 +35,12 @@ const PRIORITY_COLORS: Record<string, string> = {
   high: "text-red-600 font-semibold",
 };
 
-interface QueryItem {
-  id: string;
-  title: string;
-  description: string;
-  priority: string;
-  status: string;
-  created_at: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  profiles: any;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  assessments: any;
-}
+import type { Database } from "@/types/database";
+
+type QueryItem = Pick<Database["public"]["Tables"]["queries"]["Row"], "id" | "title" | "description" | "priority" | "status" | "created_at"> & {
+  profiles: Pick<Database["public"]["Tables"]["profiles"]["Row"], "full_name" | "roll_number"> | null;
+  assessments: Pick<Database["public"]["Tables"]["assessments"]["Row"], "title"> | null;
+};
 
 export default function TAQueriesPage() {
   const [queries, setQueries] = useState<QueryItem[]>([]);

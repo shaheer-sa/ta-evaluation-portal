@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import type { SupabaseClient } from "@supabase/supabase-js";
 
 /**
  * A query thread is readable and writable by exactly two parties: the
  * student who raised it, and any TA. Everyone else gets a 403.
  */
 async function canAccessQuery(
-  supabase: SupabaseClient,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: any,
   userId: string,
   queryId: string
 ): Promise<boolean> {

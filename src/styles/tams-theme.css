@@ -5,28 +5,28 @@
    ============================================================ */
 
 :root {
-  /* ---- palette (deep indigo / violet, tuned in HSL) ---- */
-  --tams-bg: hsl(252 44% 5%);
-  --tams-bg-elev: hsl(252 38% 8%);
-  --tams-surface: hsl(252 36% 11%);
-
-  --tams-glass: hsl(252 40% 14% / 0.55);
-  --tams-glass-strong: hsl(252 42% 12% / 0.78);
-  --tams-glass-border: hsl(38 92% 50% / 0.25);
-  --tams-glass-border-hover: hsl(38 92% 50% / 0.7);
-
-  --tams-text: hsl(250 30% 96%);
-  --tams-text-muted: hsl(250 16% 68%);
-  --tams-text-faint: hsl(250 14% 50%);
-
-  --tams-accent: hsl(268 90% 66%);
-  --tams-accent-soft: hsl(268 90% 66% / 0.16);
-  --tams-accent-2: hsl(199 89% 62%);
-  --tams-success: hsl(158 70% 48%);
-  --tams-warning: hsl(38 92% 60%);
-  --tams-danger: hsl(0 78% 63%);
-
-  --tams-glow-rgb: 132, 0, 255;
+  /* ---- palette aliases ---- */
+  --tams-bg: var(--surface-0);
+  --tams-bg-elev: var(--surface-1);
+  --tams-surface: var(--surface-2);
+  --tams-glass: hsl(26 59% 94% / 0.72);
+  --tams-glass-strong: hsl(26 60% 97% / 0.88);
+  --tams-glass-border: hsl(24 32% 82% / 0.9);
+  --tams-glass-border-hover: hsl(153 41% 19% / 0.45);
+  --tams-text: var(--ink);
+  --tams-text-muted: var(--ink-muted);
+  --tams-text-faint: var(--ink-faint);
+  --tams-accent: var(--primary);
+  --tams-accent-soft: var(--primary-soft);
+  --tams-accent-2: var(--accent-deep);
+  --tams-success: var(--success);
+  --tams-warning: var(--warning);
+  --tams-danger:  var(--danger);
+  --tams-glow-rgb: 249, 210, 186;     /* peach, for MagicBento rgba() */
+  --tams-radius: var(--radius);
+  --tams-radius-sm: var(--radius-sm);
+  --tams-shadow: var(--shadow);
+  --tams-shadow-lift: var(--shadow-lift);
 
   /* ---- type ---- */
   --font-display: var(--font-outfit), "Outfit", system-ui, sans-serif;
@@ -34,14 +34,9 @@
   --font-mono: var(--font-mono-jet), "JetBrains Mono", ui-monospace, monospace;
 
   /* ---- geometry ---- */
-  --tams-radius: 18px;
-  --tams-radius-sm: 12px;
   --tams-rail-w: 268px;
   --tams-rail-w-collapsed: 84px;
   --tams-topbar-h: 62px;
-
-  --tams-shadow: 0 18px 48px hsl(252 60% 2% / 0.55);
-  --tams-shadow-lift: 0 22px 60px hsl(252 60% 2% / 0.7), 0 0 34px hsl(268 90% 66% / 0.16);
 }
 
 /* ============================ base ============================ */
@@ -83,7 +78,7 @@
   border-radius: var(--tams-radius);
   backdrop-filter: blur(18px) saturate(150%);
   -webkit-backdrop-filter: blur(18px) saturate(150%);
-  box-shadow: inset 0 1px 0 hsl(0 0% 100% / 0.05), var(--tams-shadow);
+  box-shadow: inset 0 1px 0 hsl(0 0% 100% / 0.6), var(--tams-shadow);
 }
 
 .tams-glass-strong {
@@ -91,6 +86,7 @@
   border: 1px solid var(--tams-glass-border);
   backdrop-filter: blur(26px) saturate(160%);
   -webkit-backdrop-filter: blur(26px) saturate(160%);
+  box-shadow: inset 0 1px 0 hsl(0 0% 100% / 0.6);
 }
 
 .tams-card {
@@ -102,7 +98,7 @@
 .tams-card:hover {
   transform: translateY(-2px);
   border-color: var(--tams-glass-border-hover);
-  box-shadow: inset 0 1px 0 hsl(0 0% 100% / 0.06), var(--tams-shadow-lift);
+  box-shadow: inset 0 1px 0 hsl(0 0% 100% / 0.6), var(--tams-shadow-lift);
 }
 
 .tams-card__title {
@@ -130,6 +126,17 @@
   );
 }
 
+/* Auth panel extraction */
+.tams-auth-panel {
+  background: var(--tams-glass);
+  border: 1px solid var(--tams-glass-border);
+  border-radius: 18px;
+  backdrop-filter: blur(18px) saturate(150%);
+  -webkit-backdrop-filter: blur(18px) saturate(150%);
+  box-shadow: inset 0 1px 0 hsl(0 0% 100% / 0.6), var(--tams-shadow);
+  padding: 2.5rem 2rem;
+}
+
 /* ============================ shell ============================ */
 
 .tams-shell {
@@ -147,8 +154,8 @@
 }
 
 .tams-ambient canvas {
-  opacity: 0.85;
-  mix-blend-mode: screen;
+  opacity: 0.35;
+  mix-blend-mode: multiply;
 }
 
 /* vignette so data stays readable over the moving background */
@@ -158,10 +165,10 @@
   inset: 0;
   background: radial-gradient(
       120% 90% at 22% 0%,
-      hsl(252 44% 5% / 0.1) 0%,
-      hsl(252 44% 5% / 0.5) 68%
+      rgb(from var(--surface-0) r g b / 0.1) 0%,
+      rgb(from var(--surface-0) r g b / 0.5) 68%
     ),
-    linear-gradient(180deg, hsl(252 44% 5% / 0.2), hsl(252 44% 5% / 0.7));
+    linear-gradient(180deg, rgb(from var(--surface-0) r g b / 0.2), rgb(from var(--surface-0) r g b / 0.7));
 }
 
 .tams-rail {
@@ -206,9 +213,10 @@
   font-family: var(--font-display);
   font-weight: 700;
   font-size: 0.92rem;
-  background: linear-gradient(145deg, hsl(252 44% 12%), hsl(252 44% 6%));
-  border: 1px solid hsl(38 92% 50% / 0.7);
-  box-shadow: 0 0 12px hsl(38 92% 50% / 0.25), inset 0 1px 2px hsl(38 92% 80% / 0.2);
+  background: linear-gradient(145deg, var(--forest), hsl(153 41% 13%));
+  border: 1px solid hsl(153 41% 19% / 0.5);
+  color: var(--primary-fg);
+  box-shadow: 0 0 12px hsl(153 41% 19% / 0.25), inset 0 1px 2px hsl(0 0% 100% / 0.2);
 }
 
 .tams-rail__name {
@@ -263,7 +271,7 @@
 
 .tams-rail__dot:hover {
   color: var(--tams-text);
-  background: hsl(268 90% 66% / 0.1);
+  background: var(--tams-accent-soft);
   border-color: var(--tams-glass-border);
 }
 
@@ -280,7 +288,7 @@
   height: 38px;
   border-radius: 11px;
   border: 1px solid var(--tams-glass-border);
-  background: hsl(252 40% 18% / 0.5);
+  background: var(--surface-1);
   color: var(--tams-text-muted);
   cursor: pointer;
   transition: color 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
@@ -290,12 +298,6 @@
   color: var(--tams-text);
   border-color: var(--tams-glass-border-hover);
   transform: translateY(-1px);
-}
-
-.tams-iconbtn:focus-visible,
-.tams-rail__dot:focus-visible {
-  outline: 2px solid var(--tams-accent);
-  outline-offset: 2px;
 }
 
 .tams-content {
@@ -363,7 +365,7 @@
   position: fixed;
   inset: 0;
   z-index: 18;
-  background: hsl(252 50% 3% / 0.6);
+  background: rgb(from var(--surface-2) r g b / 0.6);
   backdrop-filter: blur(3px);
   border: 0;
   padding: 0;
@@ -440,7 +442,7 @@
 
 .tams-table tbody td {
   padding: 0.8rem 1rem;
-  border-bottom: 1px solid hsl(258 60% 78% / 0.07);
+  border-bottom: 1px solid var(--line);
   color: var(--tams-text);
 }
 
@@ -449,7 +451,7 @@
 }
 
 .tams-table tbody tr:hover {
-  background: hsl(268 90% 66% / 0.07);
+  background: var(--accent-soft);
 }
 
 .tams-pill {
@@ -464,25 +466,25 @@
   text-transform: uppercase;
   border: 1px solid var(--tams-glass-border);
   color: var(--tams-text-muted);
-  background: hsl(252 40% 18% / 0.5);
+  background: var(--surface-1);
 }
 
 .tams-pill[data-tone="open"] {
-  color: var(--tams-warning);
-  border-color: hsl(38 92% 60% / 0.35);
-  background: hsl(38 92% 60% / 0.1);
+  color: var(--warning);
+  border-color: var(--warning-soft);
+  background: var(--warning-soft);
 }
 
 .tams-pill[data-tone="done"] {
-  color: var(--tams-success);
-  border-color: hsl(158 70% 48% / 0.35);
-  background: hsl(158 70% 48% / 0.1);
+  color: var(--success);
+  border-color: var(--success-soft);
+  background: var(--success-soft);
 }
 
 .tams-pill[data-tone="late"] {
-  color: var(--tams-danger);
-  border-color: hsl(0 78% 63% / 0.35);
-  background: hsl(0 78% 63% / 0.1);
+  color: var(--danger);
+  border-color: var(--danger-soft);
+  background: var(--danger-soft);
 }
 
 /* scrollbars */
@@ -492,7 +494,7 @@
 }
 
 .tams-body ::-webkit-scrollbar-thumb {
-  background: hsl(258 40% 45% / 0.35);
+  background: var(--line-strong);
   border-radius: 999px;
 }
 

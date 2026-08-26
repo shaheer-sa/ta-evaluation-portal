@@ -50,8 +50,8 @@ export function EntityActions({
       await editAction(formData);
       setIsEditOpen(false);
       toast.success("Changes saved successfully!");
-    } catch (e: any) {
-      toast.error(e.message || "Failed to save changes");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to save changes");
     }
   }
 

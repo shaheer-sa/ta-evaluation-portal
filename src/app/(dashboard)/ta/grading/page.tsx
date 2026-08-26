@@ -23,16 +23,30 @@ interface StudentMark {
   score: string;
 }
 
+import type { Database } from "@/types/database";
+
+type SectionCourseRow = Pick<Database["public"]["Tables"]["section_courses"]["Row"], "id" | "section_id" | "course_id"> & {
+  sections: (Pick<Database["public"]["Tables"]["sections"]["Row"], "name"> & {
+    terms: Pick<Database["public"]["Tables"]["terms"]["Row"], "name"> | null;
+  }) | null;
+  courses: Pick<Database["public"]["Tables"]["courses"]["Row"], "code" | "name"> | null;
+};
+
+type AssessmentRow = Pick<Database["public"]["Tables"]["assessments"]["Row"], "id" | "title" | "type" | "max_marks">;
+
+type EnrollmentRow = Pick<Database["public"]["Tables"]["enrollments"]["Row"], "id"> & {
+  profiles: Pick<Database["public"]["Tables"]["profiles"]["Row"], "roll_number" | "full_name"> | null;
+  marks: Pick<Database["public"]["Tables"]["marks"]["Row"], "assessment_id" | "score">[];
+};
+
 const SELECT_CLASS =
   "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50";
 
 export default function GradingPage() {
   const supabase = createClient();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [sectionCourses, setSectionCourses] = useState<any[]>([]);
+  const [sectionCourses, setSectionCourses] = useState<SectionCourseRow[]>([]);
   const [selectedSC, setSelectedSC] = useState("");
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [assessments, setAssessments] = useState<any[]>([]);
+  const [assessments, setAssessments] = useState<AssessmentRow[]>([]);
   const [selectedAssessment, setSelectedAssessment] = useState("");
   const [studentMarks, setStudentMarks] = useState<StudentMark[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -88,7 +102,7 @@ export default function GradingPage() {
         return;
       }
 
-      const { data: enrollments, error } = await supabase
+      const { data: rawEnrollments, error } = await supabase
         .from("enrollments")
         .select(
           `
@@ -106,20 +120,18 @@ export default function GradingPage() {
         return;
       }
 
-      const mapped: StudentMark[] = (enrollments || []).map((e) => {
-        const mark = e.marks.find(
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          (m: any) => m.assessment_id === selectedAssessment
+      const enrollments = (rawEnrollments as unknown as EnrollmentRow[]) || [];
+      const mapped: StudentMark[] = enrollments.map((e) => {
+        const scoreObj = e.marks.find(
+          (m) => m.assessment_id === selectedAssessment
         );
         return {
           enrollmentId: e.id,
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          rollNumber: (e.profiles as any)?.roll_number || "",
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          fullName: (e.profiles as any)?.full_name || "",
+          rollNumber: e.profiles?.roll_number || "",
+          fullName: e.profiles?.full_name || "",
           score:
-            mark && mark.score !== null && mark.score !== undefined
-              ? String(mark.score)
+            scoreObj && scoreObj.score !== null && scoreObj.score !== undefined
+              ? String(scoreObj.score)
               : "",
         };
       });

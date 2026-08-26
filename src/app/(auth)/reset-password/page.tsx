@@ -55,22 +55,11 @@ const itemVariants = {
   },
 };
 
-const glassStyle: React.CSSProperties = {
-  background: "hsl(252 40% 14% / 0.55)",
-  border: "1px solid hsl(258 60% 78% / 0.14)",
-  borderRadius: "18px",
-  backdropFilter: "blur(18px) saturate(150%)",
-  WebkitBackdropFilter: "blur(18px) saturate(150%)",
-  boxShadow:
-    "inset 0 1px 0 hsl(0 0% 100% / 0.05), 0 18px 48px hsl(252 60% 2% / 0.55)",
-  padding: "2.5rem 2rem",
-};
-
 const inputStyle: React.CSSProperties = {
-  background: "hsl(252 36% 11% / 0.7)",
-  border: "1px solid hsl(258 60% 78% / 0.14)",
+  background: "var(--surface-sunk)",
+  border: "1px solid var(--line)",
   borderRadius: "12px",
-  color: "hsl(250 30% 96%)",
+  color: "var(--ink)",
   fontSize: "0.9rem",
   paddingRight: "2.5rem",
   transition: "border-color 0.2s ease, box-shadow 0.2s ease",
@@ -82,14 +71,6 @@ export default function ResetPasswordPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
-  // This page is reachable with no auth guard at the middleware level
-  // (the recovery-link flow lands here right after exchanging its
-  // code for a session, before middleware would otherwise treat this
-  // request as "logged in"). That means it's on this component to
-  // confirm a real session actually exists before letting anyone
-  // submit a new password — otherwise supabase.auth.updateUser() just
-  // fails, but with no explanation, for anyone who opens this URL
-  // directly without a valid recovery session.
   const [sessionState, setSessionState] = useState<
     "checking" | "valid" | "missing"
   >("checking");
@@ -125,7 +106,6 @@ export default function ResetPasswordPage() {
 
       toast.success("Password updated! Redirecting to sign in…");
 
-      // Sign out so they have to log in with the new password
       await supabase.auth.signOut();
 
       setTimeout(() => {
@@ -142,16 +122,16 @@ export default function ResetPasswordPage() {
   if (sessionState === "checking") {
     return (
       <div
+        className="tams-auth-panel"
         style={{
-          ...glassStyle,
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
           gap: "0.75rem",
         }}
       >
-        <Loader2 style={{ width: 24, height: 24, color: "hsl(250 16% 68%)", animation: "spin 1s linear infinite" }} />
-        <p style={{ fontSize: "0.88rem", color: "hsl(250 16% 68%)" }}>Verifying your link…</p>
+        <Loader2 style={{ width: 24, height: 24, color: "var(--ink-muted)", animation: "spin 1s linear infinite" }} />
+        <p style={{ fontSize: "0.88rem", color: "var(--ink-muted)" }}>Verifying your link…</p>
       </div>
     );
   }
@@ -162,7 +142,8 @@ export default function ResetPasswordPage() {
         variants={containerVariants}
         initial="hidden"
         animate="visible"
-        style={{ ...glassStyle, textAlign: "center" }}
+        className="tams-auth-panel"
+        style={{ textAlign: "center" }}
       >
         <div
           style={{
@@ -172,16 +153,16 @@ export default function ResetPasswordPage() {
             borderRadius: "16px",
             display: "grid",
             placeItems: "center",
-            background: "hsl(0 78% 63% / 0.12)",
-            border: "1px solid hsl(0 78% 63% / 0.25)",
+            background: "var(--danger-soft)",
+            border: "1px solid var(--danger)",
           }}
         >
-          <ShieldAlert style={{ width: 30, height: 30, color: "hsl(0 78% 63%)" }} />
+          <ShieldAlert style={{ width: 30, height: 30, color: "var(--danger)" }} />
         </div>
         <h1 style={{ fontSize: "1.3rem", fontWeight: 700, letterSpacing: "-0.02em" }}>
           This link isn&apos;t valid
         </h1>
-        <p style={{ marginTop: "0.5rem", fontSize: "0.88rem", color: "hsl(250 16% 68%)" }}>
+        <p style={{ marginTop: "0.5rem", fontSize: "0.88rem", color: "var(--ink-muted)" }}>
           Your password reset link may have expired or already been used.
           Request a new one to continue.
         </p>
@@ -191,12 +172,12 @@ export default function ResetPasswordPage() {
               block
               size="md"
               radius={14}
-              tint="hsl(268 90% 66%)"
+              tint="hsl(153 41% 19%)"
               tintOpacity={0.22}
               blur={10}
-              textColor="hsl(250 30% 96%)"
-              lineColor="#a78bfa"
-              baseColor="#5b3fa8"
+              textColor="hsl(26 59% 94%)"
+              lineColor="#F9D2BA"
+              baseColor="#1D4533"
               autoAnimate
               speed={0.3}
             >
@@ -213,7 +194,7 @@ export default function ResetPasswordPage() {
       variants={containerVariants}
       initial="hidden"
       animate="visible"
-      style={glassStyle}
+      className="tams-auth-panel"
     >
       <motion.div variants={itemVariants} style={{ marginBottom: "1.5rem", textAlign: "center" }}>
         <div
@@ -224,16 +205,16 @@ export default function ResetPasswordPage() {
             borderRadius: "16px",
             display: "grid",
             placeItems: "center",
-            background: "linear-gradient(145deg, hsl(268 90% 66% / 0.15), hsl(199 89% 62% / 0.12))",
-            border: "1px solid hsl(268 90% 66% / 0.25)",
+            background: "var(--primary-soft)",
+            border: "1px solid var(--line-strong)",
           }}
         >
-          <KeyRound style={{ width: 30, height: 30, color: "hsl(268 90% 76%)" }} />
+          <KeyRound style={{ width: 30, height: 30, color: "var(--primary)" }} />
         </div>
         <h1 style={{ fontSize: "1.3rem", fontWeight: 700, letterSpacing: "-0.02em", margin: 0 }}>
           Set a new password
         </h1>
-        <p style={{ marginTop: "0.4rem", fontSize: "0.88rem", color: "hsl(250 16% 68%)" }}>
+        <p style={{ marginTop: "0.4rem", fontSize: "0.88rem", color: "var(--ink-muted)" }}>
           Choose a strong password for your account.
         </p>
       </motion.div>
@@ -241,7 +222,7 @@ export default function ResetPasswordPage() {
       <form onSubmit={handleSubmit(onSubmit)} style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
         {/* New password */}
         <motion.div variants={itemVariants} style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-          <Label htmlFor="password" style={{ color: "hsl(250 16% 68%)", fontSize: "0.85rem", fontWeight: 500 }}>
+          <Label htmlFor="password" style={{ color: "var(--ink-muted)", fontSize: "0.85rem", fontWeight: 500 }}>
             New password
           </Label>
           <div style={{ position: "relative" }}>
@@ -265,7 +246,7 @@ export default function ResetPasswordPage() {
                 right: "0.75rem",
                 top: "50%",
                 transform: "translateY(-50%)",
-                color: "hsl(250 16% 68%)",
+                color: "var(--ink-muted)",
                 background: "none",
                 border: "none",
                 cursor: "pointer",
@@ -281,7 +262,7 @@ export default function ResetPasswordPage() {
             </button>
           </div>
           {errors.password && (
-            <p style={{ fontSize: "0.75rem", color: "hsl(0 78% 63%)", margin: 0 }}>
+            <p style={{ fontSize: "0.75rem", color: "var(--danger)", margin: 0 }}>
               {errors.password.message}
             </p>
           )}
@@ -289,7 +270,7 @@ export default function ResetPasswordPage() {
 
         {/* Confirm password */}
         <motion.div variants={itemVariants} style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-          <Label htmlFor="confirmPassword" style={{ color: "hsl(250 16% 68%)", fontSize: "0.85rem", fontWeight: 500 }}>
+          <Label htmlFor="confirmPassword" style={{ color: "var(--ink-muted)", fontSize: "0.85rem", fontWeight: 500 }}>
             Confirm password
           </Label>
           <div style={{ position: "relative" }}>
@@ -312,7 +293,7 @@ export default function ResetPasswordPage() {
                 right: "0.75rem",
                 top: "50%",
                 transform: "translateY(-50%)",
-                color: "hsl(250 16% 68%)",
+                color: "var(--ink-muted)",
                 background: "none",
                 border: "none",
                 cursor: "pointer",
@@ -328,7 +309,7 @@ export default function ResetPasswordPage() {
             </button>
           </div>
           {errors.confirmPassword && (
-            <p style={{ fontSize: "0.75rem", color: "hsl(0 78% 63%)", margin: 0 }}>
+            <p style={{ fontSize: "0.75rem", color: "var(--danger)", margin: 0 }}>
               {errors.confirmPassword.message}
             </p>
           )}
@@ -341,12 +322,12 @@ export default function ResetPasswordPage() {
             block
             size="lg"
             radius={14}
-            tint="hsl(268 90% 66%)"
+            tint="hsl(153 41% 19%)"
             tintOpacity={0.22}
             blur={10}
-            textColor="hsl(250 30% 96%)"
-            lineColor="#a78bfa"
-            baseColor="#5b3fa8"
+            textColor="hsl(26 59% 94%)"
+            lineColor="#F9D2BA"
+            baseColor="#1D4533"
             intensity={1.2}
             autoAnimate
             speed={0.3}
@@ -365,3 +346,4 @@ export default function ResetPasswordPage() {
     </motion.div>
   );
 }
+

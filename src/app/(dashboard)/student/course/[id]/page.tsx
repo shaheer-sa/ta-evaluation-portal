@@ -15,6 +15,14 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import type { Database } from "@/types/database";
+
+type EnrollmentRow = Pick<Database["public"]["Tables"]["enrollments"]["Row"], "id" | "course_id" | "section_id"> & {
+  courses: Pick<Database["public"]["Tables"]["courses"]["Row"], "code" | "name"> | null;
+  sections: (Pick<Database["public"]["Tables"]["sections"]["Row"], "name"> & {
+    terms: Pick<Database["public"]["Tables"]["terms"]["Row"], "name"> | null;
+  }) | null;
+};
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -31,7 +39,7 @@ export default async function CourseDetailPage({ params }: PageProps) {
   if (!user) return null;
 
   // Fetch the enrollment
-  const { data: enrollment } = await supabase
+  const { data: rawEnrollment } = await supabase
     .from("enrollments")
     .select(`
       id,
@@ -43,6 +51,8 @@ export default async function CourseDetailPage({ params }: PageProps) {
     .eq("id", enrollmentId)
     .eq("student_id", user.id)
     .single();
+
+  const enrollment = rawEnrollment as unknown as EnrollmentRow | null;
 
   if (!enrollment) {
     return (
@@ -101,7 +111,7 @@ export default async function CourseDetailPage({ params }: PageProps) {
   // Build the table data
   const marksMap = new Map<string, number>();
   for (const m of marks || []) {
-    marksMap.set(m.assessment_id, m.score);
+    marksMap.set(m.assessment_id, m.score ?? 0);
   }
 
   let totalWeightedScore = 0;
@@ -135,10 +145,8 @@ export default async function CourseDetailPage({ params }: PageProps) {
   });
 
   const overallPct = totalWeight > 0 ? (totalWeightedScore / totalWeight) * 100 : 0;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const course = enrollment.courses as any;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const section = enrollment.sections as any;
+  const course = enrollment.courses;
+  const section = enrollment.sections;
 
   // Group rows by assessment type
   const groupedRows = rows.reduce((acc, r) => {

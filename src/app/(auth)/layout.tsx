@@ -14,18 +14,18 @@ export default function AuthLayout({
 }) {
   return (
     <div
-      className="dark relative flex min-h-screen items-center justify-center overflow-hidden px-4"
+      className="relative flex min-h-screen items-center justify-center overflow-hidden px-4"
       style={{
-        backgroundColor: "hsl(252 44% 5%)",
-        color: "hsl(250 30% 96%)",
+        backgroundColor: "var(--surface-0)",
+        color: "var(--ink)",
         fontFamily: 'var(--font-body, "Inter", system-ui, sans-serif)',
       }}
     >
       {/* LiquidEther animated background */}
       <div className="tams-ambient" style={{ zIndex: 0 }}>
         <LiquidEther
-          colors={['#f59e0b', '#ec4899', '#8b5cf6']}
-          resolution={0.6}
+          colors={['#1D4533', '#F9D2BA', '#5E3122']}
+          resolution={0.4}
           mouseForce={28}
           cursorSize={110}
           isViscous={false}
@@ -43,9 +43,9 @@ export default function AuthLayout({
           inset: 0,
           zIndex: 1,
           pointerEvents: "none",
-          opacity: 0.03,
+          opacity: 0.15,
           backgroundImage:
-            "linear-gradient(hsl(268 90% 76% / 0.4) 1px, transparent 1px), linear-gradient(90deg, hsl(268 90% 76% / 0.4) 1px, transparent 1px)",
+            "linear-gradient(var(--line) 1px, transparent 1px), linear-gradient(90deg, var(--line) 1px, transparent 1px)",
           backgroundSize: "60px 60px",
         }}
       />

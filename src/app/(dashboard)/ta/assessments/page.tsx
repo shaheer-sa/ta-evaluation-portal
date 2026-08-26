@@ -13,26 +13,23 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
-const ASSESSMENT_TYPES = [
-  { value: "assignment", label: "Assignment" },
-  { value: "quiz", label: "Quiz" },
-  { value: "cp", label: "Class Participation" },
-];
+import { CreateAssessmentForm } from "./create-assessment-form";
 
 export default async function AssessmentsPage() {
   const supabase = await createClient();
 
   // Fetch section-courses for dropdown
-  const { data: sectionCourses } = await supabase
+  const { data } = await supabase
     .from("section_courses")
     .select(`
       id,
       sections ( name, terms ( name ) ),
-      courses ( code, name )
+      courses ( code, name, enable_cp, enable_assignments, enable_quizzes )
     `);
+  const sectionCourses = data || [];
 
   // Fetch all assessments grouped by section_course
-  const { data: assessments } = await supabase
+  const { data: assessmentsData } = await supabase
     .from("assessments")
     .select(`
       id,
@@ -47,6 +44,7 @@ export default async function AssessmentsPage() {
       )
     `)
     .order("created_at", { ascending: true });
+  const assessments = assessmentsData || [];
 
   return (
     <div className="space-y-8">
@@ -67,90 +65,7 @@ export default async function AssessmentsPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form action={createAssessment} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="sectionCourseId">Class</Label>
-                <select
-                  id="sectionCourseId"
-                  name="sectionCourseId"
-                  required
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                >
-                  <option value="">Select a class...</option>
-                  {sectionCourses?.map((sc) => {
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    const termName = (sc.sections as any)?.terms?.name;
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    const sectionName = (sc.sections as any)?.name;
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    const courseCode = (sc.courses as any)?.code;
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    const courseName = (sc.courses as any)?.name;
-                    return (
-                      <option key={sc.id} value={sc.id}>
-                        {termName} — Section {sectionName} ({courseCode} {courseName})
-                      </option>
-                    );
-                  })}
-                </select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="type">Type</Label>
-                <select
-                  id="type"
-                  name="type"
-                  required
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                >
-                  {ASSESSMENT_TYPES.map((t) => (
-                    <option key={t.value} value={t.value}>
-                      {t.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="title">Title</Label>
-                <Input
-                  id="title"
-                  name="title"
-                  required
-                  placeholder="e.g. Quiz 1"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="maxMarks">Max Marks</Label>
-                  <Input
-                    id="maxMarks"
-                    name="maxMarks"
-                    type="number"
-                    required
-                    step="0.5"
-                    min="0"
-                    placeholder="e.g. 20"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="weight">Weight (%)</Label>
-                  <Input
-                    id="weight"
-                    name="weight"
-                    type="number"
-                    required
-                    step="0.1"
-                    min="0"
-                    max="100"
-                    placeholder="e.g. 10"
-                  />
-                </div>
-              </div>
-
-              <Button type="submit">Create Assessment</Button>
-            </form>
+            <CreateAssessmentForm sectionCourses={sectionCourses} />
           </CardContent>
         </Card>
 
@@ -167,12 +82,9 @@ export default async function AssessmentsPage() {
             ) : (
               <div className="space-y-4">
                 {assessments.map((a) => {
-                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                  const termName = (a.section_courses as any)?.sections?.terms?.name;
-                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                  const sectionName = (a.section_courses as any)?.sections?.name;
-                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                  const courseCode = (a.section_courses as any)?.courses?.code;
+                  const termName = a.section_courses?.sections?.terms?.name;
+                  const sectionName = a.section_courses?.sections?.name;
+                  const courseCode = a.section_courses?.courses?.code;
                   return (
                     <div
                       key={a.id}

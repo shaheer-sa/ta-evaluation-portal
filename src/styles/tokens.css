@@ -1,0 +1,91 @@
+:root {
+  /* ---- brand ---- */
+  --forest:      hsl(153 41% 19%);   /* #1D4533 */
+  --cream:       hsl(26 59% 92%);    /* #F7EAE0 */
+  --peach:       hsl(23 84% 85%);    /* #F9D2BA */
+  --cocoa:       hsl(15 47% 25%);    /* #5E3122 */
+
+  /* ---- surfaces (paper stack) ---- */
+  --surface-0:   hsl(26 60% 97%);    /* page background */
+  --surface-1:   hsl(26 59% 94%);    /* card */
+  --surface-2:   hsl(26 55% 90%);    /* raised / table header */
+  --surface-sunk:hsl(26 45% 88%);    /* input wells */
+
+  /* ---- ink ---- */
+  --ink:         hsl(15 47% 20%);    /* body text      — 11.09:1 on cream */
+  --ink-muted:   hsl(18 22% 38%);    /* secondary      —  5.44:1 AA */
+  --ink-faint:   hsl(20 18% 44%);    /* captions       —  4.28:1 AA-large */
+  --ink-invert:  hsl(26 59% 94%);    /* text on forest */
+
+  /* ---- lines ---- */
+  --line:        hsl(24 32% 82%);
+  --line-strong: hsl(22 30% 72%);
+  --line-focus:  hsl(153 41% 19%);
+
+  /* ---- interactive ---- */
+  --primary:        var(--forest);
+  --primary-hover:  hsl(153 41% 15%);
+  --primary-fg:     hsl(26 59% 94%);
+  --primary-soft:   hsl(153 30% 92%);
+  --accent:         var(--peach);
+  --accent-deep:    hsl(20 60% 60%);
+  --accent-soft:    hsl(23 84% 93%);
+
+  /* ---- state (derived; palette has none) ---- */
+  --danger:       hsl(4 64% 42%);    --danger-soft:  hsl(4 70% 94%);
+  --warning:      hsl(32 85% 32%);   --warning-soft: hsl(35 85% 92%);
+  --success:      hsl(153 45% 28%);  --success-soft: hsl(150 40% 92%);
+  --info:         hsl(200 40% 34%);  --info-soft:    hsl(200 45% 93%);
+
+  /* ---- elevation (warm-tinted, never neutral grey) ---- */
+  --shadow-sm:  0 1px 2px hsl(15 47% 25% / 0.06);
+  --shadow:     0 4px 16px hsl(15 47% 25% / 0.08);
+  --shadow-lift:0 12px 32px hsl(15 47% 25% / 0.12);
+
+  --radius:     14px;
+  --radius-sm:  10px;
+  --radius-lg:  20px;
+}
+
+/* Dark variant — forest-derived, NOT the old indigo. Keep the selector even if
+   no toggle ships yet, so the tokens stay paired. */
+.dark {
+  --surface-0:   hsl(153 38% 7%);
+  --surface-1:   hsl(153 32% 10%);
+  --surface-2:   hsl(153 26% 14%);
+  --surface-sunk:hsl(153 30% 9%);
+  --ink:         hsl(26 59% 92%);
+  --ink-muted:   hsl(26 22% 72%);
+  --ink-faint:   hsl(26 16% 55%);
+  --ink-invert:  hsl(153 41% 15%);
+  --line:        hsl(153 20% 22%);
+  --line-strong: hsl(153 22% 32%);
+  --line-focus:  hsl(23 84% 85%);
+  --primary:       hsl(23 84% 85%);
+  --primary-hover: hsl(23 70% 78%);
+  --primary-fg:    hsl(153 41% 12%);
+  --primary-soft:  hsl(153 30% 16%);
+  --accent:        hsl(23 84% 85%);
+  --accent-deep:   hsl(20 60% 60%);
+  --accent-soft:   hsl(153 26% 18%);
+  --danger:  hsl(4 75% 68%);   --danger-soft:  hsl(4 40% 18%);
+  --warning: hsl(35 85% 66%);  --warning-soft: hsl(35 45% 18%);
+  --success: hsl(150 55% 58%); --success-soft: hsl(150 40% 16%);
+  --info:    hsl(200 60% 68%); --info-soft:    hsl(200 40% 18%);
+  --shadow-sm:  0 1px 2px hsl(153 60% 3% / 0.4);
+  --shadow:     0 4px 16px hsl(153 60% 3% / 0.5);
+  --shadow-lift:0 12px 32px hsl(153 60% 3% / 0.6);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--line-focus);
+  outline-offset: 2px;
+  border-radius: 4px;
+}

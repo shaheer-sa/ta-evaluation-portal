@@ -7,7 +7,7 @@ export async function createAssessment(formData: FormData) {
   const { supabase } = await requireTA();
 
   const sectionCourseId = formData.get("sectionCourseId") as string;
-  const type = formData.get("type") as string;
+  const type = formData.get("type") as "assignment" | "quiz" | "mid" | "final" | "project" | "cp";
   const title = formData.get("title") as string;
   const maxMarks = parseFloat(formData.get("maxMarks") as string);
   const weight = parseFloat(formData.get("weight") as string);
@@ -43,7 +43,7 @@ export async function updateAssessment(formData: FormData) {
   const { supabase } = await requireTA();
 
   const assessmentId = formData.get("assessmentId") as string;
-  const type = formData.get("type") as string;
+  const type = formData.get("type") as "assignment" | "quiz" | "mid" | "final" | "project" | "cp";
   const title = formData.get("title") as string;
   const maxMarks = parseFloat(formData.get("maxMarks") as string);
   const weight = parseFloat(formData.get("weight") as string);

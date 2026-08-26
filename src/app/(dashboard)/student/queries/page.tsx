@@ -24,16 +24,18 @@ const STATUS_COLORS: Record<string, string> = {
   rejected: "bg-red-500/10 text-red-600 border-red-500/30",
 };
 
-interface QueryItem {
-  id: string;
-  title: string;
-  description: string;
-  priority: string;
-  status: string;
-  created_at: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  assessments: any;
-}
+import type { Database } from "@/types/database";
+
+type QueryItem = Pick<Database["public"]["Tables"]["queries"]["Row"], "id" | "title" | "description" | "priority" | "status" | "created_at"> & {
+  assessments: Pick<Database["public"]["Tables"]["assessments"]["Row"], "title"> | null;
+};
+
+type EnrollmentRow = Pick<Database["public"]["Tables"]["enrollments"]["Row"], "id" | "section_id" | "course_id"> & {
+  courses: Pick<Database["public"]["Tables"]["courses"]["Row"], "code" | "name"> | null;
+  sections: Pick<Database["public"]["Tables"]["sections"]["Row"], "name"> | null;
+};
+
+type AssessmentRow = Pick<Database["public"]["Tables"]["assessments"]["Row"], "id" | "title" | "type">;
 
 export default function StudentQueriesPage() {
   const supabase = createClient();
@@ -44,10 +46,8 @@ export default function StudentQueriesPage() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   // For the create form
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [enrollments, setEnrollments] = useState<any[]>([]);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [assessments, setAssessments] = useState<any[]>([]);
+  const [enrollments, setEnrollments] = useState<EnrollmentRow[]>([]);
+  const [assessments, setAssessments] = useState<AssessmentRow[]>([]);
   const [selectedEnrollment, setSelectedEnrollment] = useState("");
   const [formTitle, setFormTitle] = useState("");
   const [formDescription, setFormDescription] = useState("");
@@ -76,18 +76,23 @@ export default function StudentQueriesPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const { data } = await supabase
-        .from("enrollments")
-        .select(`
-          id,
-          section_id,
-          course_id,
-          courses:course_id ( code, name ),
-          sections:section_id ( name )
-        `)
-        .eq("student_id", user.id);
+      const { data: rawEnrollments, error } = await supabase
+      .from("enrollments")
+      .select(`
+        id,
+        section_id,
+        course_id,
+        courses ( code, name ),
+        sections ( name )
+      `)
+      .eq("student_id", user.id);
 
-      if (data) setEnrollments(data);
+    if (error) {
+      console.error(error);
+      return;
+    }
+
+    setEnrollments(rawEnrollments || []);
     }
     loadEnrollments();
   }, [supabase]);
@@ -108,8 +113,8 @@ export default function StudentQueriesPage() {
       const { data: sc } = await supabase
         .from("section_courses")
         .select("id")
-        .eq("section_id", enrollment.section_id)
-        .eq("course_id", enrollment.course_id)
+        .eq("section_id", enrollment?.section_id || "")
+        .eq("course_id", enrollment?.course_id || "")
         .single();
 
       if (sc) {

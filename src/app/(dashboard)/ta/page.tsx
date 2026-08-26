@@ -158,12 +158,6 @@ export default async function TADashboardPage() {
     },
   ];
 
-  const STATUS_COLORS: Record<string, string> = {
-    pending: "bg-yellow-500/10 text-yellow-600",
-    in_review: "bg-blue-500/10 text-blue-600",
-    resolved: "bg-green-500/10 text-green-600",
-    rejected: "bg-red-500/10 text-red-600",
-  };
 
   const bentoCards = stats.map(s => {
     let href = "/ta";
@@ -197,7 +191,6 @@ export default async function TADashboardPage() {
 
       <MagicBento 
         cards={bentoCards} 
-        glowColor="245, 163, 10"
       />
       
       {/* Recent Queries List */}
@@ -218,7 +211,7 @@ export default async function TADashboardPage() {
                 <div
                   key={q.id}
                   className="flex items-center justify-between rounded-lg border p-4 transition-colors hover:bg-muted/50"
-                  style={{ borderColor: 'var(--tams-glass-border)', background: 'var(--tams-glass)' }}
+                  style={{ borderColor: 'var(--line)', background: 'var(--surface-sunk)' }}
                 >
                   <div className="space-y-1">
                     <p className="font-medium">{q.title}</p>

@@ -1,16 +1,9 @@
 import { createClient } from "@/lib/supabase/server";
 import { AnalyticsCharts } from "./analytics-charts";
 import { Card, CardContent } from "@/components/ui/card";
-import { StudentPerformance } from "./student-performance";
+import type { Database } from "@/types/database";
 
-export default async function AnalyticsPage(props: {
-  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
-}) {
-  const searchParams = await props.searchParams;
-  const sectionCourseId = typeof searchParams?.sectionCourseId === "string" 
-    ? searchParams.sectionCourseId 
-    : undefined;
-
+export default async function AnalyticsPage() {
   const supabase = await createClient();
 
   const { data: activeTerm } = await supabase
@@ -54,7 +47,7 @@ export default async function AnalyticsPage(props: {
   }
 
   // Fetch enrollments to know which marks belong to which section/course
-  const { data: enrollments } = await supabase
+  const { data: rawEnrollments } = await supabase
     .from("enrollments")
     .select(`
       id,
@@ -63,20 +56,25 @@ export default async function AnalyticsPage(props: {
     `)
     .in("section_id", sectionIds);
 
+  type EnrollmentRow = Pick<Database["public"]["Tables"]["enrollments"]["Row"], "id"> & {
+    sections: Pick<Database["public"]["Tables"]["sections"]["Row"], "name"> | null;
+    courses: Pick<Database["public"]["Tables"]["courses"]["Row"], "code"> | null;
+  };
+  
+  const enrollments = rawEnrollments as unknown as EnrollmentRow[] | null;
+
   const enrollmentIds = enrollments?.map((e) => e.id) || [];
   const enrollmentMap = new Map();
   
   enrollments?.forEach((e) => {
     enrollmentMap.set(e.id, {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      section: (e.sections as any)?.name || "Unknown",
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      course: (e.courses as any)?.code || "Unknown",
+      section: e.sections?.name || "Unknown",
+      course: e.courses?.code || "Unknown",
     });
   });
 
   // Fetch marks
-  const { data: marks } = await supabase
+  const { data: rawMarks } = await supabase
     .from("marks")
     .select(`
       score,
@@ -85,13 +83,18 @@ export default async function AnalyticsPage(props: {
     `)
     .in("enrollment_id", enrollmentIds);
 
+  type MarkRow = Pick<Database["public"]["Tables"]["marks"]["Row"], "score" | "enrollment_id"> & {
+    assessments: Pick<Database["public"]["Tables"]["assessments"]["Row"], "max_marks"> | null;
+  };
+
+  const marks = rawMarks as unknown as MarkRow[] | null;
+
   // Process data for charts
   const distributionBins = Array(10).fill(0);
   const comparisonMap = new Map<string, { totalPct: number; count: number }>();
 
   marks?.forEach((m) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const maxMarks = (m.assessments as any)?.max_marks;
+    const maxMarks = m.assessments?.max_marks;
     if (!maxMarks || maxMarks === 0) return;
     // Ungraded rows would otherwise land in the 0-10% bin and skew every
     // distribution and class average on this page.
@@ -130,7 +133,7 @@ export default async function AnalyticsPage(props: {
     .sort((a, b) => b.avg - a.avg); // Sort highest to lowest
 
   return (
-    <div className="space-y-10">
+    <div className="space-y-8">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Analytics</h1>
         <p className="text-muted-foreground">
@@ -141,12 +144,6 @@ export default async function AnalyticsPage(props: {
       <AnalyticsCharts 
         distributionData={distributionData} 
         comparisonData={comparisonData} 
-      />
-
-      {/* New Student Performance Section */}
-      <StudentPerformance 
-        termId={activeTerm.id} 
-        sectionCourseId={sectionCourseId} 
       />
     </div>
   );

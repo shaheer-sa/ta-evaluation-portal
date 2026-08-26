@@ -28,7 +28,6 @@ const TA_NAV = [
 
 const STUDENT_NAV = [
   { href: "/student", label: "My Grades", exact: true },
-  { href: "/student/performance", label: "Performance", exact: true },
   { href: "/student/queries", label: "Queries", exact: false },
 ];
 
@@ -66,12 +65,12 @@ export default function DashboardLayout({
 
   return (
     <ClickSpark>
-      <div className="tams-body dark">
+      <div className="tams-body">
         <div className="tams-shell">
           <div className="tams-ambient">
             <LiquidEther
-              colors={['#f59e0b', '#ec4899', '#8b5cf6']}
-              resolution={0.6}
+              colors={['#1D4533', '#F9D2BA', '#5E3122']}
+              resolution={0.4}
               mouseForce={28}
               cursorSize={110}
               isViscous={false}
@@ -95,7 +94,7 @@ export default function DashboardLayout({
           >
             <div className="tams-rail__brand">
               <div className="tams-rail__mark">
-                <GraduationCap size={20} color="hsl(38 92% 50%)" />
+                <GraduationCap size={20} color="var(--primary-fg)" />
               </div>
               <div>
                 <div className="tams-rail__name">TAMS</div>
@@ -115,7 +114,7 @@ export default function DashboardLayout({
               <LineSidebar 
                 items={navItems.map(n => n.label)}
                 defaultActive={activeIndex >= 0 ? activeIndex : null}
-                accentColor="hsl(38 92% 50%)"
+                accentColor="var(--primary)"
                 onItemClick={(idx) => {
                    router.push(navItems[idx].href);
                    setMobileMenuOpen(false);

@@ -1,3 +1,5 @@
+// GENERATED SHAPE — do not hand-edit.
+// Regenerate: npx supabase gen types typescript --project-id <ID> --schema public
 export type Json =
   | string
   | number
@@ -9,6 +11,38 @@ export type Json =
 export interface Database {
   public: {
     Tables: {
+      activity_logs: {
+        Row: {
+          action: string
+          actor_id: string | null
+          created_at: string
+          detail: Json | null
+          id: string
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          created_at?: string
+          detail?: Json | null
+          id?: string
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          created_at?: string
+          detail?: Json | null
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "activity_logs_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       assessments: {
         Row: {
           created_at: string
@@ -44,7 +78,7 @@ export interface Database {
           {
             foreignKeyName: "assessments_section_course_id_fkey"
             columns: ["section_course_id"]
-            isOneToOne: true
+            isOneToOne: false
             referencedRelation: "section_courses"
             referencedColumns: ["id"]
           }
@@ -112,21 +146,21 @@ export interface Database {
           {
             foreignKeyName: "enrollments_course_id_fkey"
             columns: ["course_id"]
-            isOneToOne: true
+            isOneToOne: false
             referencedRelation: "courses"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "enrollments_section_id_fkey"
             columns: ["section_id"]
-            isOneToOne: true
+            isOneToOne: false
             referencedRelation: "sections"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "enrollments_student_id_fkey"
             columns: ["student_id"]
-            isOneToOne: true
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           }
@@ -138,12 +172,7 @@ export interface Database {
           created_at: string
           enrollment_id: string
           id: string
-          // Nullable: a mark row can exist before a score is entered (the
-          // sync engine creates them), and the grading UI clears to empty.
           score: number | null
-          // Written and read by the Google Sheets sync engine to work out
-          // which side changed since the last run. Was missing from this
-          // file entirely while the sync route depended on it.
           sheet_synced_score: number | null
           updated_at: string
           updated_by: string | null
@@ -172,21 +201,21 @@ export interface Database {
           {
             foreignKeyName: "marks_assessment_id_fkey"
             columns: ["assessment_id"]
-            isOneToOne: true
+            isOneToOne: false
             referencedRelation: "assessments"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "marks_enrollment_id_fkey"
             columns: ["enrollment_id"]
-            isOneToOne: true
+            isOneToOne: false
             referencedRelation: "enrollments"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "marks_updated_by_fkey"
             columns: ["updated_by"]
-            isOneToOne: true
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           }
@@ -227,7 +256,7 @@ export interface Database {
           {
             foreignKeyName: "notifications_recipient_id_fkey"
             columns: ["recipient_id"]
-            isOneToOne: true
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           }
@@ -239,7 +268,6 @@ export interface Database {
           email: string
           full_name: string
           id: string
-          must_change_password: boolean
           role: "ta" | "student"
           roll_number: string | null
           updated_at: string
@@ -249,7 +277,6 @@ export interface Database {
           email: string
           full_name: string
           id: string
-          must_change_password?: boolean
           role: "ta" | "student"
           roll_number?: string | null
           updated_at?: string
@@ -259,7 +286,6 @@ export interface Database {
           email?: string
           full_name?: string
           id?: string
-          must_change_password?: boolean
           role?: "ta" | "student"
           roll_number?: string | null
           updated_at?: string
@@ -307,21 +333,21 @@ export interface Database {
           {
             foreignKeyName: "queries_assessment_id_fkey"
             columns: ["assessment_id"]
-            isOneToOne: true
+            isOneToOne: false
             referencedRelation: "assessments"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "queries_enrollment_id_fkey"
             columns: ["enrollment_id"]
-            isOneToOne: true
+            isOneToOne: false
             referencedRelation: "enrollments"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "queries_student_id_fkey"
             columns: ["student_id"]
-            isOneToOne: true
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           }
@@ -353,14 +379,14 @@ export interface Database {
           {
             foreignKeyName: "replies_sender_id_fkey"
             columns: ["sender_id"]
-            isOneToOne: true
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "replies_query_id_fkey"
             columns: ["query_id"]
-            isOneToOne: true
+            isOneToOne: false
             referencedRelation: "queries"
             referencedColumns: ["id"]
           }
@@ -389,14 +415,14 @@ export interface Database {
           {
             foreignKeyName: "section_courses_course_id_fkey"
             columns: ["course_id"]
-            isOneToOne: true
+            isOneToOne: false
             referencedRelation: "courses"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "section_courses_section_id_fkey"
             columns: ["section_id"]
-            isOneToOne: true
+            isOneToOne: false
             referencedRelation: "sections"
             referencedColumns: ["id"]
           }
@@ -428,7 +454,7 @@ export interface Database {
           {
             foreignKeyName: "sections_term_id_fkey"
             columns: ["term_id"]
-            isOneToOne: true
+            isOneToOne: false
             referencedRelation: "terms"
             referencedColumns: ["id"]
           }
@@ -469,7 +495,10 @@ export interface Database {
         }
         Returns: number
       }
-      // Called from ta/courses/actions.ts but previously undeclared here.
+      is_ta: {
+        Args: Record<string, never>
+        Returns: boolean
+      }
       activate_term: {
         Args: {
           p_term_id: string
@@ -485,3 +514,4 @@ export interface Database {
     }
   }
 }
+

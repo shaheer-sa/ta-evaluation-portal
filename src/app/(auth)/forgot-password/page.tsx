@@ -41,22 +41,11 @@ const itemVariants = {
   },
 };
 
-const glassStyle: React.CSSProperties = {
-  background: "hsl(252 40% 14% / 0.55)",
-  border: "1px solid hsl(258 60% 78% / 0.14)",
-  borderRadius: "18px",
-  backdropFilter: "blur(18px) saturate(150%)",
-  WebkitBackdropFilter: "blur(18px) saturate(150%)",
-  boxShadow:
-    "inset 0 1px 0 hsl(0 0% 100% / 0.05), 0 18px 48px hsl(252 60% 2% / 0.55)",
-  padding: "2.5rem 2rem",
-};
-
 const inputStyle: React.CSSProperties = {
-  background: "hsl(252 36% 11% / 0.7)",
-  border: "1px solid hsl(258 60% 78% / 0.14)",
+  background: "var(--surface-sunk)",
+  border: "1px solid var(--line)",
   borderRadius: "12px",
-  color: "hsl(250 30% 96%)",
+  color: "var(--ink)",
   fontSize: "0.9rem",
   transition: "border-color 0.2s ease, box-shadow 0.2s ease",
 };
@@ -102,7 +91,7 @@ export default function ForgotPasswordPage() {
       variants={containerVariants}
       initial="hidden"
       animate="visible"
-      style={glassStyle}
+      className="tams-auth-panel"
     >
       {emailSent ? (
         /* ── Success state ────────────────────────────────────── */
@@ -121,11 +110,11 @@ export default function ForgotPasswordPage() {
                 borderRadius: "16px",
                 display: "grid",
                 placeItems: "center",
-                background: "hsl(158 70% 48% / 0.12)",
-                border: "1px solid hsl(158 70% 48% / 0.25)",
+                background: "var(--success-soft)",
+                border: "1px solid var(--success)",
               }}
             >
-              <Mail style={{ width: 30, height: 30, color: "hsl(158 70% 55%)" }} />
+              <Mail style={{ width: 30, height: 30, color: "var(--success)" }} />
             </div>
           </motion.div>
           <motion.h1
@@ -136,7 +125,7 @@ export default function ForgotPasswordPage() {
           </motion.h1>
           <motion.p
             variants={itemVariants}
-            style={{ marginTop: "0.5rem", fontSize: "0.88rem", color: "hsl(250 16% 68%)" }}
+            style={{ marginTop: "0.5rem", fontSize: "0.88rem", color: "var(--ink-muted)" }}
           >
             If an account matches what you entered, you&apos;ll receive a
             password reset email shortly.
@@ -149,7 +138,7 @@ export default function ForgotPasswordPage() {
                 alignItems: "center",
                 gap: "0.4rem",
                 fontSize: "0.85rem",
-                color: "hsl(268 90% 76%)",
+                color: "var(--primary)",
                 textDecoration: "none",
               }}
             >
@@ -169,7 +158,7 @@ export default function ForgotPasswordPage() {
                 alignItems: "center",
                 gap: "0.35rem",
                 fontSize: "0.78rem",
-                color: "hsl(250 16% 68%)",
+                color: "var(--ink-muted)",
                 textDecoration: "none",
                 transition: "color 0.2s ease",
               }}
@@ -183,14 +172,14 @@ export default function ForgotPasswordPage() {
             <h1 style={{ fontSize: "1.3rem", fontWeight: 700, letterSpacing: "-0.02em", margin: 0 }}>
               Reset your password
             </h1>
-            <p style={{ marginTop: "0.4rem", fontSize: "0.88rem", color: "hsl(250 16% 68%)" }}>
+            <p style={{ marginTop: "0.4rem", fontSize: "0.88rem", color: "var(--ink-muted)" }}>
               Enter your email or roll number and we&apos;ll send you a reset link.
             </p>
           </motion.div>
 
           <form onSubmit={handleSubmit(onSubmit)} style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
             <motion.div variants={itemVariants} style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-              <Label htmlFor="identifier" style={{ color: "hsl(250 16% 68%)", fontSize: "0.85rem", fontWeight: 500 }}>
+              <Label htmlFor="identifier" style={{ color: "var(--ink-muted)", fontSize: "0.85rem", fontWeight: 500 }}>
                 Email or roll number
               </Label>
               <Input
@@ -205,7 +194,7 @@ export default function ForgotPasswordPage() {
                 {...register("identifier")}
               />
               {errors.identifier && (
-                <p style={{ fontSize: "0.75rem", color: "hsl(0 78% 63%)", margin: 0 }}>
+                <p style={{ fontSize: "0.75rem", color: "var(--danger)", margin: 0 }}>
                   {errors.identifier.message}
                 </p>
               )}
@@ -218,12 +207,12 @@ export default function ForgotPasswordPage() {
                 block
                 size="md"
                 radius={14}
-                tint="hsl(268 90% 66%)"
+                tint="hsl(153 41% 19%)"
                 tintOpacity={0.22}
                 blur={10}
-                textColor="hsl(250 30% 96%)"
-                lineColor="#a78bfa"
-                baseColor="#5b3fa8"
+                textColor="hsl(26 59% 94%)"
+                lineColor="#F9D2BA"
+                baseColor="#1D4533"
                 intensity={1.2}
                 autoAnimate
                 speed={0.3}

@@ -34,7 +34,7 @@ export interface MagicBentoProps {
 
 const DEFAULT_PARTICLE_COUNT = 10;
 const DEFAULT_SPOTLIGHT_RADIUS = 340;
-const DEFAULT_GLOW_COLOR = '132, 0, 255';
+const DEFAULT_GLOW_COLOR = 'var(--tams-glow-rgb)';
 const MOBILE_BREAKPOINT = 900;
 
 const createParticleElement = (x: number, y: number): HTMLDivElement => {

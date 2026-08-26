@@ -20,8 +20,8 @@ export interface CourseGrade {
 export function GradesGrid({ children }: { children: React.ReactNode }) {
   const gridRef = useRef<HTMLDivElement>(null);
   return (
-    <section className="mc-section w-full" style={{ '--mc-glow': '245, 163, 10' } as any}>
-      <GlobalSpotlight gridRef={gridRef} glowColor="245, 163, 10" />
+    <section className="mc-section w-full" style={{ '--mc-glow': '249, 210, 186' } as React.CSSProperties}>
+      <GlobalSpotlight gridRef={gridRef} glowColor="249, 210, 186" />
       <div ref={gridRef} className="w-full">
         {children}
       </div>
@@ -39,16 +39,16 @@ function StatTile({
 }) {
   return (
     <ParticleCard 
-      className="mc-card mc-card--glow h-full p-6 flex flex-col justify-center" 
+      className="mc-card mc-card--glow h-full p-6 flex flex-col justify-center tams-card" 
       enableTilt={true}
       clickEffect={true}
       particleCount={6}
     >
       <div className="relative z-10">
-        <p className="text-xs uppercase tracking-wider text-white/50 mb-1">
+        <p className="text-xs uppercase tracking-wider text-muted-foreground mb-1">
           {label}
         </p>
-        <p className="text-3xl font-bold text-white">{value}</p>
+        <p className="text-3xl font-bold text-foreground">{value}</p>
       </div>
     </ParticleCard>
   );
@@ -84,7 +84,7 @@ function ProgressRing({ percentage }: { percentage: number }) {
         cx="50"
         cy="50"
         r={radius}
-        stroke="rgba(255,255,255,0.08)"
+        stroke="var(--line)"
         strokeWidth="8"
         fill="none"
       />
@@ -102,8 +102,8 @@ function ProgressRing({ percentage }: { percentage: number }) {
       />
       <defs>
         <linearGradient id="gradeGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#fbbf24" />
-          <stop offset="100%" stopColor="#f59e0b" />
+          <stop offset="0%" stopColor="#1D4533" />
+          <stop offset="100%" stopColor="#27684B" />
         </linearGradient>
       </defs>
     </svg>
@@ -115,14 +115,14 @@ function MiniBar({ label, score, max }: { label: string; score: number; max: num
   return (
     <div className="mb-3 last:mb-0">
       <div className="flex justify-between text-sm mb-1.5">
-        <span className="text-white/60 truncate mr-2" title={label}>{label}</span>
-        <span className="text-white/80 font-medium shrink-0">
+        <span className="text-muted-foreground truncate mr-2" title={label}>{label}</span>
+        <span className="text-foreground font-medium shrink-0">
           {score}/{max}
         </span>
       </div>
-      <div className="h-2 rounded-full bg-white/[0.06] overflow-hidden">
+      <div className="h-2 rounded-full bg-secondary overflow-hidden">
         <div
-          className="h-full rounded-full bg-gradient-to-r from-amber-400 to-amber-500"
+          className="h-full rounded-full bg-primary"
           style={{ width: `${Math.min(pct, 100)}%` }}
         />
       </div>
@@ -134,37 +134,37 @@ export function GradeCard({ course }: { course: CourseGrade }) {
   return (
     <Link href={`/student/course/${course.id}`} className="block h-full cursor-pointer">
       <ParticleCard 
-        className="mc-card mc-card--glow h-full p-8 flex flex-col group relative overflow-hidden transition-all hover:-translate-y-1" 
+        className="mc-card mc-card--glow h-full p-8 flex flex-col group relative overflow-hidden transition-all hover:-translate-y-1 tams-card" 
         enableTilt={true}
         particleCount={15}
       >
-        <div className="absolute -top-10 -right-10 w-40 h-40 bg-amber-400/10 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+        <div className="absolute -top-10 -right-10 w-40 h-40 bg-primary/10 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
 
         <div className="relative z-10 flex flex-col sm:flex-row items-start gap-6">
           <ProgressRing percentage={course.percentage} />
 
           <div className="flex-1 min-w-0 mt-2 sm:mt-0">
-            <p className="text-sm uppercase tracking-wider text-white/50 mb-1 font-medium">
+            <p className="text-sm uppercase tracking-wider text-muted-foreground mb-1 font-medium">
               {course.code}
             </p>
-            <p className="text-4xl font-bold text-white mb-2 tracking-tight">
+            <p className="text-4xl font-bold text-foreground mb-2 tracking-tight">
               {course.percentage}%
             </p>
-            <h3 className="text-lg font-semibold text-white/90 truncate">
+            <h3 className="text-lg font-semibold text-foreground truncate">
               {course.title}
             </h3>
-            <p className="text-sm text-white/40 mt-1">
+            <p className="text-sm text-muted-foreground mt-1">
               {course.term} · Section {course.section}
             </p>
           </div>
         </div>
 
-        <div className="relative z-10 mt-auto pt-6 border-t border-white/[0.06] flex-grow flex flex-col justify-end">
+        <div className="relative z-10 mt-auto pt-6 border-t border-border flex-grow flex flex-col justify-end">
           <div className="flex items-center justify-between text-sm mb-4 mt-2">
-            <span className="text-white/50">
+            <span className="text-muted-foreground">
               {course.gradedCount} of {course.totalCount} graded
             </span>
-            <span className="text-amber-400/90 font-medium">
+            <span className="text-primary font-medium">
               {course.weightCovered}% weight covered
             </span>
           </div>

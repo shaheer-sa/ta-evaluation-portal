@@ -14,7 +14,7 @@ import {
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8", "#82ca9d"];
+const COLORS = ["#1D4533", "#5E3122", "#D6855C", "#27684B", "#346279", "#97560C"];
 
 interface AnalyticsChartsProps {
   distributionData: { name: string; count: number }[];
@@ -55,7 +55,7 @@ export function AnalyticsCharts({
                 />
                 <Bar
                   dataKey="count"
-                  fill="hsl(var(--primary))"
+                  fill="var(--primary)"
                   radius={[4, 4, 0, 0]}
                   name="Students"
                 />
@@ -95,8 +95,7 @@ export function AnalyticsCharts({
                 </Pie>
                 <Tooltip
                   contentStyle={{ borderRadius: "8px", border: "none" }}
-                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                  formatter={(value: any) => [`${value}%`, "Average Score"]}
+                  formatter={(value) => [`${value}%`, "Average Score"] as [string, string]}
                 />
               </PieChart>
             </ResponsiveContainer>

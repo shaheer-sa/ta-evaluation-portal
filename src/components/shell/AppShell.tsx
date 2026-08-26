@@ -79,7 +79,7 @@ export default function AppShell({ role, userName, title, actions, children }: A
   };
 
   return (
-    <ClickSpark sparkColor="hsl(268 90% 74%)" sparkRadius={17} sparkCount={8} duration={420}>
+    <ClickSpark sparkColor="var(--primary)" sparkRadius={17} sparkCount={8} duration={420}>
       <AmbientBackground />
 
       <div className="tams-shell">
@@ -126,9 +126,9 @@ export default function AppShell({ role, userName, title, actions, children }: A
                 fontSize={0.95}
                 maxShift={12}
                 proximityRadius={105}
-                accentColor="hsl(268 90% 70%)"
-                textColor="hsl(250 16% 70%)"
-                markerColor="hsl(250 14% 40%)"
+                accentColor="var(--primary)"
+                textColor="var(--ink-muted)"
+                markerColor="var(--ink-faint)"
                 ariaLabel={role === 'ta' ? 'Teaching assistant navigation' : 'Student navigation'}
               />
             )}

@@ -11,6 +11,14 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import type { Database } from "@/types/database";
+
+type SectionRow = Pick<Database["public"]["Tables"]["sections"]["Row"], "id" | "name" | "term_id"> & {
+  terms: Pick<Database["public"]["Tables"]["terms"]["Row"], "name"> | null;
+  section_courses: (Pick<Database["public"]["Tables"]["section_courses"]["Row"], "id" | "course_id"> & {
+    courses: Pick<Database["public"]["Tables"]["courses"]["Row"], "code" | "name"> | null;
+  })[];
+};
 
 export default async function SectionsPage() {
   const supabase = await createClient();
@@ -29,7 +37,7 @@ export default async function SectionsPage() {
     .order("code", { ascending: true });
 
   // Fetch sections with their terms and mapped courses
-  const { data: sections } = await supabase
+  const { data: rawSections } = await supabase
     .from("sections")
     .select(`
       id,
@@ -43,6 +51,8 @@ export default async function SectionsPage() {
       )
     `)
     .order("created_at", { ascending: false });
+
+  const sections = rawSections as unknown as SectionRow[] | null;
 
   return (
     <div className="space-y-8">
@@ -110,8 +120,7 @@ export default async function SectionsPage() {
                     <option value="">Select a section...</option>
                     {sections?.map((s) => (
                       <option key={s.id} value={s.id}>
-                        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                        {(s.terms as any)?.name} — Section {s.name}
+                        {s.terms?.name} — Section {s.name}
                       </option>
                     ))}
                   </select>
@@ -156,8 +165,7 @@ export default async function SectionsPage() {
                     >
                       <div className="flex justify-between items-start">
                         <div className="font-semibold">
-                          {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                          {(section.terms as any)?.name} — Section {section.name}
+                          {section.terms?.name} — Section {section.name}
                         </div>
                         <EntityActions
                           id={section.id}
@@ -198,9 +206,8 @@ export default async function SectionsPage() {
                           <p className="italic">No courses linked yet.</p>
                         ) : (
                           <ul className="list-inside list-disc">
-                            {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                            {section.section_courses.map((sc: any) => {
-                              const course = Array.isArray(sc.courses) ? sc.courses[0] : sc.courses;
+                            {section.section_courses.map((sc) => {
+                              const course = sc.courses;
                               return (
                                 <li key={sc.id} className="flex items-center justify-between group">
                                   <span>{course?.code} — {course?.name}</span>

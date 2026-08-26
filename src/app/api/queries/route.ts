@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import type { Database } from "@/types/database";
 import {
   sendEmailNotification,
   escapeHtml,
@@ -90,7 +91,10 @@ export async function GET(request: Request) {
     }
 
     if (status && status !== "all") {
-      query = query.eq("status", status);
+      query = query.eq(
+        "status",
+        status as Database["public"]["Tables"]["queries"]["Row"]["status"]
+      );
     }
 
     const { data, error } = await query;
@@ -150,7 +154,7 @@ export async function POST(request: Request) {
       if (error) throw error;
 
       // Create notification for the student
-      const { data: queryData } = await supabase
+      const { data: rawQueryData } = await supabase
         .from("queries")
         .select(`
           student_id, 
@@ -159,6 +163,12 @@ export async function POST(request: Request) {
         `)
         .eq("id", queryId)
         .single();
+        
+      type QueryData = Pick<import("@/types/database").Database["public"]["Tables"]["queries"]["Row"], "student_id" | "title"> & {
+        profiles: Pick<import("@/types/database").Database["public"]["Tables"]["profiles"]["Row"], "email" | "full_name"> | null;
+      };
+      
+      const queryData = rawQueryData as unknown as QueryData | null;
 
       if (queryData) {
         await supabase.from("notifications").insert({
@@ -170,8 +180,7 @@ export async function POST(request: Request) {
         });
 
         // Send email
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const studentEmail = (queryData.profiles as any)?.email;
+        const studentEmail = queryData.profiles?.email;
         if (studentEmail) {
           await sendEmailNotification(
             studentEmail,

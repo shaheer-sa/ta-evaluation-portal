@@ -1,8 +1,15 @@
 import type { Metadata } from "next";
+import { Inter, Outfit, JetBrains_Mono } from "next/font/google";
 import { Toaster } from "sonner";
+
+import "@/styles/tokens.css";
 import "./globals.css";
 import "@/styles/tams-theme.css";
 import "@/styles/react-bits.css";
+
+const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "swap" });
+const outfit = Outfit({ subsets: ["latin"], variable: "--font-outfit", display: "swap" });
+const mono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-mono-jet", display: "swap" });
 
 export const metadata: Metadata = {
   title: "TAMS — Teaching Assistant Management System",
@@ -16,15 +23,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    // Fonts are pulled in via @import in globals.css rather than <link> tags
-    // here. The <link> approach tripped the Next.js `no-page-custom-font`
-    // lint rule three times, and `next/font/google` needs to reach
-    // fonts.googleapis.com at BUILD time, which breaks any offline or
-    // network-restricted build. The CSS import fetches at runtime instead.
-    <html lang="en" className="dark" suppressHydrationWarning>
+    <html lang="en" className={`${inter.variable} ${outfit.variable} ${mono.variable}`} suppressHydrationWarning>
       <body
         className="min-h-screen font-sans text-foreground antialiased"
-        style={{ backgroundColor: "hsl(252 44% 5%)" }}
         suppressHydrationWarning
       >
         {children}

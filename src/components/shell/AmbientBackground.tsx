@@ -12,7 +12,7 @@ export default function AmbientBackground() {
   return (
     <div className="tams-ambient" aria-hidden="true">
       <LiquidEther
-        colors={['#5227FF', '#A855F7', '#38BDF8']}
+        colors={['#1D4533', '#F9D2BA', '#5E3122']}
         mouseForce={16}
         cursorSize={120}
         resolution={0.35}

@@ -18,6 +18,8 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 
+import type { Database } from "@/types/database";
+
 const ASSESSMENT_TYPES = [
   { value: "assignment", label: "Assignment" },
   { value: "quiz", label: "Quiz" },
@@ -27,8 +29,7 @@ const ASSESSMENT_TYPES = [
 export function EditAssessmentDialog({
   assessment,
 }: {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  assessment: any;
+  assessment: Pick<Database["public"]["Tables"]["assessments"]["Row"], "id" | "title" | "type" | "max_marks" | "weight">;
 }) {
   const [open, setOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);

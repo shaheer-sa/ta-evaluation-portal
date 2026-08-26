@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { createClient } from "@/lib/supabase/client";
 import SpecularButton from "@/components/react-bits/SpecularButton";
+import { ParticleCard, GlobalSpotlight } from "@/components/react-bits/MagicBento";
 
 // ── Schema ──────────────────────────────────────────────────────
 const loginSchema = z.object({
@@ -22,7 +23,6 @@ const loginSchema = z.object({
     .min(1, "Email or roll number is required")
     .refine(
       (val) => {
-        // Must be either a valid email or a non-empty string (roll number)
         if (val.includes("@")) {
           return z.string().email().safeParse(val).success;
         }
@@ -58,8 +58,15 @@ const itemVariants = {
   },
 };
 
-import { useRef } from "react";
-import { ParticleCard, GlobalSpotlight } from "@/components/react-bits/MagicBento";
+const inputStyle: React.CSSProperties = {
+  background: "var(--surface-sunk)",
+  border: "1px solid var(--line)",
+  borderRadius: "12px",
+  color: "var(--ink)",
+  fontSize: "0.9rem",
+  paddingRight: "2.5rem",
+  transition: "border-color 0.2s ease, box-shadow 0.2s ease",
+};
 
 // ── Component ───────────────────────────────────────────────────
 export default function LoginPage() {
@@ -69,7 +76,6 @@ export default function LoginPage() {
   const gridRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // If the user lands here with a hash fragment from Supabase (e.g. from an un-redirected password reset link)
     if (typeof window !== "undefined" && window.location.hash.includes("access_token=")) {
       setIsLoading(true);
       const supabase = createClient();
@@ -120,26 +126,18 @@ export default function LoginPage() {
   }
 
   return (
-    <div ref={gridRef} className="mc-section w-full" style={{ '--mc-glow': '245, 163, 10' } as any}>
-      <GlobalSpotlight gridRef={gridRef} glowColor="245, 163, 10" />
+    <div ref={gridRef} className="mc-section w-full" style={{ '--mc-glow': '249, 210, 186' } as React.CSSProperties}>
+      <GlobalSpotlight gridRef={gridRef} glowColor="249, 210, 186" />
       <motion.div
         variants={containerVariants}
         initial="hidden"
         animate="visible"
       >
         <ParticleCard
-          className="mc-card mc-card--glow"
+          className="mc-card mc-card--glow tams-auth-panel"
           enableTilt={true}
           clickEffect={true}
           particleCount={15}
-          style={{
-            padding: "2.5rem 2rem",
-            background: "hsl(252 40% 14% / 0.55)",
-            backdropFilter: "blur(18px) saturate(150%)",
-            WebkitBackdropFilter: "blur(18px) saturate(150%)",
-            boxShadow:
-              "inset 0 1px 0 hsl(0 0% 100% / 0.05), 0 18px 48px hsl(252 60% 2% / 0.55)",
-          }}
         >
       {/* ── Header ─────────────────────────────────────────────── */}
       <motion.div variants={itemVariants} style={{ marginBottom: "2rem", textAlign: "center" }}>
@@ -151,12 +149,12 @@ export default function LoginPage() {
             borderRadius: "16px",
             display: "grid",
             placeItems: "center",
-            background: "linear-gradient(145deg, hsl(252 44% 12%), hsl(252 44% 6%))",
-            border: "1px solid hsl(38, 92%, 50%, 0.7)",
-            boxShadow: "0 0 16px hsl(38 92% 50% / 0.25), inset 0 1px 2px hsl(38 92% 80% / 0.2)",
+            background: "linear-gradient(145deg, var(--forest), hsl(153 41% 13%))",
+            border: "1px solid hsl(153 41% 19% / 0.7)",
+            boxShadow: "0 0 16px hsl(153 41% 19% / 0.25), inset 0 1px 2px hsl(0 0% 100% / 0.2)",
           }}
         >
-          <GraduationCap style={{ width: 30, height: 30, color: "hsl(38 92% 50%)" }} />
+          <GraduationCap style={{ width: 30, height: 30, color: "var(--primary-fg)" }} />
         </div>
         <h1
           style={{
@@ -164,7 +162,7 @@ export default function LoginPage() {
             fontWeight: 700,
             letterSpacing: "-0.03em",
             margin: 0,
-            background: "linear-gradient(135deg, hsl(250 30% 96%), hsl(268 90% 76%))",
+            background: "linear-gradient(135deg, var(--forest), var(--cocoa))",
             WebkitBackgroundClip: "text",
             backgroundClip: "text",
             color: "transparent",
@@ -176,7 +174,7 @@ export default function LoginPage() {
           style={{
             marginTop: "0.4rem",
             fontSize: "0.88rem",
-            color: "hsl(250 16% 68%)",
+            color: "var(--ink-muted)",
             letterSpacing: "0.01em",
           }}
         >
@@ -190,7 +188,7 @@ export default function LoginPage() {
         <motion.div variants={itemVariants} style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
           <Label
             htmlFor="identifier"
-            style={{ color: "hsl(250 16% 68%)", fontSize: "0.85rem", fontWeight: 500 }}
+            style={{ color: "var(--ink-muted)", fontSize: "0.85rem", fontWeight: 500 }}
           >
             Email or Roll Number
           </Label>
@@ -202,18 +200,11 @@ export default function LoginPage() {
             autoFocus
             disabled={isLoading}
             className="h-11"
-            style={{
-              background: "hsl(252 36% 11% / 0.7)",
-              border: "1px solid hsl(258 60% 78% / 0.14)",
-              borderRadius: "12px",
-              color: "hsl(250 30% 96%)",
-              fontSize: "0.9rem",
-              transition: "border-color 0.2s ease, box-shadow 0.2s ease",
-            }}
+            style={inputStyle}
             {...register("identifier")}
           />
           {errors.identifier && (
-            <p style={{ fontSize: "0.75rem", color: "hsl(0 78% 63%)", margin: 0 }}>
+            <p style={{ fontSize: "0.75rem", color: "var(--danger)", margin: 0 }}>
               {errors.identifier.message}
             </p>
           )}
@@ -224,7 +215,7 @@ export default function LoginPage() {
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <Label
               htmlFor="password"
-              style={{ color: "hsl(250 16% 68%)", fontSize: "0.85rem", fontWeight: 500 }}
+              style={{ color: "var(--ink-muted)", fontSize: "0.85rem", fontWeight: 500 }}
             >
               Password
             </Label>
@@ -232,7 +223,7 @@ export default function LoginPage() {
               href="/forgot-password"
               style={{
                 fontSize: "0.75rem",
-                color: "hsl(250 16% 68%)",
+                color: "var(--ink-muted)",
                 textDecoration: "none",
                 transition: "color 0.2s ease",
               }}
@@ -249,15 +240,7 @@ export default function LoginPage() {
               autoComplete="current-password"
               disabled={isLoading}
               className="h-11"
-              style={{
-                background: "hsl(252 36% 11% / 0.7)",
-                border: "1px solid hsl(258 60% 78% / 0.14)",
-                borderRadius: "12px",
-                color: "hsl(250 30% 96%)",
-                fontSize: "0.9rem",
-                paddingRight: "2.5rem",
-                transition: "border-color 0.2s ease, box-shadow 0.2s ease",
-              }}
+              style={inputStyle}
               {...register("password")}
             />
             <button
@@ -269,7 +252,7 @@ export default function LoginPage() {
                 right: "0.75rem",
                 top: "50%",
                 transform: "translateY(-50%)",
-                color: "hsl(250 16% 68%)",
+                color: "var(--ink-muted)",
                 background: "none",
                 border: "none",
                 cursor: "pointer",
@@ -286,7 +269,7 @@ export default function LoginPage() {
             </button>
           </div>
           {errors.password && (
-            <p style={{ fontSize: "0.75rem", color: "hsl(0 78% 63%)", margin: 0 }}>
+            <p style={{ fontSize: "0.75rem", color: "var(--danger)", margin: 0 }}>
               {errors.password.message}
             </p>
           )}
@@ -300,12 +283,12 @@ export default function LoginPage() {
             block
             size="lg"
             radius={14}
-            tint="hsl(268 90% 66%)"
+            tint="hsl(153 41% 19%)"
             tintOpacity={0.22}
             blur={10}
-            textColor="hsl(250 30% 96%)"
-            lineColor="#a78bfa"
-            baseColor="#5b3fa8"
+            textColor="hsl(26 59% 94%)"
+            lineColor="#F9D2BA"
+            baseColor="#1D4533"
             intensity={1.2}
             shineSize={14}
             shineFade={40}
@@ -332,7 +315,7 @@ export default function LoginPage() {
           marginTop: "1.75rem",
           textAlign: "center",
           fontSize: "0.75rem",
-          color: "hsl(250 14% 50%)",
+          color: "var(--ink-faint)",
           lineHeight: 1.5,
         }}
       >

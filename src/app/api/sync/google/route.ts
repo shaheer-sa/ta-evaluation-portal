@@ -3,6 +3,7 @@ import { randomBytes } from "crypto";
 import { google } from "googleapis";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import type { Database } from "@/types/database";
 
 // ── Types for the structured sync result ────────────────────────────
 
@@ -56,6 +57,19 @@ function generateEmail(rollNo: string): string {
   return `${clean}@${STUDENT_EMAIL_DOMAIN}`;
 }
 
+/**
+ * Cryptographically random initial password.
+ *
+ * This replaces `Tams@${roll_number}` -- a password derived entirely from
+ * the roll number, which is printed on every class list and appears in the
+ * source Google Sheet. Anyone who knew a classmate's roll number could sign
+ * in as them and read their grades. Nobody is ever expected to type this
+ * value: students claim their account through "Forgot password", which
+ * emails them a reset link.
+ */
+function generateInitialPassword(): string {
+  return `${randomBytes(24).toString("base64url")}Aa1!`;
+}
 
 // ── Utility: Match Assessment Type to Sheet Tab ──────────────────────
 
@@ -219,8 +233,9 @@ export async function POST(request: Request) {
         const { data: authData, error: authError } = await admin.auth.admin.createUser({
           email: student.email,
           email_confirm: true,
-          // predictable default password pattern:
-          password: `Tams@${student.roll_number.replace(/\s/g, "")}`,
+          // Random and immediately discarded -- students set their own
+          // password via the "Forgot password" flow on the login page.
+          password: generateInitialPassword(),
           user_metadata: {
             roll_number: student.roll_number,
             full_name: student.full_name,
@@ -312,7 +327,12 @@ export async function POST(request: Request) {
     let gradesWritten = false;
 
     if (assessments && assessments.length > 0) {
-      const { data: currentEnrollments } = await admin
+      type AssessmentRow = Pick<Database["public"]["Tables"]["assessments"]["Row"], "id" | "title" | "type" | "max_marks" | "created_at">;
+      type EnrollmentRow = Pick<Database["public"]["Tables"]["enrollments"]["Row"], "id"> & {
+        profiles: Pick<Database["public"]["Tables"]["profiles"]["Row"], "email" | "roll_number"> | null;
+        marks: Pick<Database["public"]["Tables"]["marks"]["Row"], "id" | "assessment_id" | "score" | "sheet_synced_score">[];
+      };
+      const { data: rawEnrollments } = await admin
         .from("enrollments")
         .select(`
           id,
@@ -322,10 +342,11 @@ export async function POST(request: Request) {
         .eq("section_id", mapped.section_id)
         .eq("course_id", mapped.course_id);
 
+      const currentEnrollments = rawEnrollments as unknown as EnrollmentRow[] | null;
+
       if (currentEnrollments) {
         // Group assessments by their matching tab
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const tabToAssessments = new Map<string, any[]>();
+        const tabToAssessments = new Map<string, AssessmentRow[]>();
         for (const assessment of assessments) {
           const tabName = findMatchingTab(assessment.type, tabMap, firstSheetName);
           if (!tabToAssessments.has(tabName)) tabToAssessments.set(tabName, []);
@@ -333,8 +354,7 @@ export async function POST(request: Request) {
         }
 
         // Collect marks to upsert into Supabase after we read everything
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const marksToUpsert: any[] = [];
+        const marksToUpsert: Database["public"]["Tables"]["marks"]["Insert"][] = [];
 
         for (const [tabName, tabAssessments] of tabToAssessments.entries()) {
           const tabData = await sheets.spreadsheets.values.get({ spreadsheetId, range: tabName });
@@ -383,14 +403,14 @@ export async function POST(request: Request) {
 
               const email = generateEmail(rollNo);
               const enrollment = currentEnrollments.find(e => {
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                const p = e.profiles as any;
+                const p = e.profiles;
                 return p?.roll_number?.toLowerCase() === rollNo.toLowerCase() || p?.email === email;
               });
               
               if (enrollment) {
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                const mark = enrollment.marks.find((m: any) => m.assessment_id === assessment.id);
+                const existingMark = enrollment.marks.find((m) => m.assessment_id === assessment.id);
+                // We don't necessarily use existingMark here but it checks if it exists.
+                if (existingMark) { /* ... */ }
                 
                 // Parse sheet score safely
                 const sheetScoreStr = (row[colIdx] || "").toString().trim();
@@ -400,9 +420,9 @@ export async function POST(request: Request) {
                   if (!isNaN(parsed)) sheetScore = parsed;
                 }
 
-                if (mark) {
-                  const tamsScore = mark.score !== null ? Number(mark.score) : null;
-                  const syncedScore = mark.sheet_synced_score !== null ? Number(mark.sheet_synced_score) : null;
+                if (existingMark) {
+                  const tamsScore = existingMark.score !== null ? Number(existingMark.score) : null;
+                  const syncedScore = existingMark.sheet_synced_score !== null ? Number(existingMark.sheet_synced_score) : null;
 
                   if (tamsScore !== syncedScore) {
                      // 1. TAMS was modified locally. Push to sheet.
@@ -414,14 +434,14 @@ export async function POST(request: Request) {
                      }
                      // Update memory
                      marksToUpsert.push({
-                        id: mark.id,
+                        id: existingMark.id,
                         enrollment_id: enrollment.id,
                         assessment_id: assessment.id,
                         score: tamsScore,
                         sheet_synced_score: tamsScore,
                         updated_by: user.id
                      });
-                     mark.sheet_synced_score = tamsScore; // update local ref
+                     existingMark.sheet_synced_score = tamsScore; // update local ref
                   } else if (sheetScore !== syncedScore) {
                      // 2. Sheet was modified externally! Pull to TAMS.
                      if (sheetScore === null) {
@@ -435,15 +455,15 @@ export async function POST(request: Request) {
                         }
                      } else {
                         marksToUpsert.push({
-                           id: mark.id,
+                           id: existingMark.id,
                            enrollment_id: enrollment.id,
                            assessment_id: assessment.id,
                            score: sheetScore,
                            sheet_synced_score: sheetScore,
                            updated_by: user.id
                         });
-                        mark.score = sheetScore;
-                        mark.sheet_synced_score = sheetScore;
+                        existingMark.score = sheetScore;
+                        existingMark.sheet_synced_score = sheetScore;
                      }
                   }
                 } else {
@@ -457,12 +477,14 @@ export async function POST(request: Request) {
                         updated_by: user.id
                      });
                      // Create local ref to prevent duplicates if processed again
-                     enrollment.marks.push({
-                        id: "temp",
-                        assessment_id: assessment.id,
-                        score: sheetScore,
-                        sheet_synced_score: sheetScore
-                     });
+                     if (enrollment.marks) {
+                        enrollment.marks.push({
+                           id: "temp",
+                           assessment_id: assessment.id,
+                           score: sheetScore,
+                           sheet_synced_score: sheetScore
+                        });
+                     }
                   } else {
                      // Neither has a grade, but if we need to write empty cell to sheet?
                      // Usually handled by default. We do nothing.

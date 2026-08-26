@@ -31,18 +31,31 @@ interface SyncResult {
   totalProcessed: number;
 }
 
+import type { Database } from "@/types/database";
+
+type SectionCourseRow = Pick<Database["public"]["Tables"]["section_courses"]["Row"], "id" | "section_id" | "course_id"> & {
+  sections: (Pick<Database["public"]["Tables"]["sections"]["Row"], "name"> & {
+    terms: Pick<Database["public"]["Tables"]["terms"]["Row"], "name"> | null;
+  }) | null;
+  courses: Pick<Database["public"]["Tables"]["courses"]["Row"], "code" | "name"> | null;
+};
+
+type EnrollmentRow = Pick<Database["public"]["Tables"]["enrollments"]["Row"], "id"> & {
+  profiles: Pick<Database["public"]["Tables"]["profiles"]["Row"], "roll_number" | "full_name" | "email"> | null;
+  marks: Pick<Database["public"]["Tables"]["marks"]["Row"], "assessment_id" | "score">[];
+};
+
+type AssessmentRow = Pick<Database["public"]["Tables"]["assessments"]["Row"], "id" | "title" | "max_marks">;
+
 export default function RosterPage() {
   const supabase = createClient();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [sections, setSections] = useState<any[]>([]);
+  const [sections, setSections] = useState<SectionCourseRow[]>([]);
   const [selectedSectionCourseId, setSelectedSectionCourseId] = useState("");
   const [sheetUrl, setSheetUrl] = useState("");
   const [isSyncing, setIsSyncing] = useState(false);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [roster, setRoster] = useState<any[]>([]);
+  const [roster, setRoster] = useState<EnrollmentRow[]>([]);
   const [isLoadingRoster, setIsLoadingRoster] = useState(false);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [assessments, setAssessments] = useState<any[]>([]);
+  const [assessments, setAssessments] = useState<AssessmentRow[]>([]);
   const [syncResult, setSyncResult] = useState<SyncResult | null>(null);
   // Bumped after a sync to re-run the roster fetch without clearing the
   // current selection (which used to blank the table mid-render).
@@ -60,7 +73,7 @@ export default function RosterPage() {
           sections ( name, terms ( name ) ),
           courses ( code, name )
         `);
-      if (data) setSections(data);
+      if (data) setSections(data as unknown as SectionCourseRow[]);
     }
     load();
     
@@ -114,7 +127,7 @@ export default function RosterPage() {
           return;
         }
 
-        setRoster(data || []);
+        setRoster(data as unknown as EnrollmentRow[]);
       } finally {
         setIsLoadingRoster(false);
       }
@@ -202,7 +215,7 @@ export default function RosterPage() {
               <option value="">Select...</option>
               {sections.map((s) => (
                 <option key={s.id} value={s.id}>
-                  {s.sections.terms.name} — Section {s.sections.name} ({s.courses.code})
+                  {`${s.sections?.terms?.name || "Term"} - ${s.sections?.name || "Sec"} (${s.courses?.code || "Code"})`}
                 </option>
               ))}
             </select>
@@ -359,8 +372,7 @@ export default function RosterPage() {
                           {r.profiles?.email}
                         </td>
                         {assessments.map(a => {
-                          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                          const mark = r.marks.find((m: any) => m.assessment_id === a.id);
+                          const mark = r.marks.find((m) => m.assessment_id === a.id);
                           return (
                             <td key={a.id} className="p-3 text-center">
                               {mark ? mark.score : "-"}

@@ -48,19 +48,19 @@ export async function POST(request: Request) {
     for (const student of students) {
       let studentId = "";
       
-      // Create the user silently with a default password.
-      // They are forced to change this password on their first login.
-      const defaultPassword = `Tams@${student.roll_number.replace(/\s/g, "")}`;
-      
-      const { data: authData, error: authError } = await admin.auth.admin.createUser({
-        email: student.email,
-        password: defaultPassword,
-        email_confirm: true,
-        user_metadata: {
-          roll_number: student.roll_number,
-          full_name: student.full_name,
+      // Try to invite the user. If they already exist, it will throw an error,
+      // which we can catch and then look up their existing ID.
+      const { data: authData, error: authError } = await admin.auth.admin.inviteUserByEmail(
+        student.email,
+        {
+          data: {
+            roll_number: student.roll_number,
+            full_name: student.full_name,
+          },
+          // Redirect them to the app (middleware will send them to /reset-password if they don't have one)
+          redirectTo: process.env.NEXT_PUBLIC_APP_URL ? `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback` : undefined,
         }
-      });
+      );
 
       if (authError) {
         // If email already exists, just get their ID from profiles

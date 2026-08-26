@@ -6,12 +6,13 @@ import { Loader2, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
+import type { Database } from "@/types/database";
+
 interface ReplyItem {
   id: string;
   message: string;
   created_at: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  profiles: any;
+  profiles: Pick<Database["public"]["Tables"]["profiles"]["Row"], "role" | "full_name"> | null;
 }
 
 interface QueryThreadProps {

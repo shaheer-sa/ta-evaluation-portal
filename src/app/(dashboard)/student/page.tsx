@@ -3,11 +3,21 @@ import { StatStrip, GradeCard, CourseGrade, GradesGrid } from "@/components/stud
 import {
   Card,
   CardContent,
-  CardHeader,
 } from "@/components/ui/card";
-import Link from "next/link";
-import { ArrowRight, BarChart2, TrendingUp } from "lucide-react";
-import { ParticleCard } from "@/components/react-bits/MagicBento";
+import type { Database } from "@/types/database";
+
+type EnrollmentRow = {
+  id: string;
+  course_id: string;
+  section_id: string;
+  courses: Pick<Database["public"]["Tables"]["courses"]["Row"], "id" | "code" | "name"> | null;
+  sections: (Pick<Database["public"]["Tables"]["sections"]["Row"], "name"> & {
+    terms: Pick<Database["public"]["Tables"]["terms"]["Row"], "name"> | null;
+  }) | null;
+  marks: (Pick<Database["public"]["Tables"]["marks"]["Row"], "score"> & {
+    assessments: Pick<Database["public"]["Tables"]["assessments"]["Row"], "title" | "max_marks" | "weight"> | null;
+  })[];
+};
 
 export default async function StudentDashboardPage() {
   const supabase = await createClient();
@@ -31,7 +41,7 @@ export default async function StudentDashboardPage() {
     .eq("status", "pending");
 
   // Fetch the student's enrollments with courses and marks
-  const { data: enrollments } = await supabase
+  const { data: rawEnrollments } = await supabase
     .from("enrollments")
     .select(`
       id,
@@ -43,6 +53,8 @@ export default async function StudentDashboardPage() {
     `)
     .eq("student_id", user.id);
 
+  const enrollments = rawEnrollments as unknown as EnrollmentRow[] | null;
+
   // Calculate weighted percentage per enrollment
   const courseCards: CourseGrade[] = (enrollments || []).map((e) => {
     let totalWeightedScore = 0;
@@ -51,8 +63,7 @@ export default async function StudentDashboardPage() {
     let gradedCount = 0;
 
     for (const m of e.marks) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const assessment = m.assessments as any;
+      const assessment = m.assessments;
       if (
         assessment &&
         assessment.max_marks > 0 &&
@@ -87,14 +98,10 @@ export default async function StudentDashboardPage() {
 
     return {
       id: e.id,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      code: (e.courses as any)?.code || "",
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      title: (e.courses as any)?.name || "",
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      section: (e.sections as any)?.name || "",
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      term: (e.sections as any)?.terms?.name || "",
+      code: e.courses?.code || "",
+      title: e.courses?.name || "",
+      section: e.sections?.name || "",
+      term: e.sections?.terms?.name || "",
       gradedCount,
       totalCount: e.marks.length,
       percentage: Math.round(weightedPct * 10) / 10,
@@ -123,8 +130,6 @@ export default async function StudentDashboardPage() {
           pendingQueries={pendingQueries || 0}
         />
 
-
-
         {courseCards.length === 0 ? (
           <Card className="border-none bg-white/[0.03] backdrop-blur-xl">
             <CardContent className="py-12 text-center">
@@ -134,36 +139,7 @@ export default async function StudentDashboardPage() {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 mt-4">
-            {/* Performance Entry Card as a MagicBento box */}
-            <Link href="/student/performance" className="block h-full">
-              <ParticleCard 
-                className="mc-card mc-card--glow h-full p-8 flex flex-col group relative overflow-hidden transition-all hover:-translate-y-1" 
-                enableTilt={true}
-                particleCount={25}
-              >
-                <div className="absolute -top-10 -right-10 w-40 h-40 bg-primary/20 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
-                
-                <div className="relative z-10 flex flex-col items-center text-center justify-center h-full">
-                  <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-500 border border-primary/20">
-                    <TrendingUp className="w-8 h-8 text-primary" />
-                  </div>
-                  
-                  <h3 className="text-2xl font-bold text-white mb-3 tracking-tight group-hover:text-primary transition-colors">
-                    Performance Analytics
-                  </h3>
-                  
-                  <p className="text-sm text-white/50 leading-relaxed mb-6">
-                    Compare your absolute scores against the class average and track your overall standing.
-                  </p>
-                  
-                  <div className="mt-auto flex items-center gap-2 text-primary text-sm font-medium opacity-80 group-hover:opacity-100 group-hover:translate-x-1 transition-all">
-                    View full report <ArrowRight className="w-4 h-4" />
-                  </div>
-                </div>
-              </ParticleCard>
-            </Link>
-
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {courseCards.map((c) => (
               <GradeCard key={c.code} course={c} />
             ))}
