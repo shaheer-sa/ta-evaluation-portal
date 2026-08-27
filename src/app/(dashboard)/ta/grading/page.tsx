@@ -112,7 +112,8 @@ export default function GradingPage() {
         `
         )
         .eq("section_id", sc.section_id)
-        .eq("course_id", sc.course_id);
+        .eq("course_id", sc.course_id)
+        .eq("status", "active");
 
       if (error) {
         toast.error("Couldn't load the roster for this class.");

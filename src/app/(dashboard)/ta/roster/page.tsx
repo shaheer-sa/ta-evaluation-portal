@@ -30,6 +30,7 @@ interface SyncResult {
   failed: SyncStudentResult[];
   gradesWritten: boolean;
   totalProcessed: number;
+  missingFromSheet?: { enrollmentId: string; rollNumber: string; fullName: string }[];
 }
 
 import type { Database } from "@/types/database";
@@ -41,7 +42,7 @@ type SectionCourseRow = Pick<Database["public"]["Tables"]["section_courses"]["Ro
   courses: Pick<Database["public"]["Tables"]["courses"]["Row"], "code" | "name"> | null;
 };
 
-type EnrollmentRow = Pick<Database["public"]["Tables"]["enrollments"]["Row"], "id"> & {
+type EnrollmentRow = Pick<Database["public"]["Tables"]["enrollments"]["Row"], "id" | "status"> & {
   profiles: Pick<Database["public"]["Tables"]["profiles"]["Row"], "id" | "roll_number" | "full_name" | "email" | "must_change_password"> | null;
   marks: Pick<Database["public"]["Tables"]["marks"]["Row"], "assessment_id" | "score">[];
 };
@@ -116,6 +117,7 @@ export default function RosterPage() {
           .from("enrollments")
           .select(`
             id,
+            status,
             profiles:student_id ( id, roll_number, full_name, email, must_change_password ),
             marks ( assessment_id, score )
           `)
@@ -330,6 +332,16 @@ export default function RosterPage() {
                 </div>
               </div>
             )}
+
+            {syncResult.missingFromSheet && syncResult.missingFromSheet.length > 0 && (
+              <MissingStudentsPanel 
+                missingStudents={syncResult.missingFromSheet} 
+                onWithdrawComplete={() => {
+                  setSyncResult(prev => prev ? { ...prev, missingFromSheet: [] } : null);
+                  setRefreshKey(k => k + 1);
+                }} 
+              />
+            )}
           </CardContent>
         </Card>
       )}
@@ -367,7 +379,7 @@ export default function RosterPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {roster.map((r) => (
+                    {roster.filter(r => r.status === "active").map((r) => (
                       <tr key={r.id}>
                         <td className="whitespace-nowrap">{r.profiles?.roll_number}</td>
                         <td className="whitespace-nowrap">{r.profiles?.full_name}</td>
@@ -408,6 +420,155 @@ export default function RosterPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* ── Withdrawn Roster Table ──────────────────────────────────── */}
+      {selectedSectionCourseId && roster.filter(r => r.status === "withdrawn").length > 0 && (
+        <Card data-edge>
+          <CardHeader>
+            <CardTitle className="text-muted-foreground">Withdrawn ({roster.filter(r => r.status === "withdrawn").length})</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="tams-table-wrap opacity-75">
+              <table className="tams-table">
+                <thead>
+                  <tr>
+                    <th className="whitespace-nowrap">Roll Number</th>
+                    <th className="whitespace-nowrap">Name</th>
+                    <th className="whitespace-nowrap">Status</th>
+                    <th className="whitespace-nowrap"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {roster.filter(r => r.status === "withdrawn").map((r) => (
+                    <tr key={r.id}>
+                      <td className="whitespace-nowrap">{r.profiles?.roll_number}</td>
+                      <td className="whitespace-nowrap">{r.profiles?.full_name}</td>
+                      <td className="whitespace-nowrap">
+                        <span className="tams-pill" data-tone="late">Withdrawn</span>
+                      </td>
+                      <td className="whitespace-nowrap text-right">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={async () => {
+                            try {
+                              const res = await fetch("/api/admin/enrollments/withdraw", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({
+                                  enrollmentIds: [r.id],
+                                  status: "active"
+                                })
+                              });
+                              if (!res.ok) throw new Error("Failed to reactivate");
+                              toast.success("Student reactivated");
+                              setRefreshKey(k => k + 1);
+                            } catch (err) {
+                              toast.error(err instanceof Error ? err.message : "Error");
+                            }
+                          }}
+                        >
+                          Reactivate
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
+
+function MissingStudentsPanel({ 
+  missingStudents, 
+  onWithdrawComplete 
+}: { 
+  missingStudents: { enrollmentId: string; rollNumber: string; fullName: string }[];
+  onWithdrawComplete: () => void;
+}) {
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set(missingStudents.map(s => s.enrollmentId)));
+  const [isWithdrawing, setIsWithdrawing] = useState(false);
+
+  const handleWithdraw = async () => {
+    if (selectedIds.size === 0) return;
+    setIsWithdrawing(true);
+    try {
+      const res = await fetch("/api/admin/enrollments/withdraw", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          enrollmentIds: Array.from(selectedIds),
+          status: "withdrawn"
+        })
+      });
+      if (!res.ok) throw new Error("Failed to withdraw students");
+      toast.success("Students withdrawn successfully.");
+      onWithdrawComplete();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Error withdrawing students");
+    } finally {
+      setIsWithdrawing(false);
+    }
+  };
+
+  return (
+    <div 
+      className="mt-6 rounded-md border p-4" 
+      style={{ backgroundColor: 'var(--warning-soft, #fffbeb)', borderColor: 'var(--warning, #f59e0b)', color: 'var(--warning, #b45309)' }}
+    >
+      <h4 className="font-semibold flex items-center gap-2 mb-3">
+        <AlertCircle className="h-5 w-5" />
+        {missingStudents.length} student{missingStudents.length === 1 ? ' is' : 's are'} enrolled in TAMS but not in the sheet.
+      </h4>
+      
+      <div className="space-y-2 mb-4 max-h-[300px] overflow-y-auto bg-white/50 p-2 rounded border border-white/20">
+        {missingStudents.map(s => (
+          <div key={s.enrollmentId} className="flex items-center gap-2 text-sm text-black">
+            <input 
+              type="checkbox" 
+              className="rounded"
+              checked={selectedIds.has(s.enrollmentId)}
+              onChange={(e) => {
+                const next = new Set(selectedIds);
+                if (e.target.checked) next.add(s.enrollmentId);
+                else next.delete(s.enrollmentId);
+                setSelectedIds(next);
+              }}
+            />
+            <span className="font-mono text-muted-foreground">{s.rollNumber}</span>
+            <span className="font-medium">{s.fullName}</span>
+          </div>
+        ))}
+      </div>
+      
+      <p className="text-sm font-medium opacity-90 mb-4 max-w-2xl">
+        Withdrawn students keep their grades and can still sign in to view them, 
+        but are removed from the roster, analytics, and sheet sync.
+      </p>
+      
+      <div className="flex gap-3">
+        <Button 
+          variant="outline" 
+          onClick={handleWithdraw} 
+          disabled={isWithdrawing || selectedIds.size === 0}
+          className="bg-white hover:bg-red-50 text-red-600 hover:text-red-700 border-red-200"
+        >
+          {isWithdrawing ? "Processing..." : "Mark selected as withdrawn"}
+        </Button>
+        <Button 
+          variant="ghost"
+          onClick={() => onWithdrawComplete()} 
+          disabled={isWithdrawing}
+          style={{ color: 'var(--warning, #b45309)' }}
+          className="hover:bg-black/5"
+        >
+          Keep all
+        </Button>
+      </div>
     </div>
   );
 }

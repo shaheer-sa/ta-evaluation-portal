@@ -6,7 +6,7 @@ import type { Database } from "@/types/database";
 import { createRateLimiter } from "@/lib/rate-limit";
 import { runInBatches } from "@/lib/batch";
 
-const syncRateLimit = createRateLimiter({ tokens: 2, window: "10 m" });
+const syncRateLimit = createRateLimiter({ tokens: 5, window: "10 m" });
 
 // ── Types for the structured sync result ────────────────────────────
 
@@ -18,12 +18,13 @@ interface SyncStudentResult {
   detail?: string;
 }
 
-interface SyncResponse {
+export interface SyncResponse {
   invited: SyncStudentResult[];
   existing: SyncStudentResult[];
   failed: SyncStudentResult[];
   gradesWritten: boolean;
   totalProcessed: number;
+  missingFromSheet?: { enrollmentId: string; rollNumber: string; fullName: string }[];
 }
 
 // ── Utility: Generate Email from Roll Number ────────────────────────
@@ -317,27 +318,48 @@ export async function POST(request: NextRequest) {
       }
     });
 
+    // 4.5 Fetch all active enrollments for this section_course to detect missing students and sync marks
+    type AssessmentRow = Pick<Database["public"]["Tables"]["assessments"]["Row"], "id" | "title" | "type" | "max_marks" | "created_at">;
+    type EnrollmentRow = Pick<Database["public"]["Tables"]["enrollments"]["Row"], "id"> & {
+      profiles: Pick<Database["public"]["Tables"]["profiles"]["Row"], "email" | "roll_number" | "full_name"> | null;
+      marks: Pick<Database["public"]["Tables"]["marks"]["Row"], "id" | "assessment_id" | "score" | "sheet_synced_score">[];
+    };
+
+    const { data: rawEnrollments } = await admin
+      .from("enrollments")
+      .select(`
+        id,
+        profiles:student_id ( email, roll_number, full_name ),
+        marks ( id, assessment_id, score, sheet_synced_score )
+      `)
+      .eq("section_id", mapped.section_id)
+      .eq("course_id", mapped.course_id)
+      .eq("status", "active"); // Step 5b: exclude withdrawn students
+
+    const currentEnrollments = rawEnrollments as unknown as EnrollmentRow[] | null;
+
+    // Detect students missing from the sheet
+    // We explicitly skip detection if parsedStudents is empty. 
+    // An empty parse almost always means the tab name changed or the Google API call failed, 
+    // not that the entire class withdrew. Without this guard, one transient API error would 
+    // show the TA a pre-checked prompt to withdraw every student in the section.
+    let missingFromSheet: { enrollmentId: string; rollNumber: string; fullName: string }[] = [];
+
+    if (parsedStudents.length > 0 && currentEnrollments) {
+      const sheetRollNumbers = new Set(parsedStudents.map(s => s.roll_number.toLowerCase()));
+      missingFromSheet = currentEnrollments
+        .filter(e => e.profiles?.roll_number && !sheetRollNumbers.has(e.profiles.roll_number.toLowerCase()))
+        .map(e => ({
+          enrollmentId: e.id,
+          rollNumber: e.profiles!.roll_number || "",
+          fullName: e.profiles!.full_name || "",
+        }));
+    }
+
     // 5. Push TAMS marks back to Google Sheets across multiple tabs
     let gradesWritten = false;
 
     if (assessments && assessments.length > 0) {
-      type AssessmentRow = Pick<Database["public"]["Tables"]["assessments"]["Row"], "id" | "title" | "type" | "max_marks" | "created_at">;
-      type EnrollmentRow = Pick<Database["public"]["Tables"]["enrollments"]["Row"], "id"> & {
-        profiles: Pick<Database["public"]["Tables"]["profiles"]["Row"], "email" | "roll_number"> | null;
-        marks: Pick<Database["public"]["Tables"]["marks"]["Row"], "id" | "assessment_id" | "score" | "sheet_synced_score">[];
-      };
-      const { data: rawEnrollments } = await admin
-        .from("enrollments")
-        .select(`
-          id,
-          profiles:student_id ( email, roll_number ),
-          marks ( id, assessment_id, score, sheet_synced_score )
-        `)
-        .eq("section_id", mapped.section_id)
-        .eq("course_id", mapped.course_id);
-
-      const currentEnrollments = rawEnrollments as unknown as EnrollmentRow[] | null;
-
       if (currentEnrollments) {
         // Group assessments by their matching tab
         const tabToAssessments = new Map<string, AssessmentRow[]>();
@@ -525,6 +547,7 @@ export async function POST(request: NextRequest) {
       failed: results.filter(r => r.outcome === "failed"),
       gradesWritten,
       totalProcessed: results.length,
+      missingFromSheet,
     };
 
     return NextResponse.json(response);

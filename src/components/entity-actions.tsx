@@ -32,6 +32,8 @@ export function EntityActions({
   editTitle,
   editDescription,
   type = "default",
+  affectedStudentsCount,
+  affectedMarksCount,
 }: {
   id: string;
   itemName: string;
@@ -41,6 +43,8 @@ export function EntityActions({
   editTitle?: string;
   editDescription?: string;
   type?: "default" | "unlink";
+  affectedStudentsCount?: number;
+  affectedMarksCount?: number;
 }) {
   const [isEditOpen, setIsEditOpen] = useState(false);
 
@@ -93,7 +97,17 @@ export function EntityActions({
             <AlertDialogDescription>
               {type === "unlink" 
                 ? "This will remove the course from this section."
-                : "This action cannot be undone. This will permanently delete this item and ALL associated data (including related sections, assessments, and marks)."}
+                : (
+                  <span className="space-y-2 block">
+                    <span>This action cannot be undone. This will permanently delete this item and ALL associated data (including related sections, assessments, and marks).</span>
+                    {(affectedStudentsCount !== undefined || affectedMarksCount !== undefined) && (
+                      <span className="block mt-2 font-medium text-destructive">
+                        Warning: This will destroy records for {affectedStudentsCount ?? 0} student(s) and {affectedMarksCount ?? 0} mark(s).
+                      </span>
+                    )}
+                  </span>
+                )
+              }
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

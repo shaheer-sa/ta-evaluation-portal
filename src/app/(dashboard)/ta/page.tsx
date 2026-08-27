@@ -44,7 +44,8 @@ export default async function TADashboardPage() {
     const { count } = await supabase
       .from("enrollments")
       .select("student_id", { count: "exact", head: true })
-      .in("section_id", activeSectionIds);
+      .in("section_id", activeSectionIds)
+      .eq("status", "active");
     studentCount = count || 0;
   }
 
@@ -84,7 +85,8 @@ export default async function TADashboardPage() {
     const { data: activeEnrollmentIds } = await supabase
       .from("enrollments")
       .select("id")
-      .in("section_id", activeSectionIds);
+      .in("section_id", activeSectionIds)
+      .eq("status", "active");
 
     if (activeEnrollmentIds && activeEnrollmentIds.length > 0) {
       const { count } = await supabase
@@ -111,7 +113,8 @@ export default async function TADashboardPage() {
     const { data: activeEnrollmentIds } = await supabase
       .from("enrollments")
       .select("id")
-      .in("section_id", activeSectionIds);
+      .in("section_id", activeSectionIds)
+      .eq("status", "active");
 
     if (activeEnrollmentIds && activeEnrollmentIds.length > 0) {
       const { data } = await supabase

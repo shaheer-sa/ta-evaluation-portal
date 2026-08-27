@@ -101,6 +101,14 @@ create table if not exists enrollments (
   unique (student_id, section_id, course_id)
 );
 
+alter table enrollments
+  add column if not exists status text not null default 'active'
+    check (status in ('active', 'withdrawn')),
+  add column if not exists withdrawn_at timestamptz;
+
+create index if not exists enrollments_status_idx
+  on enrollments (section_id, course_id, status);
+
 create table if not exists assessments (
   id                uuid primary key default gen_random_uuid(),
   section_course_id uuid not null references section_courses(id) on delete cascade,
@@ -197,6 +205,9 @@ as $$
   );
 $$;
 
+revoke all on function is_ta() from public, anon;
+grant execute on function is_ta() to authenticated;
+
 create or replace function current_user_role() returns text
   language sql stable security definer set search_path = public as
   $$ select role::text from profiles where id = auth.uid() $$;
@@ -261,6 +272,9 @@ as $$
     and score is not null;
 $$;
 
+revoke all on function get_class_average(uuid) from public, anon;
+grant execute on function get_class_average(uuid) to authenticated;
+
 -- ── Function: activate a term atomically ────────────────────────────────────
 -- Deactivating the old term and activating the new one must happen in one
 -- statement pair, or the unique partial index above rejects the intermediate
@@ -284,6 +298,9 @@ begin
   values (auth.uid(), 'term_activated', jsonb_build_object('term_id', p_term_id));
 end;
 $$;
+
+revoke all on function activate_term(uuid) from public, anon;
+grant execute on function activate_term(uuid) to authenticated;
 
 -- ── Trigger: keep updated_at honest ─────────────────────────────────────────
 
@@ -467,3 +484,50 @@ create policy activity_logs_ta_read on activity_logs for select using (is_ta());
 -- TA accounts are created manually, not imported, so they must not be
 -- caught by the first-login flow.
 update profiles set must_change_password = false where role = 'ta';
+
+-- ── Function: count affected students/marks before deletion ─────────────
+-- SECURITY DEFINER bypasses RLS, so we gate it with is_ta() explicitly.
+-- set search_path = public prevents search-path manipulation attacks.
+
+create or replace function get_deletion_impact(p_type text, p_id uuid)
+returns json
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_students bigint := 0;
+  v_marks bigint := 0;
+begin
+  -- SECURITY DEFINER bypasses RLS, so gate it explicitly.
+  if not is_ta() then
+    raise exception 'forbidden';
+  end if;
+
+  if p_type = 'section' then
+    select count(*) into v_students from enrollments where section_id = p_id;
+    select count(*) into v_marks from marks
+      where enrollment_id in (select id from enrollments where section_id = p_id);
+  elsif p_type = 'course' then
+    select count(*) into v_students from enrollments where course_id = p_id;
+    select count(*) into v_marks from marks
+      where enrollment_id in (select id from enrollments where course_id = p_id);
+  elsif p_type = 'section_course' then
+    select count(*) into v_students from enrollments
+      where (section_id, course_id) =
+        (select section_id, course_id from section_courses where id = p_id limit 1);
+    select count(*) into v_marks from marks
+      where enrollment_id in (
+        select id from enrollments where (section_id, course_id) =
+          (select section_id, course_id from section_courses where id = p_id limit 1)
+      );
+  else
+    raise exception 'invalid type';
+  end if;
+
+  return json_build_object('students', v_students, 'marks', v_marks);
+end;
+$$;
+
+revoke all on function get_deletion_impact(text, uuid) from public, anon;
+grant execute on function get_deletion_impact(text, uuid) to authenticated;

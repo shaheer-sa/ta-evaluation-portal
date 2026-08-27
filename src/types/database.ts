@@ -127,6 +127,8 @@ export interface Database {
           id: string
           section_id: string
           student_id: string
+          status: string
+          withdrawn_at: string | null
         }
         Insert: {
           course_id: string
@@ -134,6 +136,8 @@ export interface Database {
           id?: string
           section_id: string
           student_id: string
+          status?: string
+          withdrawn_at?: string | null
         }
         Update: {
           course_id?: string
@@ -141,6 +145,8 @@ export interface Database {
           id?: string
           section_id?: string
           student_id?: string
+          status?: string
+          withdrawn_at?: string | null
         }
         Relationships: [
           {
@@ -507,6 +513,13 @@ export interface Database {
           p_term_id: string
         }
         Returns: undefined
+      }
+      get_deletion_impact: {
+        Args: {
+          p_type: string
+          p_id: string
+        }
+        Returns: Json
       }
     }
     Enums: {

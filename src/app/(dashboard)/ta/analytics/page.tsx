@@ -106,7 +106,8 @@ export default async function AnalyticsPage(props: {
     .from("enrollments")
     .select("id, profiles(full_name, roll_number)")
     .eq("section_id", sectionCourse.section_id)
-    .eq("course_id", sectionCourse.course_id);
+    .eq("course_id", sectionCourse.course_id)
+    .eq("status", "active");
 
   const { data: assessments } = await supabase
     .from("assessments")

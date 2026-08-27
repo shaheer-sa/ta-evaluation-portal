@@ -54,6 +54,22 @@ export default async function SectionsPage() {
 
   const sections = rawSections as unknown as SectionRow[] | null;
 
+  const impactMap = new Map<string, { students: number; marks: number }>();
+  if (sections) {
+    await Promise.all(
+      sections.flatMap((s) => [
+        supabase.rpc("get_deletion_impact", { p_type: "section", p_id: s.id }).then(({ data }) => {
+          if (data) impactMap.set(`section-${s.id}`, data as { students: number; marks: number });
+        }),
+        ...s.section_courses.map((sc) => 
+          supabase.rpc("get_deletion_impact", { p_type: "section_course", p_id: sc.id }).then(({ data }) => {
+            if (data) impactMap.set(`sc-${sc.id}`, data as { students: number; marks: number });
+          })
+        )
+      ])
+    );
+  }
+
   return (
     <div className="space-y-8">
       <div className="tams-pagehead">
@@ -171,6 +187,8 @@ export default async function SectionsPage() {
                           id={section.id}
                           itemName={`Section ${section.name}`}
                           deleteAction={deleteSection}
+                          affectedStudentsCount={impactMap.get(`section-${section.id}`)?.students || 0}
+                          affectedMarksCount={impactMap.get(`section-${section.id}`)?.marks || 0}
                           editAction={updateSection}
                           editTitle="Edit Section"
                           editNode={
@@ -214,8 +232,10 @@ export default async function SectionsPage() {
                                   <div className="opacity-0 group-hover:opacity-100 transition-opacity">
                                     <EntityActions
                                       id={sc.id}
-                                      itemName={`${course?.code} from Section ${section.name}`}
+                                      itemName={`${sc.courses?.code} in ${section.name}`}
                                       deleteAction={unlinkCourseFromSection}
+                                      affectedStudentsCount={impactMap.get(`sc-${sc.id}`)?.students || 0}
+                                      affectedMarksCount={impactMap.get(`sc-${sc.id}`)?.marks || 0}
                                       type="unlink"
                                     />
                                   </div>

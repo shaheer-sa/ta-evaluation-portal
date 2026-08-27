@@ -22,6 +22,16 @@ export default async function CoursesPage() {
     supabase.from("terms").select("*").order("created_at", { ascending: false }),
     supabase.from("courses").select("*").order("code", { ascending: true }),
   ]);
+  const impactMap = new Map<string, { students: number; marks: number }>();
+  if (courses) {
+    await Promise.all(
+      courses.map((c) =>
+        supabase.rpc("get_deletion_impact", { p_type: "course", p_id: c.id }).then(({ data }) => {
+          if (data) impactMap.set(c.id, data as { students: number; marks: number });
+        })
+      )
+    );
+  }
 
   return (
     <div className="space-y-8">
@@ -202,6 +212,8 @@ export default async function CoursesPage() {
                           id={course.id}
                           itemName={`${course.code} - ${course.name}`}
                           deleteAction={deleteCourse}
+                          affectedStudentsCount={impactMap.get(course.id)?.students || 0}
+                          affectedMarksCount={impactMap.get(course.id)?.marks || 0}
                           editAction={updateCourse}
                           editTitle="Edit Course"
                           editNode={
