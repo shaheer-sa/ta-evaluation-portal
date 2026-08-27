@@ -1,9 +1,12 @@
-import { NextResponse } from "next/server";
-import { randomBytes } from "crypto";
+import { NextRequest, NextResponse } from "next/server";
 import { google } from "googleapis";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { Database } from "@/types/database";
+import { createRateLimiter } from "@/lib/rate-limit";
+import { runInBatches } from "@/lib/batch";
+
+const syncRateLimit = createRateLimiter({ tokens: 2, window: "10 m" });
 
 // ── Types for the structured sync result ────────────────────────────
 
@@ -21,22 +24,6 @@ interface SyncResponse {
   failed: SyncStudentResult[];
   gradesWritten: boolean;
   totalProcessed: number;
-}
-
-// ── Concurrency-limited batch runner ────────────────────────────────
-
-async function runInBatches<T, R>(
-  items: T[],
-  batchSize: number,
-  fn: (item: T) => Promise<R>
-): Promise<R[]> {
-  const results: R[] = [];
-  for (let i = 0; i < items.length; i += batchSize) {
-    const batch = items.slice(i, i + batchSize);
-    const batchResults = await Promise.all(batch.map(fn));
-    results.push(...batchResults);
-  }
-  return results;
 }
 
 // ── Utility: Generate Email from Roll Number ────────────────────────
@@ -57,18 +44,8 @@ function generateEmail(rollNo: string): string {
   return `${clean}@${STUDENT_EMAIL_DOMAIN}`;
 }
 
-/**
- * Cryptographically random initial password.
- *
- * This replaces `Tams@${roll_number}` -- a password derived entirely from
- * the roll number, which is printed on every class list and appears in the
- * source Google Sheet. Anyone who knew a classmate's roll number could sign
- * in as them and read their grades. Nobody is ever expected to type this
- * value: students claim their account through "Forgot password", which
- * emails them a reset link.
- */
-function generateInitialPassword(): string {
-  return `${randomBytes(24).toString("base64url")}Aa1!`;
+function generateInitialPassword(rollNumber: string): string {
+  return `Tams@${rollNumber}`;
 }
 
 // ── Utility: Match Assessment Type to Sheet Tab ──────────────────────
@@ -99,7 +76,7 @@ function findMatchingTab(type: string, tabMap: Map<string, string>, firstTab: st
 
 // ── Main handler ────────────────────────────────────────────────────
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient();
 
@@ -115,6 +92,20 @@ export async function POST(request: Request) {
 
     if (profile?.role !== "ta") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    if (syncRateLimit) {
+      const { success, reset } = await syncRateLimit.limit(`sync-google:${user.id}`);
+      if (!success) {
+        const retryAfter = Math.ceil((reset - Date.now()) / 1000);
+        return NextResponse.json(
+          { error: "Too many sync attempts, please wait before trying again." },
+          { 
+            status: 429,
+            headers: { "Retry-After": retryAfter.toString() }
+          }
+        );
+      }
     }
 
     const { sectionCourseId, spreadsheetUrl } = await request.json();
@@ -233,9 +224,7 @@ export async function POST(request: Request) {
         const { data: authData, error: authError } = await admin.auth.admin.createUser({
           email: student.email,
           email_confirm: true,
-          // Random and immediately discarded -- students set their own
-          // password via the "Forgot password" flow on the login page.
-          password: generateInitialPassword(),
+          password: generateInitialPassword(student.roll_number),
           user_metadata: {
             roll_number: student.roll_number,
             full_name: student.full_name,
@@ -278,6 +267,11 @@ export async function POST(request: Request) {
           }
         } else {
           studentId = authData.user.id;
+          
+          await admin
+            .from("profiles")
+            .update({ must_change_password: true })
+            .eq("id", authData.user.id);
         }
 
         const { error: enrollError } = await admin.from("enrollments").insert({

@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
 
 /**
  * A query thread is readable and writable by exactly two parties: the
@@ -79,12 +78,15 @@ export async function GET(request: Request) {
     const senderIds = [...new Set((replies || []).map((r) => r.sender_id))];
     let senders: { id: string; full_name: string; role: string }[] = [];
     if (senderIds.length > 0) {
-      const admin = createAdminClient();
-      const { data } = await admin
+      const { data: readable } = await supabase
         .from("profiles")
         .select("id, full_name, role")
         .in("id", senderIds);
-      if (data) senders = data;
+        
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: tas } = await (supabase as any).rpc("get_tas");
+      
+      senders = [...(readable || []), ...(tas || [])];
     }
 
     const senderMap = new Map(senders.map((s) => [s.id, s]));
@@ -175,15 +177,13 @@ export async function POST(request: Request) {
         });
       } else {
         // Student replied → notify all TAs
-        const admin = createAdminClient();
-        const { data: tas } = await admin
-          .from("profiles")
-          .select("id")
-          .eq("role", "ta");
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { data: tas } = await (supabase as any).rpc("get_tas");
 
         if (tas && tas.length > 0) {
-          const { error: notifyError } = await admin.from("notifications").insert(
-            tas.map((ta) => ({
+          const { error: notifyError } = await supabase.from("notifications").insert(
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            tas.map((ta: any) => ({
               recipient_id: ta.id,
               type: "query_reply",
               title: `Reply on "${queryData.title}"`,

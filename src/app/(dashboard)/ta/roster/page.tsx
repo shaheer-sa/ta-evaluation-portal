@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
-import { Loader2, RefreshCw, CheckCircle2, AlertCircle, UserPlus } from "lucide-react";
+import { Loader2, RefreshCw, CheckCircle2, AlertCircle } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +14,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { ResetPasswordButton } from "@/components/reset-password-button";
 
 interface SyncStudentResult {
   email: string;
@@ -41,7 +42,7 @@ type SectionCourseRow = Pick<Database["public"]["Tables"]["section_courses"]["Ro
 };
 
 type EnrollmentRow = Pick<Database["public"]["Tables"]["enrollments"]["Row"], "id"> & {
-  profiles: Pick<Database["public"]["Tables"]["profiles"]["Row"], "roll_number" | "full_name" | "email"> | null;
+  profiles: Pick<Database["public"]["Tables"]["profiles"]["Row"], "id" | "roll_number" | "full_name" | "email" | "must_change_password"> | null;
   marks: Pick<Database["public"]["Tables"]["marks"]["Row"], "assessment_id" | "score">[];
 };
 
@@ -115,7 +116,7 @@ export default function RosterPage() {
           .from("enrollments")
           .select(`
             id,
-            profiles:student_id ( roll_number, full_name, email ),
+            profiles:student_id ( id, roll_number, full_name, email, must_change_password ),
             marks ( assessment_id, score )
           `)
           .eq("section_id", mapped.section_id)
@@ -167,7 +168,7 @@ export default function RosterPage() {
 
       // Summary toast
       const parts: string[] = [];
-      if (data.invited?.length) parts.push(`${data.invited.length} invited`);
+      if (data.invited?.length) parts.push(`${data.invited.length} created`);
       if (data.existing?.length) parts.push(`${data.existing.length} already existed`);
       if (data.failed?.length) parts.push(`${data.failed.length} failed`);
       if (data.gradesWritten) parts.push("grades pushed to sheet");
@@ -238,9 +239,7 @@ export default function RosterPage() {
                   <li>Any new students in the sheet get a TAMS account.</li>
                   <li>Any grades recorded in TAMS are pushed to the sheet automatically.</li>
                   <li>
-                    New accounts have no usable password — students set one
-                    themselves via <strong>Forgot password</strong> on the
-                    login page.
+                    New accounts get the password Tams@&lt;roll-number&gt; and must change it on first login.
                   </li>
                 </ul>
               </div>
@@ -281,9 +280,8 @@ export default function RosterPage() {
           <CardContent className="space-y-4">
             {syncResult.invited.length > 0 && (
               <div>
-                <h4 className="text-sm font-medium flex items-center gap-1.5 mb-2">
-                  <UserPlus className="h-4 w-4 text-green-600" />
-                  Invited ({syncResult.invited.length})
+                <h4 className="font-medium text-sm text-primary mb-2">
+                  Created ({syncResult.invited.length})
                 </h4>
                 <div className="rounded-md border">
                   {syncResult.invited.map((s, i) => (
@@ -359,11 +357,13 @@ export default function RosterPage() {
                       <th className="whitespace-nowrap">Roll Number</th>
                       <th className="whitespace-nowrap">Name</th>
                       <th className="whitespace-nowrap">Email</th>
+                      <th className="whitespace-nowrap">Status</th>
                       {assessments.map(a => (
                         <th key={a.id} className="whitespace-nowrap tams-numeral">
                           {a.title} ({a.max_marks})
                         </th>
                       ))}
+                      <th className="whitespace-nowrap"></th>
                     </tr>
                   </thead>
                   <tbody>
@@ -374,6 +374,13 @@ export default function RosterPage() {
                         <td className="whitespace-nowrap">
                           {r.profiles?.email}
                         </td>
+                        <td className="whitespace-nowrap">
+                          {r.profiles?.must_change_password === true ? (
+                            <span className="tams-pill" data-tone="open">Not logged in yet</span>
+                          ) : (
+                            <span className="tams-pill" data-tone="done">Active</span>
+                          )}
+                        </td>
                         {assessments.map(a => {
                           const mark = r.marks.find((m) => m.assessment_id === a.id);
                           return (
@@ -382,6 +389,16 @@ export default function RosterPage() {
                             </td>
                           )
                         })}
+                        <td className="whitespace-nowrap text-right">
+                          {r.profiles?.id && r.profiles?.roll_number && r.profiles?.full_name && (
+                            <ResetPasswordButton
+                              studentId={r.profiles.id}
+                              studentName={r.profiles.full_name}
+                              rollNumber={r.profiles.roll_number}
+                              onSuccess={() => setRefreshKey(k => k + 1)}
+                            />
+                          )}
+                        </td>
                       </tr>
                     ))}
                   </tbody>

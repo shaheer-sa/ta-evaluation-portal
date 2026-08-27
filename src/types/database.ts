@@ -270,6 +270,7 @@ export interface Database {
           id: string
           role: "ta" | "student"
           roll_number: string | null
+          must_change_password: boolean
           updated_at: string
         }
         Insert: {
@@ -279,6 +280,7 @@ export interface Database {
           id: string
           role: "ta" | "student"
           roll_number?: string | null
+          must_change_password?: boolean
           updated_at?: string
         }
         Update: {
@@ -288,6 +290,7 @@ export interface Database {
           id?: string
           role?: "ta" | "student"
           roll_number?: string | null
+          must_change_password?: boolean
           updated_at?: string
         }
         Relationships: []

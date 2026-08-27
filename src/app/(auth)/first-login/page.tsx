@@ -1,13 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
-import { Eye, EyeOff, KeyRound, Loader2, ShieldAlert } from "lucide-react";
-import Link from "next/link";
+import { Eye, EyeOff, KeyRound, Loader2 } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/client";
 import { Input } from "@/components/ui/input";
@@ -18,20 +16,18 @@ const schema = z
   .object({
     password: z
       .string()
-      .min(8, "Password must be at least 8 characters")
-      .regex(
-        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
-        "Must include uppercase, lowercase, and a number"
-      ),
+      .min(8, "Password must be at least 8 characters.")
+      .refine((val) => !val.startsWith("Tams@"), {
+        message: "Please choose a different password.",
+      }),
     confirmPassword: z.string(),
   })
   .refine((data) => data.password === data.confirmPassword, {
-    message: "Passwords don't match",
+    message: "Passwords do not match.",
     path: ["confirmPassword"],
   });
 
-type ResetPasswordForm = z.infer<typeof schema>;
-
+type FirstLoginForm = z.infer<typeof schema>;
 
 const inputStyle: React.CSSProperties = {
   background: "var(--surface-sunk)",
@@ -43,53 +39,46 @@ const inputStyle: React.CSSProperties = {
   transition: "border-color 0.2s ease, box-shadow 0.2s ease",
 };
 
-export default function ResetPasswordPage() {
-  const router = useRouter();
+export default function FirstLoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
-
-  const [sessionState, setSessionState] = useState<
-    "checking" | "valid" | "missing"
-  >("checking");
-
-  useEffect(() => {
-    const supabase = createClient();
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSessionState(session ? "valid" : "missing");
-    });
-  }, []);
 
   const {
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm<ResetPasswordForm>({
+  } = useForm<FirstLoginForm>({
     resolver: zodResolver(schema),
   });
 
-  async function onSubmit(data: ResetPasswordForm) {
+  async function onSubmit(data: FirstLoginForm) {
     setIsLoading(true);
 
     try {
       const supabase = createClient();
-      const { error } = await supabase.auth.updateUser({
-        password: data.password,
-      });
-
-      if (error) {
-        toast.error(error.message);
+      
+      // 1. change the password
+      const { error: pwError } = await supabase.auth.updateUser({ password: data.password });
+      if (pwError) {
+        toast.error(pwError.message);
+        setIsLoading(false);
         return;
       }
 
-      toast.success("Password updated! Redirecting to sign in…");
+      // 2. clear the flag server-side (the client session may be stale after
+      //    a password change, so this cannot be done from the browser)
+      const res = await fetch("/api/auth/complete-first-login", { method: "POST" });
+      if (!res.ok) {
+        toast.error("Password changed, but your account could not be unlocked. Contact your TA.");
+        setIsLoading(false);
+        return;
+      }
 
-      await supabase.auth.signOut();
+      toast.success("Password updated!");
 
-      setTimeout(() => {
-        router.push("/login");
-        router.refresh();
-      }, 1500);
+      // 3. hard navigation so middleware re-reads the flag from scratch
+      window.location.href = "/student";
     } catch {
       toast.error("Something went wrong. Please try again.");
     } finally {
@@ -97,76 +86,9 @@ export default function ResetPasswordPage() {
     }
   }
 
-  if (sessionState === "checking") {
-    return (
-      <div
-        className="tams-auth-panel"
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          gap: "0.75rem",
-        }}
-      >
-        <Loader2 style={{ width: 24, height: 24, color: "var(--ink-muted)", animation: "spin 1s linear infinite" }} />
-        <p style={{ fontSize: "0.88rem", color: "var(--ink-muted)" }}>Verifying your link…</p>
-      </div>
-    );
-  }
-
-  if (sessionState === "missing") {
-    return (
-      <div>
-        <div
-          style={{
-            margin: "0 auto 1rem",
-            width: "60px",
-            height: "60px",
-            borderRadius: "16px",
-            display: "grid",
-            placeItems: "center",
-            background: "var(--danger-soft)",
-            border: "1px solid var(--danger)",
-          }}
-        >
-          <ShieldAlert style={{ width: 30, height: 30, color: "var(--danger)" }} />
-        </div>
-        <h1 style={{ fontSize: "1.3rem", fontWeight: 700, letterSpacing: "-0.02em" }}>
-          This link isn&apos;t valid
-        </h1>
-        <p style={{ marginTop: "0.5rem", fontSize: "0.88rem", color: "var(--ink-muted)" }}>
-          Your password reset link may have expired or already been used.
-          Request a new one to continue.
-        </p>
-        <div style={{ marginTop: "1.5rem" }}>
-          <Link href="/forgot-password">
-            <SpecularButton
-              block
-              size="md"
-              radius={14}
-              tint="hsl(210 75% 16%)"
-              tintOpacity={1}
-              blur={10}
-              textColor="hsl(40 55% 97%)"
-              lineColor="#F3E4C9"
-              baseColor="#0A2947"
-              intensity={2.4}
-              shineSize={26}
-              thickness={2}
-              autoAnimate
-              speed={0.3}
-            >
-              Request a new link
-            </SpecularButton>
-          </Link>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="tams-auth-panel animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out">
-      <div>
+      <div style={{ marginBottom: "1.5rem", textAlign: "center" }}>
         <div
           style={{
             margin: "0 auto 1rem",
@@ -185,13 +107,13 @@ export default function ResetPasswordPage() {
           Set a new password
         </h1>
         <p style={{ marginTop: "0.4rem", fontSize: "0.88rem", color: "var(--ink-muted)" }}>
-          Choose a strong password for your account.
+          Set your own password before continuing.
         </p>
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
         {/* New password */}
-        <div>
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
           <Label htmlFor="password" style={{ color: "var(--ink-muted)", fontSize: "0.85rem", fontWeight: 500 }}>
             New password
           </Label>
@@ -216,30 +138,27 @@ export default function ResetPasswordPage() {
                 right: "0.75rem",
                 top: "50%",
                 transform: "translateY(-50%)",
-                color: "var(--ink-muted)",
                 background: "none",
                 border: "none",
-                cursor: "pointer",
                 padding: 0,
+                cursor: "pointer",
+                display: "grid",
+                placeItems: "center",
+                color: "var(--ink-faint)",
               }}
-              aria-label={showPassword ? "Hide password" : "Show password"}
             >
-              {showPassword ? (
-                <EyeOff style={{ width: 16, height: 16 }} />
-              ) : (
-                <Eye style={{ width: 16, height: 16 }} />
-              )}
+              {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
             </button>
           </div>
           {errors.password && (
-            <p style={{ fontSize: "0.75rem", color: "var(--danger)", margin: 0 }}>
+            <span style={{ fontSize: "0.8rem", color: "var(--danger)" }}>
               {errors.password.message}
-            </p>
+            </span>
           )}
         </div>
 
         {/* Confirm password */}
-        <div>
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
           <Label htmlFor="confirmPassword" style={{ color: "var(--ink-muted)", fontSize: "0.85rem", fontWeight: 500 }}>
             Confirm password
           </Label>
@@ -263,25 +182,22 @@ export default function ResetPasswordPage() {
                 right: "0.75rem",
                 top: "50%",
                 transform: "translateY(-50%)",
-                color: "var(--ink-muted)",
                 background: "none",
                 border: "none",
-                cursor: "pointer",
                 padding: 0,
+                cursor: "pointer",
+                display: "grid",
+                placeItems: "center",
+                color: "var(--ink-faint)",
               }}
-              aria-label={showConfirm ? "Hide password" : "Show password"}
             >
-              {showConfirm ? (
-                <EyeOff style={{ width: 16, height: 16 }} />
-              ) : (
-                <Eye style={{ width: 16, height: 16 }} />
-              )}
+              {showConfirm ? <EyeOff size={18} /> : <Eye size={18} />}
             </button>
           </div>
           {errors.confirmPassword && (
-            <p style={{ fontSize: "0.75rem", color: "var(--danger)", margin: 0 }}>
+            <span style={{ fontSize: "0.8rem", color: "var(--danger)" }}>
               {errors.confirmPassword.message}
-            </p>
+            </span>
           )}
         </div>
 
@@ -290,7 +206,7 @@ export default function ResetPasswordPage() {
             type="submit"
             disabled={isLoading}
             block
-            size="lg"
+            size="md"
             radius={14}
             tint="hsl(210 75% 16%)"
             tintOpacity={1}
@@ -304,18 +220,32 @@ export default function ResetPasswordPage() {
             autoAnimate
             speed={0.3}
           >
-            {isLoading ? (
-              <>
-                <Loader2 style={{ width: 16, height: 16, animation: "spin 1s linear infinite" }} />
-                Updating…
-              </>
-            ) : (
-              "Update password"
-            )}
+            {isLoading ? <Loader2 className="animate-spin" size={18} /> : "Save & Continue"}
           </SpecularButton>
+        </div>
+        
+        <div style={{ textAlign: "center" }}>
+          <button
+            type="button"
+            onClick={async () => {
+              const supabase = createClient();
+              await supabase.auth.signOut();
+              window.location.href = "/login";
+            }}
+            style={{
+              background: "none",
+              border: "none",
+              color: "var(--ink-muted)",
+              fontSize: "0.85rem",
+              cursor: "pointer",
+              textDecoration: "underline",
+              textUnderlineOffset: "4px"
+            }}
+          >
+            Sign out
+          </button>
         </div>
       </form>
     </div>
   );
 }
-

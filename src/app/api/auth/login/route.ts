@@ -1,4 +1,5 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { createRateLimiter, getClientIp } from "@/lib/rate-limit";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { z } from "zod";
@@ -19,7 +20,9 @@ const loginSchema = z.object({
  * through the cookie-scoped server client so the session cookie is
  * set correctly on the response.
  */
-export async function POST(request: Request) {
+const loginRateLimit = createRateLimiter({ tokens: 5, window: "15 m" });
+
+export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const parsed = loginSchema.safeParse(body);
@@ -32,6 +35,25 @@ export async function POST(request: Request) {
     }
 
     const { identifier, password } = parsed.data;
+
+    // ── Rate Limiting ────────────────────────────────────────
+    if (loginRateLimit) {
+      const ip = getClientIp(request);
+      // Keyed on IP + submitted identifier
+      const { success, reset } = await loginRateLimit.limit(`login:${ip}:${identifier}`);
+      if (!success) {
+        // Return 429 but generic message
+        const retryAfter = Math.ceil((reset - Date.now()) / 1000);
+        return NextResponse.json(
+          { error: "Too many attempts, please try again later" },
+          { 
+            status: 429,
+            headers: { "Retry-After": retryAfter.toString() }
+          }
+        );
+      }
+    }
+
     let email = identifier;
 
     // ── Resolve roll number → email ──────────────────────────

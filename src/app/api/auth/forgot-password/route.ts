@@ -1,4 +1,5 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { createRateLimiter, getClientIp } from "@/lib/rate-limit";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { z } from "zod";
@@ -18,7 +19,9 @@ const schema = z.object({
  * was an email or a roll number — this prevents both email
  * enumeration AND roll-number enumeration.
  */
-export async function POST(request: Request) {
+const forgotPasswordRateLimit = createRateLimiter({ tokens: 3, window: "1 h" });
+
+export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const parsed = schema.safeParse(body);
@@ -31,6 +34,22 @@ export async function POST(request: Request) {
     }
 
     const { identifier } = parsed.data;
+
+    if (forgotPasswordRateLimit) {
+      const ip = getClientIp(request);
+      const { success, reset } = await forgotPasswordRateLimit.limit(`forgot-password:${ip}`);
+      if (!success) {
+        const retryAfter = Math.ceil((reset - Date.now()) / 1000);
+        return NextResponse.json(
+          { error: "Too many attempts, please try again later" },
+          { 
+            status: 429,
+            headers: { "Retry-After": retryAfter.toString() }
+          }
+        );
+      }
+    }
+
     let email: string | null = null;
 
     if (identifier.includes("@")) {

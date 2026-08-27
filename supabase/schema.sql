@@ -197,6 +197,25 @@ as $$
   );
 $$;
 
+create or replace function current_user_role() returns text
+  language sql stable security definer set search_path = public as
+  $$ select role::text from profiles where id = auth.uid() $$;
+
+revoke execute on function current_user_role() from public;
+grant execute on function current_user_role() to authenticated;
+
+-- ── Function: get TAs for students to read ──────────────────────────────────
+-- Problem 2: Expose TA names to students without widening profiles_select
+create or replace function get_tas()
+returns table(id uuid, full_name text, role text)
+language sql security definer set search_path = public stable as
+$$
+  select id, full_name, role::text from profiles where role = 'ta';
+$$;
+
+revoke execute on function get_tas() from public;
+grant execute on function get_tas() to authenticated;
+
 -- ── Trigger: create a profile row for every new auth user ───────────────────
 
 create or replace function handle_new_user()
@@ -320,7 +339,7 @@ drop policy if exists profiles_update_own on profiles;
 create policy profiles_update_own on profiles for update
   using (id = auth.uid())
   -- A student must not be able to promote themselves to 'ta'.
-  with check (id = auth.uid() and role = (select role from profiles where id = auth.uid()));
+  with check (id = auth.uid() and role::text = current_user_role());
 
 drop policy if exists profiles_ta_all on profiles;
 create policy profiles_ta_all on profiles for all
@@ -423,11 +442,12 @@ drop policy if exists notifications_update_own on notifications;
 create policy notifications_update_own on notifications for update
   using (recipient_id = auth.uid()) with check (recipient_id = auth.uid());
 
--- Any signed-in user can create a notification, but only addressed to
--- someone else as a side effect of an action they were allowed to take.
+-- Problem 1: Students may only insert a notification whose recipient is a TA, and TAs may insert to anyone.
 drop policy if exists notifications_insert on notifications;
 create policy notifications_insert on notifications for insert
-  to authenticated with check (true);
+  to authenticated with check (
+    is_ta() or recipient_id in (select id from get_tas())
+  );
 
 -- activity_logs -------------------------------------------------------------
 drop policy if exists activity_logs_ta_read on activity_logs;
@@ -443,3 +463,7 @@ create policy activity_logs_ta_read on activity_logs for select using (is_ta());
 --   update profiles set role = 'ta' where email = 'you@university.edu';
 --
 -- ============================================================================
+
+-- TA accounts are created manually, not imported, so they must not be
+-- caught by the first-login flow.
+update profiles set must_change_password = false where role = 'ta';

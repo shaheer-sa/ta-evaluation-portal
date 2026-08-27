@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { ArrowLeft, Loader2, Mail } from "lucide-react";
 import Link from "next/link";
@@ -19,27 +18,6 @@ const schema = z.object({
 
 type ForgotPasswordForm = z.infer<typeof schema>;
 
-const containerVariants = {
-  hidden: { opacity: 0, y: 20 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: {
-      duration: 0.5,
-      ease: [0.22, 1, 0.36, 1],
-      staggerChildren: 0.08,
-    },
-  },
-};
-
-const itemVariants = {
-  hidden: { opacity: 0, y: 12 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.4, ease: [0.22, 1, 0.36, 1] },
-  },
-};
 
 const inputStyle: React.CSSProperties = {
   background: "var(--surface-sunk)",
@@ -87,21 +65,11 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <motion.div
-      variants={containerVariants}
-      initial="hidden"
-      animate="visible"
-      className="tams-auth-panel"
-    >
+    <div className="tams-auth-panel animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out">
       {emailSent ? (
         /* ── Success state ────────────────────────────────────── */
-        <motion.div
-          variants={containerVariants}
-          initial="hidden"
-          animate="visible"
-          style={{ textAlign: "center" }}
-        >
-          <motion.div variants={itemVariants}>
+        <div style={{ textAlign: "center" }}>
+          <div>
             <div
               style={{
                 margin: "0 auto 1rem",
@@ -116,21 +84,15 @@ export default function ForgotPasswordPage() {
             >
               <Mail style={{ width: 30, height: 30, color: "var(--success)" }} />
             </div>
-          </motion.div>
-          <motion.h1
-            variants={itemVariants}
-            style={{ fontSize: "1.3rem", fontWeight: 700, letterSpacing: "-0.02em" }}
-          >
+          </div>
+          <h1>
             Check your email
-          </motion.h1>
-          <motion.p
-            variants={itemVariants}
-            style={{ marginTop: "0.5rem", fontSize: "0.88rem", color: "var(--ink-muted)" }}
-          >
+          </h1>
+          <p>
             If an account matches what you entered, you&apos;ll receive a
             password reset email shortly.
-          </motion.p>
-          <motion.div variants={itemVariants} style={{ marginTop: "1.5rem" }}>
+          </p>
+          <div>
             <Link
               href="/login"
               style={{
@@ -145,12 +107,12 @@ export default function ForgotPasswordPage() {
               <ArrowLeft style={{ width: 14, height: 14 }} />
               Back to sign in
             </Link>
-          </motion.div>
-        </motion.div>
+          </div>
+        </div>
       ) : (
         /* ── Form state ───────────────────────────────────────── */
         <>
-          <motion.div variants={itemVariants} style={{ marginBottom: "1.5rem" }}>
+          <div>
             <Link
               href="/login"
               style={{
@@ -166,19 +128,19 @@ export default function ForgotPasswordPage() {
               <ArrowLeft style={{ width: 14, height: 14 }} />
               Back to sign in
             </Link>
-          </motion.div>
+          </div>
 
-          <motion.div variants={itemVariants} style={{ marginBottom: "1.5rem" }}>
+          <div>
             <h1 style={{ fontSize: "1.3rem", fontWeight: 700, letterSpacing: "-0.02em", margin: 0 }}>
               Reset your password
             </h1>
             <p style={{ marginTop: "0.4rem", fontSize: "0.88rem", color: "var(--ink-muted)" }}>
               Enter your email or roll number and we&apos;ll send you a reset link.
             </p>
-          </motion.div>
+          </div>
 
           <form onSubmit={handleSubmit(onSubmit)} style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
-            <motion.div variants={itemVariants} style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+            <div>
               <Label htmlFor="identifier" style={{ color: "var(--ink-muted)", fontSize: "0.85rem", fontWeight: 500 }}>
                 Email or roll number
               </Label>
@@ -198,9 +160,9 @@ export default function ForgotPasswordPage() {
                   {errors.identifier.message}
                 </p>
               )}
-            </motion.div>
+            </div>
 
-            <motion.div variants={itemVariants}>
+            <div>
               <SpecularButton
                 type="submit"
                 disabled={isLoading}
@@ -228,10 +190,10 @@ export default function ForgotPasswordPage() {
                   "Send reset link"
                 )}
               </SpecularButton>
-            </motion.div>
+            </div>
           </form>
         </>
       )}
-    </motion.div>
+    </div>
   );
 }

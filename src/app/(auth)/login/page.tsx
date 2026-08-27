@@ -1,11 +1,10 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { GraduationCap, Eye, EyeOff, Loader2 } from "lucide-react";
 import Link from "next/link";
@@ -14,7 +13,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { createClient } from "@/lib/supabase/client";
 import SpecularButton from "@/components/react-bits/SpecularButton";
-import { ParticleCard, GlobalSpotlight } from "@/components/react-bits/MagicBento";
 
 // ── Schema ──────────────────────────────────────────────────────
 const loginSchema = z.object({
@@ -35,29 +33,6 @@ const loginSchema = z.object({
 
 type LoginForm = z.infer<typeof loginSchema>;
 
-// ── Animations ──────────────────────────────────────────────────
-const containerVariants = {
-  hidden: { opacity: 0, y: 20 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: {
-      duration: 0.5,
-      ease: [0.22, 1, 0.36, 1],
-      staggerChildren: 0.08,
-    },
-  },
-};
-
-const itemVariants = {
-  hidden: { opacity: 0, y: 12 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.4, ease: [0.22, 1, 0.36, 1] },
-  },
-};
-
 const inputStyle: React.CSSProperties = {
   background: "var(--surface-sunk)",
   border: "1px solid var(--line)",
@@ -73,7 +48,6 @@ export default function LoginPage() {
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const gridRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (typeof window !== "undefined" && window.location.hash.includes("access_token=")) {
@@ -130,21 +104,10 @@ export default function LoginPage() {
   }
 
   return (
-    <div ref={gridRef} className="mc-section w-full" style={{ '--mc-glow': '211, 212, 192' } as React.CSSProperties}>
-      <GlobalSpotlight gridRef={gridRef} glowColor="211, 212, 192" />
-      <motion.div
-        variants={containerVariants}
-        initial="hidden"
-        animate="visible"
-      >
-        <ParticleCard
-          className="mc-card mc-card--glow tams-auth-panel"
-          enableTilt={true}
-          clickEffect={true}
-          particleCount={15}
-        >
+    <div className="mc-section w-full">
+      <div className="mc-card mc-card--glow tams-auth-panel animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out">
       {/* ── Header ─────────────────────────────────────────────── */}
-      <motion.div variants={itemVariants} style={{ marginBottom: "2rem", textAlign: "center" }}>
+      <div style={{ marginBottom: "2rem", textAlign: "center" }}>
         <div
           style={{
             margin: "0 auto 1rem",
@@ -184,12 +147,12 @@ export default function LoginPage() {
         >
           Teaching Assistant Management System
         </p>
-      </motion.div>
+      </div>
 
       {/* ── Form ───────────────────────────────────────────────── */}
       <form onSubmit={handleSubmit(onSubmit)} style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
         {/* Identifier field */}
-        <motion.div variants={itemVariants} style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
           <Label
             htmlFor="identifier"
             style={{ color: "var(--ink-muted)", fontSize: "0.85rem", fontWeight: 500 }}
@@ -212,10 +175,10 @@ export default function LoginPage() {
               {errors.identifier.message}
             </p>
           )}
-        </motion.div>
+        </div>
 
         {/* Password field */}
-        <motion.div variants={itemVariants} style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <Label
               htmlFor="password"
@@ -277,10 +240,10 @@ export default function LoginPage() {
               {errors.password.message}
             </p>
           )}
-        </motion.div>
+        </div>
 
         {/* Submit */}
-        <motion.div variants={itemVariants} style={{ marginTop: "0.5rem" }}>
+        <div style={{ marginTop: "0.5rem" }}>
           <SpecularButton
             type="submit"
             disabled={isLoading || !identifierValue || !passwordValue}
@@ -309,12 +272,11 @@ export default function LoginPage() {
               "Sign In"
             )}
           </SpecularButton>
-        </motion.div>
+        </div>
       </form>
 
       {/* ── Footer ─────────────────────────────────────────────── */}
-      <motion.p
-        variants={itemVariants}
+      <p
         style={{
           marginTop: "1.75rem",
           textAlign: "center",
@@ -326,9 +288,8 @@ export default function LoginPage() {
         Student accounts are created by the TA.
         <br />
         Contact your TA if you don&apos;t have an account.
-      </motion.p>
-        </ParticleCard>
-      </motion.div>
+      </p>
+      </div>
     </div>
   );
 }
