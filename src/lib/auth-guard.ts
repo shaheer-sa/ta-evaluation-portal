@@ -1,6 +1,4 @@
 import { createClient } from "@/lib/supabase/server";
-import type { SupabaseClient } from '@supabase/supabase-js';
-import type { Database } from '@/types/database';
 
 /**
  * Asserts that the current request comes from an authenticated TA.
@@ -34,10 +32,12 @@ export async function requireTA() {
     .eq("id", user.id)
     .single();
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   if ((profile as any)?.role !== "ta") {
     throw new Error("Only teaching assistants can perform this action.");
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return { supabase: supabase as any, userId: user.id };
 }
 

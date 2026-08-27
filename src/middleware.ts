@@ -41,9 +41,11 @@ export async function middleware(request: NextRequest) {
     .eq("id", user.id)
     .single();
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const role = (profile as any)?.role;
   const dashboardPath = role === "ta" ? "/ta" : "/student";
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const mustChange = (profile as any)?.must_change_password === true;
 
   if (mustChange && pathname !== "/first-login") {
