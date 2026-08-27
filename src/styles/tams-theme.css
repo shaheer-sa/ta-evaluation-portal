@@ -395,17 +395,18 @@
   font-weight: 600;
   letter-spacing: 0.09em;
   text-transform: uppercase;
-  padding: 0.7rem 0.9rem;
+  padding: 0.75rem 1rem;
   text-align: left;
   border-bottom: none;
 }
 
-.tams-table thead th.tams-numeral {
+.tams-table thead th.tams-numeral,
+.tams-table tbody td.tams-numeral {
   text-align: right;
 }
 
 .tams-table tbody td {
-  padding: 0.8rem 1rem;
+  padding: 0.75rem 1rem;
   border-bottom: 1px solid var(--line);
   color: var(--ink);
 }
