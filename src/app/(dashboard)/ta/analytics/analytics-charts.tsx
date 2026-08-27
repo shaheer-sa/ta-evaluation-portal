@@ -14,7 +14,7 @@ import {
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-const COLORS = ["#1D4533", "#5E3122", "#D6855C", "#27684B", "#346279", "#97560C"];
+const COLORS = ["#0A2947", "#8B5E3C", "#2C6347", "#8B5218", "#2D5276", "#744D2F"];
 
 interface AnalyticsChartsProps {
   distributionData: { name: string; count: number }[];

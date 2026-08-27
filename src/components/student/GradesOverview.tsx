@@ -20,8 +20,8 @@ export interface CourseGrade {
 export function GradesGrid({ children }: { children: React.ReactNode }) {
   const gridRef = useRef<HTMLDivElement>(null);
   return (
-    <section className="mc-section w-full" style={{ '--mc-glow': '249, 210, 186' } as React.CSSProperties}>
-      <GlobalSpotlight gridRef={gridRef} glowColor="249, 210, 186" />
+    <section className="mc-section w-full" style={{ '--mc-glow': '211, 212, 192' } as React.CSSProperties}>
+      <GlobalSpotlight gridRef={gridRef} glowColor="211, 212, 192" />
       <div ref={gridRef} className="w-full">
         {children}
       </div>
@@ -102,8 +102,8 @@ function ProgressRing({ percentage }: { percentage: number }) {
       />
       <defs>
         <linearGradient id="gradeGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#1D4533" />
-          <stop offset="100%" stopColor="#27684B" />
+          <stop offset="0%" stopColor="#0A2947" />
+          <stop offset="100%" stopColor="#2D5276" />
         </linearGradient>
       </defs>
     </svg>

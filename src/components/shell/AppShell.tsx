@@ -4,7 +4,7 @@ import { ReactNode, useEffect, useMemo, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import ClickSpark from '@/components/react-bits/ClickSpark';
 import LineSidebar from '@/components/react-bits/LineSidebar';
-import AmbientBackground from '@/components/shell/AmbientBackground';
+import AmbientField from '@/components/shell/AmbientField';
 import { STUDENT_NAV, TA_NAV, activeIndexFor } from '@/components/shell/nav-config';
 
 interface AppShellProps {
@@ -80,7 +80,7 @@ export default function AppShell({ role, userName, title, actions, children }: A
 
   return (
     <ClickSpark sparkColor="var(--primary)" sparkRadius={17} sparkCount={8} duration={420}>
-      <AmbientBackground />
+      <AmbientField />
 
       <div className="tams-shell">
         <aside

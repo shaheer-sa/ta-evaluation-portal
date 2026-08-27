@@ -1,46 +1,51 @@
 :root {
   /* ---- brand ---- */
-  --forest:      hsl(153 41% 19%);   /* #1D4533 */
-  --cream:       hsl(26 59% 92%);    /* #F7EAE0 */
-  --peach:       hsl(23 84% 85%);    /* #F9D2BA */
-  --cocoa:       hsl(15 47% 25%);    /* #5E3122 */
+  --navy:   hsl(210 75% 16%);   /* #0A2947 */
+  --sand:   hsl(39 64% 87%);    /* #F3E4C9 */
+  --sage:   hsl(63 19% 79%);    /* #D3D4C0 */
+  --tan:    hsl(26 40% 39%);    /* #8B5E3C */
+  --slate:  hsl(0 0% 29%);      /* #4A4A4A */
 
-  /* ---- surfaces (paper stack) ---- */
-  --surface-0:   hsl(26 60% 97%);    /* page background */
-  --surface-1:   hsl(26 59% 94%);    /* card */
-  --surface-2:   hsl(26 55% 90%);    /* raised / table header */
-  --surface-sunk:hsl(26 45% 88%);    /* input wells */
+  /* ---- surfaces ---- */
+  --surface-0:    hsl(40 55% 97%);   /* page  #FCF9F3 */
+  --surface-1:    hsl(41 52% 95%);   /* card  #F9F5EC */
+  --surface-2:    hsl(63 19% 79%);   /* sage — table headers, sidebar */
+  --surface-sunk: hsl(39 64% 87%);   /* sand — input wells */
 
   /* ---- ink ---- */
-  --ink:         hsl(15 47% 20%);    /* body text      — 11.09:1 on cream */
-  --ink-muted:   hsl(18 22% 38%);    /* secondary      —  5.44:1 AA */
-  --ink-faint:   hsl(20 18% 44%);    /* captions       —  4.28:1 AA-large */
-  --ink-invert:  hsl(26 59% 94%);    /* text on forest */
+  --ink:        hsl(0 0% 25%);       /* body     — 9.87:1 on paper  AAA */
+  --ink-muted:  hsl(30 8% 38%);      /* secondary— 5.78:1          AA  */
+  --ink-faint:  hsl(30 10% 46%);     /* captions — 4.26:1          AA-large */
+  --ink-invert: hsl(40 55% 97%);     /* text on navy — 14.06:1     AAA */
 
   /* ---- lines ---- */
-  --line:        hsl(24 32% 82%);
-  --line-strong: hsl(22 30% 72%);
-  --line-focus:  hsl(153 41% 19%);
+  --line:        hsl(45 25% 84%);
+  --line-strong: hsl(45 20% 72%);
+  --line-focus:  hsl(210 75% 16%);
 
   /* ---- interactive ---- */
-  --primary:        var(--forest);
-  --primary-hover:  hsl(153 41% 15%);
-  --primary-fg:     hsl(26 59% 94%);
-  --primary-soft:   hsl(153 30% 92%);
-  --accent:         var(--peach);
-  --accent-deep:    hsl(20 60% 60%);
-  --accent-soft:    hsl(23 84% 93%);
+  --primary:       var(--navy);
+  --primary-hover: hsl(210 75% 12%);
+  --primary-fg:    hsl(40 55% 97%);
+  --primary-soft:  hsl(210 40% 92%);
+  --accent:        var(--tan);
+  --accent-deep:   hsl(26 42% 32%);
+  --accent-soft:   hsl(39 64% 87%);
 
-  /* ---- state (derived; palette has none) ---- */
-  --danger:       hsl(4 64% 42%);    --danger-soft:  hsl(4 70% 94%);
-  --warning:      hsl(32 85% 32%);   --warning-soft: hsl(35 85% 92%);
-  --success:      hsl(153 45% 28%);  --success-soft: hsl(150 40% 92%);
-  --info:         hsl(200 40% 34%);  --info-soft:    hsl(200 45% 93%);
+  /* ---- state ---- */
+  --danger:  hsl(2 58% 40%);    --danger-soft:  hsl(2 55% 94%);
+  --warning: hsl(30 70% 32%);   --warning-soft: hsl(35 70% 92%);
+  --success: hsl(150 38% 28%);  --success-soft: hsl(150 30% 92%);
+  --info:    hsl(210 45% 32%);  --info-soft:    hsl(210 45% 93%);
 
-  /* ---- elevation (warm-tinted, never neutral grey) ---- */
-  --shadow-sm:  0 1px 2px hsl(15 47% 25% / 0.06);
-  --shadow:     0 4px 16px hsl(15 47% 25% / 0.08);
-  --shadow-lift:0 12px 32px hsl(15 47% 25% / 0.12);
+  /* ---- ambient field (used by AmbientField) ---- */
+  --field-glow-core: hsl(63 19% 79% / 0.5);
+  --field-glow-mid:  hsl(26 40% 39% / 0.09);
+
+  /* ---- elevation: warm-tinted, never neutral grey ---- */
+  --shadow-sm:   0 1px 2px hsl(30 20% 25% / 0.06);
+  --shadow:      0 4px 16px hsl(30 20% 25% / 0.08);
+  --shadow-lift: 0 12px 32px hsl(30 20% 25% / 0.12);
 
   --radius:     14px;
   --radius-sm:  10px;
@@ -50,31 +55,30 @@
 /* Dark variant — forest-derived, NOT the old indigo. Keep the selector even if
    no toggle ships yet, so the tokens stay paired. */
 .dark {
-  --surface-0:   hsl(153 38% 7%);
-  --surface-1:   hsl(153 32% 10%);
-  --surface-2:   hsl(153 26% 14%);
-  --surface-sunk:hsl(153 30% 9%);
-  --ink:         hsl(26 59% 92%);
-  --ink-muted:   hsl(26 22% 72%);
-  --ink-faint:   hsl(26 16% 55%);
-  --ink-invert:  hsl(153 41% 15%);
-  --line:        hsl(153 20% 22%);
-  --line-strong: hsl(153 22% 32%);
-  --line-focus:  hsl(23 84% 85%);
-  --primary:       hsl(23 84% 85%);
-  --primary-hover: hsl(23 70% 78%);
-  --primary-fg:    hsl(153 41% 12%);
-  --primary-soft:  hsl(153 30% 16%);
-  --accent:        hsl(23 84% 85%);
-  --accent-deep:   hsl(20 60% 60%);
-  --accent-soft:   hsl(153 26% 18%);
-  --danger:  hsl(4 75% 68%);   --danger-soft:  hsl(4 40% 18%);
-  --warning: hsl(35 85% 66%);  --warning-soft: hsl(35 45% 18%);
-  --success: hsl(150 55% 58%); --success-soft: hsl(150 40% 16%);
-  --info:    hsl(200 60% 68%); --info-soft:    hsl(200 40% 18%);
-  --shadow-sm:  0 1px 2px hsl(153 60% 3% / 0.4);
-  --shadow:     0 4px 16px hsl(153 60% 3% / 0.5);
-  --shadow-lift:0 12px 32px hsl(153 60% 3% / 0.6);
+  --surface-0:    hsl(210 55% 8%);
+  --surface-1:    hsl(210 48% 11%);
+  --surface-2:    hsl(210 40% 15%);
+  --surface-sunk: hsl(210 50% 9%);
+  --ink:          hsl(39 64% 87%);
+  --ink-muted:    hsl(39 20% 70%);
+  --ink-faint:    hsl(39 14% 55%);
+  --ink-invert:   hsl(210 75% 12%);
+  --line:         hsl(210 25% 22%);
+  --line-strong:  hsl(210 22% 32%);
+  --line-focus:   hsl(39 64% 87%);
+  --primary:       hsl(39 64% 87%);
+  --primary-hover: hsl(39 55% 80%);
+  --primary-fg:    hsl(210 75% 12%);
+  --primary-soft:  hsl(210 40% 18%);
+  --accent:        hsl(26 45% 58%);
+  --accent-deep:   hsl(26 42% 44%);
+  --accent-soft:   hsl(210 35% 18%);
+  --danger:  hsl(2 65% 65%);    --danger-soft:  hsl(2 35% 18%);
+  --warning: hsl(35 70% 62%);   --warning-soft: hsl(35 40% 18%);
+  --success: hsl(150 45% 55%);  --success-soft: hsl(150 35% 16%);
+  --info:    hsl(210 55% 66%);  --info-soft:    hsl(210 40% 18%);
+  --field-glow-core: hsl(210 50% 40% / 0.35);
+  --field-glow-mid:  hsl(26 45% 45% / 0.10);
 }
 
 @media (prefers-reduced-motion: reduce) {

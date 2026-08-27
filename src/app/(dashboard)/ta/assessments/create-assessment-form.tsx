@@ -15,6 +15,7 @@ const ALL_ASSESSMENT_TYPES = [
   { value: "cp", label: "Class Participation", requirement: "enable_cp" },
 ];
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function CreateAssessmentForm({ sectionCourses }: { sectionCourses: any[] }) {
   const [selectedSectionCourseId, setSelectedSectionCourseId] = useState("");
 
@@ -25,7 +26,7 @@ export function CreateAssessmentForm({ sectionCourses }: { sectionCourses: any[]
   const availableTypes = ALL_ASSESSMENT_TYPES.filter((type) => {
     if (!type.requirement) return true;
     if (!selectedCourse) return true; // Show all by default if no class selected
-    // @ts-ignore
+
     return selectedCourse[type.requirement] !== false;
   });
 

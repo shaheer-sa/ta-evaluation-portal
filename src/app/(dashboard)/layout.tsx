@@ -8,12 +8,7 @@ import { useState } from "react";
 import { NotificationsBell } from "@/components/notifications-bell";
 import LineSidebar from "@/components/react-bits/LineSidebar";
 import ClickSpark from "@/components/react-bits/ClickSpark";
-import dynamic from "next/dynamic";
-
-const LiquidEther = dynamic(
-  () => import("@/components/react-bits/LiquidEther"),
-  { ssr: false }
-);
+import AmbientField from "@/components/shell/AmbientField";
 
 const TA_NAV = [
   { href: "/ta", label: "Overview", exact: true },
@@ -67,19 +62,7 @@ export default function DashboardLayout({
     <ClickSpark>
       <div className="tams-body">
         <div className="tams-shell">
-          <div className="tams-ambient">
-            <LiquidEther
-              colors={['#1D4533', '#F9D2BA', '#5E3122']}
-              resolution={0.4}
-              mouseForce={28}
-              cursorSize={110}
-              isViscous={false}
-              autoDemo={false}
-              takeoverDuration={0.15}
-              autoResumeDelay={3000}
-              autoRampDuration={0.3}
-            />
-          </div>
+          <AmbientField />
           
           {mobileMenuOpen && (
             <div 

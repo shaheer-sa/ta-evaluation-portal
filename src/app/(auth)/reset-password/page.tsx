@@ -172,12 +172,12 @@ export default function ResetPasswordPage() {
               block
               size="md"
               radius={14}
-              tint="hsl(153 41% 19%)"
+              tint="hsl(210 75% 16%)"
               tintOpacity={0.22}
               blur={10}
-              textColor="hsl(26 59% 94%)"
-              lineColor="#F9D2BA"
-              baseColor="#1D4533"
+              textColor="hsl(40 55% 97%)"
+              lineColor="#F3E4C9"
+              baseColor="#0A2947"
               autoAnimate
               speed={0.3}
             >
@@ -322,12 +322,12 @@ export default function ResetPasswordPage() {
             block
             size="lg"
             radius={14}
-            tint="hsl(153 41% 19%)"
+            tint="hsl(210 75% 16%)"
             tintOpacity={0.22}
             blur={10}
-            textColor="hsl(26 59% 94%)"
-            lineColor="#F9D2BA"
-            baseColor="#1D4533"
+            textColor="hsl(40 55% 97%)"
+            lineColor="#F3E4C9"
+            baseColor="#0A2947"
             intensity={1.2}
             autoAnimate
             speed={0.3}

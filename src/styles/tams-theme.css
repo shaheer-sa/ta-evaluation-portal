@@ -146,30 +146,6 @@
   isolation: isolate;
 }
 
-.tams-ambient {
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-}
-
-.tams-ambient canvas {
-  opacity: 0.35;
-  mix-blend-mode: multiply;
-}
-
-/* vignette so data stays readable over the moving background */
-.tams-ambient::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(
-      120% 90% at 22% 0%,
-      rgb(from var(--surface-0) r g b / 0.1) 0%,
-      rgb(from var(--surface-0) r g b / 0.5) 68%
-    ),
-    linear-gradient(180deg, rgb(from var(--surface-0) r g b / 0.2), rgb(from var(--surface-0) r g b / 0.7));
-}
 
 .tams-rail {
   position: sticky;
@@ -213,7 +189,7 @@
   font-family: var(--font-display);
   font-weight: 700;
   font-size: 0.92rem;
-  background: linear-gradient(145deg, var(--forest), hsl(153 41% 13%));
+  background: linear-gradient(145deg, var(--navy), hsl(210 75% 12%));
   border: 1px solid hsl(153 41% 19% / 0.5);
   color: var(--primary-fg);
   box-shadow: 0 0 12px hsl(153 41% 19% / 0.25), inset 0 1px 2px hsl(0 0% 100% / 0.2);

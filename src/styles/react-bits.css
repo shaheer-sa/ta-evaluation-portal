@@ -75,11 +75,9 @@
   height: 1px;
   width: var(--marker-length);
   transform-origin: left;
-  background-color: color-mix(
-    in srgb,
-    var(--accent-color) calc(var(--effect, 0) * 100%),
-    var(--marker-color)
-  );
+  background-color: color-mix(in srgb,
+      var(--accent-color) calc(var(--effect, 0) * 100%),
+      var(--marker-color));
   transform: translateY(-50%) scaleX(calc(0.7 + var(--effect, 0) * 0.5));
 }
 
@@ -89,11 +87,9 @@
   align-items: baseline;
   line-height: 1.2;
   white-space: nowrap;
-  color: color-mix(
-    in srgb,
-    var(--accent-color) calc(var(--effect, 0) * 100%),
-    var(--text-color)
-  );
+  color: color-mix(in srgb,
+      var(--accent-color) calc(var(--effect, 0) * 100%),
+      var(--text-color));
   font-size: var(--font-size);
   transform: translateX(calc(var(--effect, 0) * var(--max-shift)));
 }
@@ -143,11 +139,9 @@
   letter-spacing: 0.01em;
   color: var(--sb-text-color);
   border-radius: var(--sb-radius);
-  background: color-mix(
-    in srgb,
-    var(--sb-tint) calc(var(--sb-tint-opacity) * 100%),
-    transparent
-  );
+  background: color-mix(in srgb,
+      var(--sb-tint) calc(var(--sb-tint-opacity) * 100%),
+      transparent);
   backdrop-filter: blur(var(--sb-blur));
   -webkit-backdrop-filter: blur(var(--sb-blur));
   box-shadow: inset 0 1px 0 hsl(0 0% 100% / 0.04), 0 8px 24px hsl(0 0% 0% / 0.25);
@@ -176,14 +170,17 @@
   font-size: 0.85rem;
   padding: 10px 22px;
 }
+
 .rb-spec--md {
   font-size: 1rem;
   padding: 14px 30px;
 }
+
 .rb-spec--lg {
   font-size: 1.15rem;
   padding: 18px 40px;
 }
+
 .rb-spec--block {
   width: 100%;
 }
@@ -241,17 +238,17 @@
   }
 
   /* asymmetric bento: 3rd tile is the hero, 4th is a wide band */
-  .mc-grid > .mc-card:nth-child(3) {
+  .mc-grid>.mc-card:nth-child(3) {
     grid-column: span 2;
     grid-row: span 2;
   }
 
-  .mc-grid > .mc-card:nth-child(4) {
+  .mc-grid>.mc-card:nth-child(4) {
     grid-column: 1 / span 2;
     grid-row: 2 / span 2;
   }
 
-  .mc-grid > .mc-card:nth-child(6) {
+  .mc-grid>.mc-card:nth-child(6) {
     grid-column: 4;
     grid-row: 3;
   }
@@ -296,12 +293,10 @@
   inset: 0;
   padding: 5px;
   border-radius: inherit;
-  background: radial-gradient(
-    var(--glow-radius) circle at var(--glow-x) var(--glow-y),
-    rgba(var(--mc-glow), calc(var(--glow-intensity) * 0.85)) 0%,
-    rgba(var(--mc-glow), calc(var(--glow-intensity) * 0.4)) 30%,
-    transparent 60%
-  );
+  background: radial-gradient(var(--glow-radius) circle at var(--glow-x) var(--glow-y),
+      rgba(var(--mc-glow), calc(var(--glow-intensity) * 0.85)) 0%,
+      rgba(var(--mc-glow), calc(var(--glow-intensity) * 0.4)) 30%,
+      transparent 60%);
   -webkit-mask: linear-gradient(#fff 0 0) content-box,
     linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;
@@ -338,6 +333,7 @@
 .mc-card__delta[data-tone="up"] {
   color: var(--tams-success);
 }
+
 .mc-card__delta[data-tone="down"] {
   color: var(--tams-danger);
 }
@@ -357,11 +353,9 @@
   letter-spacing: -0.04em;
   line-height: 1;
   margin: 0 0 0.45rem;
-  background: linear-gradient(
-    140deg,
-    var(--forest),
-    var(--cocoa)
-  );
+  background: linear-gradient(140deg,
+      var(--navy),
+      var(--slate));
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -424,12 +418,10 @@
   border-radius: 50%;
   pointer-events: none;
   z-index: 4;
-  background: radial-gradient(
-    circle,
-    rgba(var(--mc-glow), 0.4) 0%,
-    rgba(var(--mc-glow), 0.2) 30%,
-    transparent 70%
-  );
+  background: radial-gradient(circle,
+      rgba(var(--mc-glow), 0.4) 0%,
+      rgba(var(--mc-glow), 0.2) 30%,
+      transparent 70%);
 }
 
 .mc-spotlight {
@@ -442,29 +434,18 @@
   opacity: 0;
   transform: translate(-50%, -50%);
   mix-blend-mode: screen;
-  background: radial-gradient(
-    circle,
-    rgba(var(--mc-glow), 0.15) 0%,
-    rgba(var(--mc-glow), 0.08) 15%,
-    rgba(var(--mc-glow), 0.04) 25%,
-    rgba(var(--mc-glow), 0.02) 40%,
-    rgba(var(--mc-glow), 0.01) 65%,
-    transparent 70%
-  );
+  background: radial-gradient(circle,
+      rgba(var(--mc-glow), 0.15) 0%,
+      rgba(var(--mc-glow), 0.08) 15%,
+      rgba(var(--mc-glow), 0.04) 25%,
+      rgba(var(--mc-glow), 0.02) 40%,
+      rgba(var(--mc-glow), 0.01) 65%,
+      transparent 70%);
 }
 
-/* ===================== LiquidEther ===================== */
-
-.rb-liquid {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  overflow: hidden;
-  pointer-events: none;
-  touch-action: none;
-}
 
 @media (prefers-reduced-motion: reduce) {
+
   .mc-card,
   .rb-spec,
   .rb-line__label,
