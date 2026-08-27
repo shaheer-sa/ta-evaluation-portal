@@ -41,10 +41,10 @@ export async function middleware(request: NextRequest) {
     .eq("id", user.id)
     .single();
 
-  const role = profile?.role;
+  const role = (profile as any)?.role;
   const dashboardPath = role === "ta" ? "/ta" : "/student";
 
-  const mustChange = profile?.must_change_password === true;
+  const mustChange = (profile as any)?.must_change_password === true;
 
   if (mustChange && pathname !== "/first-login") {
     const url = request.nextUrl.clone();

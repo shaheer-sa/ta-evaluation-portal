@@ -472,7 +472,7 @@ export async function POST(request: NextRequest) {
                      });
                      // Create local ref to prevent duplicates if processed again
                      if (enrollment.marks) {
-                        enrollment.marks.push({
+                        (enrollment.marks as any[]).push({
                            id: "temp",
                            assessment_id: assessment.id,
                            score: sheetScore,

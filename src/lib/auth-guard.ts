@@ -34,10 +34,10 @@ export async function requireTA() {
     .eq("id", user.id)
     .single();
 
-  if (profile?.role !== "ta") {
+  if ((profile as any)?.role !== "ta") {
     throw new Error("Only teaching assistants can perform this action.");
   }
 
-  return { supabase: supabase as SupabaseClient<Database>, userId: user.id };
+  return { supabase: supabase as any, userId: user.id };
 }
 
