@@ -24,11 +24,9 @@
   --line-focus:  hsl(210 75% 16%);
 
   /* ---- interactive ---- */
-  --primary:       var(--navy);
   --primary-hover: hsl(210 75% 12%);
   --primary-fg:    hsl(40 55% 97%);
   --primary-soft:  hsl(210 40% 92%);
-  --accent:        var(--tan);
   --accent-deep:   hsl(26 42% 32%);
   --accent-soft:   hsl(39 64% 87%);
 
@@ -47,7 +45,6 @@
   --shadow:      0 4px 16px hsl(30 20% 25% / 0.08);
   --shadow-lift: 0 12px 32px hsl(30 20% 25% / 0.12);
 
-  --radius:     14px;
   --radius-sm:  10px;
   --radius-lg:  20px;
 }
@@ -66,11 +63,9 @@
   --line:         hsl(210 25% 22%);
   --line-strong:  hsl(210 22% 32%);
   --line-focus:   hsl(39 64% 87%);
-  --primary:       hsl(39 64% 87%);
   --primary-hover: hsl(39 55% 80%);
   --primary-fg:    hsl(210 75% 12%);
   --primary-soft:  hsl(210 40% 18%);
-  --accent:        hsl(26 45% 58%);
   --accent-deep:   hsl(26 42% 44%);
   --accent-soft:   hsl(210 35% 18%);
   --danger:  hsl(2 65% 65%);    --danger-soft:  hsl(2 35% 18%);

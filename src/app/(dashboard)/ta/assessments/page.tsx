@@ -45,16 +45,16 @@ export default async function AssessmentsPage() {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Assessments</h1>
-        <p className="text-muted-foreground">
-          Define assessments for each of your classes.
-        </p>
+      <div className="tams-pagehead">
+        <div>
+          <p className="tams-pagehead__eyebrow">TEACHING ASSISTANT</p>
+          <h1 className="tams-pagehead__title">Assessments</h1>
+        </div>
       </div>
 
       <div className="grid gap-8 md:grid-cols-2">
         {/* ── Create Assessment ──────────────────────────────── */}
-        <Card>
+        <Card data-edge>
           <CardHeader>
             <CardTitle>Create Assessment</CardTitle>
             <CardDescription>
@@ -67,7 +67,7 @@ export default async function AssessmentsPage() {
         </Card>
 
         {/* ── Existing Assessments ──────────────────────────── */}
-        <Card>
+        <Card data-edge>
           <CardHeader>
             <CardTitle>Existing Assessments</CardTitle>
           </CardHeader>
@@ -85,7 +85,7 @@ export default async function AssessmentsPage() {
                   return (
                     <div
                       key={a.id}
-                      className="flex items-center justify-between rounded-md border p-3"
+                      className="tams-inset flex items-center justify-between p-3"
                     >
                       <div>
                         <div className="font-medium">{a.title}</div>

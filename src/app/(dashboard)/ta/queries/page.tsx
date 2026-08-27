@@ -93,11 +93,11 @@ export default function TAQueriesPage() {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Student Queries</h1>
-        <p className="text-muted-foreground">
-          Review and resolve re-evaluation requests and student questions.
-        </p>
+      <div className="tams-pagehead">
+        <div>
+          <p className="tams-pagehead__eyebrow">TEACHING ASSISTANT</p>
+          <h1 className="tams-pagehead__title">Student Queries</h1>
+        </div>
       </div>
 
       {/* Filter tabs */}
@@ -119,7 +119,7 @@ export default function TAQueriesPage() {
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
         </div>
       ) : queries.length === 0 ? (
-        <Card>
+        <Card data-edge>
           <CardContent className="py-12 text-center">
             <p className="text-muted-foreground">No queries found for this filter.</p>
           </CardContent>
@@ -127,7 +127,7 @@ export default function TAQueriesPage() {
       ) : (
         <div className="space-y-4">
           {queries.map((q) => (
-            <Card key={q.id}>
+            <Card data-edge key={q.id}>
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between gap-4">
                   <div>

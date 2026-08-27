@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { LogOut, Menu, X, GraduationCap } from "lucide-react";
 import { toast } from "sonner";
 import { usePathname } from "next/navigation";
@@ -9,6 +10,7 @@ import { NotificationsBell } from "@/components/notifications-bell";
 import LineSidebar from "@/components/react-bits/LineSidebar";
 import ClickSpark from "@/components/react-bits/ClickSpark";
 import AmbientField from "@/components/shell/AmbientField";
+import CardEdgeTracker from "@/components/shell/CardEdgeTracker";
 
 const TA_NAV = [
   { href: "/ta", label: "Overview", exact: true },
@@ -63,6 +65,7 @@ export default function DashboardLayout({
       <div className="tams-body">
         <div className="tams-shell">
           <AmbientField />
+          <CardEdgeTracker />
           
           {mobileMenuOpen && (
             <div 
@@ -72,19 +75,21 @@ export default function DashboardLayout({
           )}
 
           <aside 
-            className="tams-rail tams-glass-strong" 
+            className="tams-rail" 
             data-open={mobileMenuOpen}
           >
             <div className="tams-rail__brand">
-              <div className="tams-rail__mark">
-                <GraduationCap size={20} color="var(--primary-fg)" />
-              </div>
-              <div>
-                <div className="tams-rail__name">TAMS</div>
-                <span className="tams-rail__role">
-                  {isTA ? 'Teaching Assistant' : 'Student'}
-                </span>
-              </div>
+              <Link href={isTA ? "/ta" : "/student"} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', textDecoration: 'none', color: 'inherit' }}>
+                <div className="tams-rail__mark">
+                  <GraduationCap size={20} color="var(--primary-fg)" />
+                </div>
+                <div>
+                  <div className="tams-rail__name">TAMS</div>
+                  <span className="tams-rail__role">
+                    {isTA ? 'Teaching Assistant' : 'Student'}
+                  </span>
+                </div>
+              </Link>
               <button 
                 className="tams-iconbtn tams-mobile-only ml-auto"
                 onClick={() => setMobileMenuOpen(false)}
@@ -97,7 +102,8 @@ export default function DashboardLayout({
               <LineSidebar 
                 items={navItems.map(n => n.label)}
                 defaultActive={activeIndex >= 0 ? activeIndex : null}
-                accentColor="var(--primary)"
+                accentColor="var(--navy)"
+                textColor="var(--navy)"
                 onItemClick={(idx) => {
                    router.push(navItems[idx].href);
                    setMobileMenuOpen(false);
@@ -113,7 +119,7 @@ export default function DashboardLayout({
           </aside>
 
           <div className="tams-content">
-            <header className="tams-topbar tams-glass-strong border-b">
+            <header className="tams-topbar border-b">
               <button 
                 className="tams-iconbtn tams-mobile-only"
                 onClick={() => setMobileMenuOpen(true)}

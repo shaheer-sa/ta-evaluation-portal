@@ -116,9 +116,12 @@ export default async function StudentDashboardPage() {
 
   return (
     <div className="max-w-[1200px] mx-auto pb-12">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold tracking-tight mb-2">My Grades</h1>
-        <p className="text-muted-foreground">
+      <div className="tams-pagehead">
+        <div>
+          <p className="tams-pagehead__eyebrow">STUDENT</p>
+          <h1 className="tams-pagehead__title">My Grades</h1>
+        </div>
+        <p className="text-sm text-muted-foreground text-right hidden sm:block">
           Welcome back, {profile?.full_name || "Student"} ({profile?.roll_number}).
         </p>
       </div>
@@ -131,7 +134,7 @@ export default async function StudentDashboardPage() {
         />
 
         {courseCards.length === 0 ? (
-          <Card className="border-none bg-white/[0.03] backdrop-blur-xl">
+          <Card data-edge className="border-none bg-white/[0.03] backdrop-blur-xl">
             <CardContent className="py-12 text-center">
               <p className="text-muted-foreground">
                 You are not enrolled in any courses yet. Your TA will add you once the semester begins.

@@ -186,6 +186,7 @@ const LineSidebar = ({
             role="link"
             tabIndex={0}
             aria-current={activeIndex === index ? 'page' : undefined}
+            data-active={activeIndex === index ? "true" : undefined}
             onClick={() => handleSelect(index, label)}
             onKeyDown={e => {
               if (e.key === 'Enter' || e.key === ' ') {

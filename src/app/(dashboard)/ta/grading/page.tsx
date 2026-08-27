@@ -219,15 +219,18 @@ export default function GradingPage() {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Grading</h1>
-        <p className="text-muted-foreground">
+      <div className="tams-pagehead">
+        <div>
+          <p className="tams-pagehead__eyebrow">TEACHING ASSISTANT</p>
+          <h1 className="tams-pagehead__title">Grading</h1>
+        </div>
+        <p className="text-sm text-muted-foreground text-right hidden sm:block max-w-[250px]">
           Enter and update marks for a single assessment across the whole class.
         </p>
       </div>
 
       {/* ── Class + assessment pickers ─────────────────────────── */}
-      <Card>
+      <Card data-edge>
         <CardHeader>
           <CardTitle>Choose what to grade</CardTitle>
           <CardDescription>
@@ -277,7 +280,7 @@ export default function GradingPage() {
 
       {/* ── Marks table ────────────────────────────────────────── */}
       {selectedAssessment && (
-        <Card>
+        <Card data-edge>
           <CardHeader>
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
@@ -335,13 +338,13 @@ export default function GradingPage() {
                 No students match &ldquo;{searchQuery}&rdquo;.
               </p>
             ) : (
-              <div className="overflow-x-auto rounded-md border">
-                <table className="w-full text-sm">
+              <div className="tams-table-wrap">
+                <table className="tams-table">
                   <thead>
-                    <tr className="border-b bg-muted/50">
-                      <th className="p-3 text-left font-medium">Roll number</th>
-                      <th className="p-3 text-left font-medium">Name</th>
-                      <th className="p-3 text-right font-medium">
+                    <tr>
+                      <th>Roll number</th>
+                      <th>Name</th>
+                      <th className="tams-numeral">
                         Score (out of {maxMarks})
                       </th>
                     </tr>
@@ -355,13 +358,12 @@ export default function GradingPage() {
                       return (
                         <tr
                           key={s.enrollmentId}
-                          className="border-b transition-colors last:border-0 hover:bg-muted/30"
                         >
-                          <td className="p-3 font-mono text-xs">
+                          <td>
                             {s.rollNumber}
                           </td>
-                          <td className="p-3 font-medium">{s.fullName}</td>
-                          <td className="p-2 text-right">
+                          <td>{s.fullName}</td>
+                          <td className="tams-numeral">
                             <Input
                               type="number"
                               inputMode="decimal"

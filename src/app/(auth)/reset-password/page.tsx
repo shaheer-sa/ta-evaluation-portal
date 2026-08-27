@@ -173,11 +173,14 @@ export default function ResetPasswordPage() {
               size="md"
               radius={14}
               tint="hsl(210 75% 16%)"
-              tintOpacity={0.22}
+              tintOpacity={1}
               blur={10}
               textColor="hsl(40 55% 97%)"
               lineColor="#F3E4C9"
               baseColor="#0A2947"
+              intensity={2.4}
+              shineSize={26}
+              thickness={2}
               autoAnimate
               speed={0.3}
             >
@@ -209,7 +212,7 @@ export default function ResetPasswordPage() {
             border: "1px solid var(--line-strong)",
           }}
         >
-          <KeyRound style={{ width: 30, height: 30, color: "var(--primary)" }} />
+          <KeyRound style={{ width: 30, height: 30, color: "var(--navy)" }} />
         </div>
         <h1 style={{ fontSize: "1.3rem", fontWeight: 700, letterSpacing: "-0.02em", margin: 0 }}>
           Set a new password
@@ -323,12 +326,14 @@ export default function ResetPasswordPage() {
             size="lg"
             radius={14}
             tint="hsl(210 75% 16%)"
-            tintOpacity={0.22}
+            tintOpacity={1}
             blur={10}
             textColor="hsl(40 55% 97%)"
             lineColor="#F3E4C9"
             baseColor="#0A2947"
-            intensity={1.2}
+            intensity={2.4}
+            shineSize={26}
+            thickness={2}
             autoAnimate
             speed={0.3}
           >

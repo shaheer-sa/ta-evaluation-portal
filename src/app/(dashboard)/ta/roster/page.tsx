@@ -187,14 +187,17 @@ export default function RosterPage() {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Roster & Google Sync</h1>
-        <p className="text-muted-foreground">
+      <div className="tams-pagehead">
+        <div>
+          <p className="tams-pagehead__eyebrow">TEACHING ASSISTANT</p>
+          <h1 className="tams-pagehead__title">Roster & Google Sync</h1>
+        </div>
+        <p className="text-sm text-muted-foreground text-right hidden sm:block max-w-[250px]">
           View enrolled students and perform a live two-way sync with Google Sheets.
         </p>
       </div>
 
-      <Card>
+      <Card data-edge>
         <CardHeader>
           <CardTitle>Select Class & Sync</CardTitle>
           <CardDescription>
@@ -267,7 +270,7 @@ export default function RosterPage() {
 
       {/* ── Sync Result Breakdown ──────────────────────────────────── */}
       {syncResult && (
-        <Card>
+        <Card data-edge>
           <CardHeader>
             <CardTitle className="text-lg">Sync Results</CardTitle>
             <CardDescription>
@@ -284,7 +287,7 @@ export default function RosterPage() {
                 </h4>
                 <div className="rounded-md border">
                   {syncResult.invited.map((s, i) => (
-                    <div key={i} className="flex items-center gap-3 px-3 py-2 text-sm border-b last:border-0">
+                    <div key={i} className="tams-inset flex items-center gap-3 px-3 py-2 text-sm mb-2 last:mb-0">
                       <span className="font-mono text-xs">{s.rollNumber}</span>
                       <span>{s.fullName}</span>
                       <span className="text-muted-foreground text-xs ml-auto">{s.email}</span>
@@ -302,7 +305,7 @@ export default function RosterPage() {
                 </h4>
                 <div className="rounded-md border">
                   {syncResult.existing.map((s, i) => (
-                    <div key={i} className="flex items-center gap-3 px-3 py-2 text-sm border-b last:border-0">
+                    <div key={i} className="tams-inset flex items-center gap-3 px-3 py-2 text-sm mb-2 last:mb-0">
                       <span className="font-mono text-xs">{s.rollNumber}</span>
                       <span>{s.fullName}</span>
                       <span className="text-muted-foreground text-xs ml-auto">{s.detail}</span>
@@ -320,7 +323,7 @@ export default function RosterPage() {
                 </h4>
                 <div className="rounded-md border border-red-200">
                   {syncResult.failed.map((s, i) => (
-                    <div key={i} className="flex items-center gap-3 px-3 py-2 text-sm border-b last:border-0">
+                    <div key={i} className="tams-inset flex items-center gap-3 px-3 py-2 text-sm mb-2 last:mb-0">
                       <span className="font-mono text-xs">{s.rollNumber}</span>
                       <span>{s.fullName}</span>
                       <span className="text-red-600 text-xs ml-auto">{s.detail}</span>
@@ -335,7 +338,7 @@ export default function RosterPage() {
 
       {/* ── Current Roster Table ──────────────────────────────────── */}
       {selectedSectionCourseId && (
-        <Card>
+        <Card data-edge>
           <CardHeader>
             <CardTitle>Current Roster</CardTitle>
           </CardHeader>
@@ -349,15 +352,15 @@ export default function RosterPage() {
                 No students enrolled in this section yet. Click Sync above to pull them from Google Sheets!
               </p>
             ) : (
-              <div className="overflow-x-auto rounded-md border">
-                <table className="w-full text-sm">
+              <div className="tams-table-wrap">
+                <table className="tams-table">
                   <thead>
-                    <tr className="border-b bg-muted/50">
-                      <th className="p-3 text-left font-medium whitespace-nowrap">Roll Number</th>
-                      <th className="p-3 text-left font-medium whitespace-nowrap">Name</th>
-                      <th className="p-3 text-left font-medium whitespace-nowrap">Email</th>
+                    <tr>
+                      <th className="whitespace-nowrap">Roll Number</th>
+                      <th className="whitespace-nowrap">Name</th>
+                      <th className="whitespace-nowrap">Email</th>
                       {assessments.map(a => (
-                        <th key={a.id} className="p-3 text-left font-medium whitespace-nowrap">
+                        <th key={a.id} className="whitespace-nowrap tams-numeral">
                           {a.title} ({a.max_marks})
                         </th>
                       ))}
@@ -365,16 +368,16 @@ export default function RosterPage() {
                   </thead>
                   <tbody>
                     {roster.map((r) => (
-                      <tr key={r.id} className="border-b last:border-0 hover:bg-muted/30">
-                        <td className="p-3 font-mono whitespace-nowrap">{r.profiles?.roll_number}</td>
-                        <td className="p-3 whitespace-nowrap">{r.profiles?.full_name}</td>
-                        <td className="p-3 text-muted-foreground whitespace-nowrap">
+                      <tr key={r.id}>
+                        <td className="whitespace-nowrap">{r.profiles?.roll_number}</td>
+                        <td className="whitespace-nowrap">{r.profiles?.full_name}</td>
+                        <td className="whitespace-nowrap">
                           {r.profiles?.email}
                         </td>
                         {assessments.map(a => {
                           const mark = r.marks.find((m) => m.assessment_id === a.id);
                           return (
-                            <td key={a.id} className="p-3 text-center">
+                            <td key={a.id} className="tams-numeral">
                               {mark ? mark.score : "-"}
                             </td>
                           )

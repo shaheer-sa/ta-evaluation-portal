@@ -92,11 +92,15 @@ export default function LoginPage() {
   const {
     register,
     handleSubmit,
+    watch,
     formState: { errors },
   } = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
     defaultValues: { identifier: "", password: "" },
   });
+
+  const identifierValue = watch("identifier");
+  const passwordValue = watch("password");
 
   async function onSubmit(data: LoginForm) {
     setIsLoading(true);
@@ -279,20 +283,20 @@ export default function LoginPage() {
         <motion.div variants={itemVariants} style={{ marginTop: "0.5rem" }}>
           <SpecularButton
             type="submit"
-            disabled={isLoading}
+            disabled={isLoading || !identifierValue || !passwordValue}
             block
             size="lg"
             radius={14}
             tint="hsl(210 75% 16%)"
-            tintOpacity={0.22}
+            tintOpacity={1}
             blur={10}
             textColor="hsl(40 55% 97%)"
             lineColor="#F3E4C9"
             baseColor="#0A2947"
-            intensity={1.2}
-            shineSize={14}
+            intensity={2.4}
+            shineSize={26}
             shineFade={40}
-            thickness={1.5}
+            thickness={2}
             autoAnimate
             speed={0.3}
           >

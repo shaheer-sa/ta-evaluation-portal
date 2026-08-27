@@ -56,17 +56,17 @@ export default async function SectionsPage() {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Sections</h1>
-        <p className="text-muted-foreground">
-          Create sections for active terms and link courses to them.
-        </p>
+      <div className="tams-pagehead">
+        <div>
+          <p className="tams-pagehead__eyebrow">TEACHING ASSISTANT</p>
+          <h1 className="tams-pagehead__title">Sections</h1>
+        </div>
       </div>
 
       <div className="grid gap-8 md:grid-cols-2">
         {/* ── Create Section ──────────────────────────────────────── */}
         <div className="space-y-6">
-          <Card>
+          <Card data-edge>
             <CardHeader>
               <CardTitle>Create New Section</CardTitle>
               <CardDescription>
@@ -100,7 +100,7 @@ export default async function SectionsPage() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card data-edge>
             <CardHeader>
               <CardTitle>Link Course to Section</CardTitle>
               <CardDescription>
@@ -149,7 +149,7 @@ export default async function SectionsPage() {
 
         {/* ── Existing Sections ────────────────────────────────────── */}
         <div>
-          <Card>
+          <Card data-edge>
             <CardHeader>
               <CardTitle>Existing Sections</CardTitle>
             </CardHeader>
@@ -161,7 +161,7 @@ export default async function SectionsPage() {
                   {sections.map((section) => (
                     <div
                       key={section.id}
-                      className="rounded-md border p-4 space-y-3"
+                      className="tams-inset p-4 space-y-3"
                     >
                       <div className="flex justify-between items-start">
                         <div className="font-semibold">

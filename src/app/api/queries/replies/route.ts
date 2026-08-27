@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 /**
  * A query thread is readable and writable by exactly two parties: the
@@ -75,7 +76,32 @@ export async function GET(request: Request) {
 
     if (error) throw error;
 
-    return NextResponse.json({ replies: replies || [] });
+    const senderIds = [...new Set((replies || []).map((r) => r.sender_id))];
+    let senders: { id: string; full_name: string; role: string }[] = [];
+    if (senderIds.length > 0) {
+      const admin = createAdminClient();
+      const { data } = await admin
+        .from("profiles")
+        .select("id, full_name, role")
+        .in("id", senderIds);
+      if (data) senders = data;
+    }
+
+    const senderMap = new Map(senders.map((s) => [s.id, s]));
+    const enriched = (replies || []).map((r) => {
+      const sender = senderMap.get(r.sender_id);
+      return {
+        ...r,
+        profiles: sender
+          ? {
+              full_name: sender.full_name,
+              role: sender.role,
+            }
+          : null,
+      };
+    });
+
+    return NextResponse.json({ replies: enriched });
   } catch (err: unknown) {
     console.error("Replies fetch error:", err);
     return NextResponse.json(
@@ -149,13 +175,14 @@ export async function POST(request: Request) {
         });
       } else {
         // Student replied → notify all TAs
-        const { data: tas } = await supabase
+        const admin = createAdminClient();
+        const { data: tas } = await admin
           .from("profiles")
           .select("id")
           .eq("role", "ta");
 
         if (tas && tas.length > 0) {
-          await supabase.from("notifications").insert(
+          const { error: notifyError } = await admin.from("notifications").insert(
             tas.map((ta) => ({
               recipient_id: ta.id,
               type: "query_reply",
@@ -164,6 +191,7 @@ export async function POST(request: Request) {
               related_id: queryId,
             }))
           );
+          if (notifyError) console.error("TA notify failed:", notifyError);
         }
       }
     }

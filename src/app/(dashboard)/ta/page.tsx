@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import MagicBento from "@/components/react-bits/MagicBento";
+import Link from "next/link";
 import { Users, BookOpen, FileQuestion, ClipboardList } from "lucide-react";
 
 export default async function TADashboardPage() {
@@ -160,41 +160,61 @@ export default async function TADashboardPage() {
 
 
   const bentoCards = stats.map(s => {
-    let href = "/ta";
-    if (s.title === "Students") href = "/ta/roster";
-    if (s.title === "Courses") href = "/ta/courses";
-    if (s.title === "Assessments") href = "/ta/assessments";
-    if (s.title === "Pending Queries") href = "/ta/queries";
+    let cat = "count";
+    let href = "";
+    if (s.title === "Pending Queries") {
+      cat = "pending";
+      href = "/ta/queries";
+    } else if (s.title === "Students") {
+      href = "/ta/roster";
+    } else if (s.title === "Courses") {
+      href = "/ta/courses";
+    } else if (s.title === "Assessments") {
+      href = "/ta/assessments";
+    }
     
     return {
       label: s.title,
       value: s.value,
-      title: s.title,
-      description: s.desc,
-      href,
+      meta: s.desc,
+      Icon: s.icon,
+      cat,
+      href
     };
   });
 
   return (
     <div className="space-y-8">
-      <div className="tams-page-head">
-        <h1 className="text-3xl font-bold tracking-tight">TA Dashboard</h1>
-        <p className="text-muted-foreground">
+      <div className="tams-pagehead">
+        <div>
+          <p className="tams-pagehead__eyebrow">TEACHING ASSISTANT</p>
+          <h1 className="tams-pagehead__title">Dashboard</h1>
+        </div>
+        <p className="text-sm text-muted-foreground text-right hidden sm:block">
           Welcome back, {profile?.full_name || "TA"}.
           {activeTerm && (
-            <span className="ml-1">
+            <span className="ml-1 block">
               Active term: <span className="font-medium text-foreground">{activeTerm.name}</span>
             </span>
           )}
         </p>
       </div>
 
-      <MagicBento 
-        cards={bentoCards} 
-      />
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {bentoCards.map((c) => (
+          <Link key={c.label} href={c.href} className="tams-stat" data-edge data-cat={c.cat}>
+            <c.Icon size={18} strokeWidth={1.5} className="tams-stat__icon" />
+            <p className="tams-stat__label">{c.label}</p>
+            <p className="tams-stat__value">{c.value}</p>
+            <div className="tams-stat__foot">
+              <p className="tams-stat__meta">{c.meta}</p>
+            </div>
+          </Link>
+        ))}
+      </div>
       
       {/* Recent Queries List */}
-      <div className="tams-card tams-glass-strong">
+      <div className="tams-card" data-edge>
         <div className="mb-4">
           <h2 className="tams-card__title">Recent Queries</h2>
           <p className="tams-card__hint">
@@ -210,8 +230,7 @@ export default async function TADashboardPage() {
               {recentQueries.map((q) => (
                 <div
                   key={q.id}
-                  className="flex items-center justify-between rounded-lg border p-4 transition-colors hover:bg-muted/50"
-                  style={{ borderColor: 'var(--line)', background: 'var(--surface-sunk)' }}
+                  className="tams-inset flex items-center justify-between p-4"
                 >
                   <div className="space-y-1">
                     <p className="font-medium">{q.title}</p>

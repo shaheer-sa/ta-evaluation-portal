@@ -165,18 +165,21 @@ export default async function CourseDetailPage({ params }: PageProps) {
             Back
           </Button>
         </Link>
+      </div>
+      <div className="tams-pagehead">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">
+          <p className="tams-pagehead__eyebrow">STUDENT</p>
+          <h1 className="tams-pagehead__title">
             {course?.code} — {course?.name}
           </h1>
-          <p className="text-muted-foreground">
-            {section?.terms?.name} · Section {section?.name}
-          </p>
         </div>
+        <p className="text-sm text-muted-foreground text-right hidden sm:block">
+          {section?.terms?.name} · Section {section?.name}
+        </p>
       </div>
 
       {/* Summary Card */}
-      <Card>
+      <Card data-edge>
         <CardHeader>
           <CardTitle>Overall Performance</CardTitle>
           <CardDescription>
@@ -203,7 +206,7 @@ export default async function CourseDetailPage({ params }: PageProps) {
       </Card>
 
       {/* Marks Accordion */}
-      <Card>
+      <Card data-edge>
         <CardHeader>
           <CardTitle>Assessment Breakdown</CardTitle>
         </CardHeader>
@@ -220,40 +223,40 @@ export default async function CourseDetailPage({ params }: PageProps) {
                     {type} ({items.length})
                   </AccordionTrigger>
                   <AccordionContent>
-                    <div className="overflow-x-auto rounded-md border mt-2">
-                      <table className="w-full text-sm">
+                    <div className="tams-table-wrap mt-2">
+                      <table className="tams-table">
                         <thead>
-                          <tr className="border-b bg-muted/50">
-                            <th className="p-3 text-left font-medium">Assessment</th>
-                            <th className="p-3 text-right font-medium">Score</th>
-                            <th className="p-3 text-right font-medium">Max</th>
-                            <th className="p-3 text-right font-medium">Absolutes</th>
-                            <th className="p-3 text-right font-medium">Class Avg</th>
-                            <th className="p-3 text-right font-medium">Weight</th>
+                          <tr>
+                            <th>Assessment</th>
+                            <th className="tams-numeral">Score</th>
+                            <th className="tams-numeral">Max</th>
+                            <th className="tams-numeral">Absolutes</th>
+                            <th className="tams-numeral">Class Avg</th>
+                            <th className="tams-numeral">Weight</th>
                           </tr>
                         </thead>
                         <tbody>
                           {items.map((r) => (
                             <tr
                               key={r.id}
-                              className="border-b last:border-0 hover:bg-muted/30 transition-colors"
+                              className="transition-colors"
                             >
-                              <td className="p-3 font-medium">{r.title}</td>
-                              <td className="p-3 text-right font-mono">
+                              <td>{r.title}</td>
+                              <td className="tams-numeral">
                                 {r.score !== null ? r.score : "—"}
                               </td>
-                              <td className="p-3 text-right font-mono text-muted-foreground">
+                              <td className="tams-numeral text-muted-foreground">
                                 {r.maxMarks}
                               </td>
-                              <td className="p-3 text-right font-mono">
+                              <td className="tams-numeral">
                                 {r.abs !== null ? `${Math.round(r.abs * 100) / 100}` : "—"}
                               </td>
-                              <td className="p-3 text-right font-mono text-muted-foreground">
+                              <td className="tams-numeral text-muted-foreground">
                                 {r.classAvg !== null
                                   ? `${Math.round(r.classAvg * 10) / 10} (${Math.round((r.classAvgAbs ?? 0) * 100) / 100} abs)`
                                   : "—"}
                               </td>
-                              <td className="p-3 text-right text-muted-foreground">
+                              <td className="tams-numeral text-muted-foreground">
                                 {r.weight}%
                               </td>
                             </tr>

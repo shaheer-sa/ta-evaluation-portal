@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useRef } from "react";
+import { ChevronDown } from "lucide-react";
 import { ParticleCard, GlobalSpotlight } from "@/components/react-bits/MagicBento";
 
 export interface CourseGrade {
@@ -33,11 +34,13 @@ export function GradesGrid({ children }: { children: React.ReactNode }) {
 function StatTile({
   label,
   value,
+  href,
 }: {
   label: string;
   value: string | number;
+  href?: string;
 }) {
-  return (
+  const content = (
     <ParticleCard 
       className="mc-card mc-card--glow h-full p-6 flex flex-col justify-center tams-card" 
       enableTilt={true}
@@ -52,6 +55,14 @@ function StatTile({
       </div>
     </ParticleCard>
   );
+
+  return href ? (
+    <Link href={href} className="tams-stat" style={{ textDecoration: 'none', color: 'inherit', display: 'flex' }}>
+      {content}
+    </Link>
+  ) : (
+    content
+  );
 }
 
 export function StatStrip({
@@ -65,9 +76,9 @@ export function StatStrip({
 }) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8 w-full">
-      <StatTile label="Overall Standing" value={overall} />
-      <StatTile label="Courses Enrolled" value={courseCount} />
-      <StatTile label="Pending Queries" value={pendingQueries} />
+      <StatTile label="Overall Standing" value={overall} href="/student" />
+      <StatTile label="Courses Enrolled" value={courseCount} href="/student" />
+      <StatTile label="Pending Queries" value={pendingQueries} href="/student/queries" />
     </div>
   );
 }
@@ -144,9 +155,12 @@ export function GradeCard({ course }: { course: CourseGrade }) {
           <ProgressRing percentage={course.percentage} />
 
           <div className="flex-1 min-w-0 mt-2 sm:mt-0">
-            <p className="text-sm uppercase tracking-wider text-muted-foreground mb-1 font-medium">
-              {course.code}
-            </p>
+            <div className="flex justify-between items-start">
+              <p className="text-sm uppercase tracking-wider text-muted-foreground mb-1 font-medium">
+                {course.code}
+              </p>
+              <ChevronDown size={18} strokeWidth={1.5} className="tams-expand-icon" />
+            </div>
             <p className="text-4xl font-bold text-foreground mb-2 tracking-tight">
               {course.percentage}%
             </p>

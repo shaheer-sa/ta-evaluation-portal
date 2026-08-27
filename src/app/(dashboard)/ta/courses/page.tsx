@@ -25,17 +25,17 @@ export default async function CoursesPage() {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Terms & Courses</h1>
-        <p className="text-muted-foreground">
-          Manage academic terms and the courses you are assisting in.
-        </p>
+      <div className="tams-pagehead">
+        <div>
+          <p className="tams-pagehead__eyebrow">TEACHING ASSISTANT</p>
+          <h1 className="tams-pagehead__title">Terms & Courses</h1>
+        </div>
       </div>
 
       <div className="grid gap-8 md:grid-cols-2">
         {/* ── Terms Section ──────────────────────────────────────── */}
         <div className="space-y-6">
-          <Card>
+          <Card data-edge>
             <CardHeader>
               <CardTitle>Create New Term</CardTitle>
               <CardDescription>
@@ -65,7 +65,7 @@ export default async function CoursesPage() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card data-edge>
             <CardHeader>
               <CardTitle>Existing Terms</CardTitle>
             </CardHeader>
@@ -78,7 +78,7 @@ export default async function CoursesPage() {
                   {terms.map((term) => (
                     <li
                       key={term.id}
-                      className="flex items-center justify-between rounded-md border p-3"
+                      className="tams-inset flex items-center justify-between p-3"
                     >
                       <span className="font-medium">{term.name}</span>
                       <div className="flex items-center space-x-2">
@@ -130,7 +130,7 @@ export default async function CoursesPage() {
 
         {/* ── Courses Section ────────────────────────────────────── */}
         <div className="space-y-6">
-          <Card>
+          <Card data-edge>
             <CardHeader>
               <CardTitle>Create New Course</CardTitle>
               <CardDescription>
@@ -179,7 +179,7 @@ export default async function CoursesPage() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card data-edge>
             <CardHeader>
               <CardTitle>Existing Courses</CardTitle>
             </CardHeader>
@@ -192,7 +192,7 @@ export default async function CoursesPage() {
                   {courses.map((course) => (
                     <li
                       key={course.id}
-                      className="flex flex-col gap-1 rounded-md border p-3 text-sm"
+                      className="tams-inset flex flex-col gap-1 p-3 text-sm"
                     >
                       <div className="flex justify-between items-start">
                         <div className="font-medium">

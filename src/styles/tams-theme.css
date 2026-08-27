@@ -1,5 +1,5 @@
 /* ============================================================
-   TAMS — theme tokens, glass surfaces, shell layout
+   TAMS â€” theme tokens, glass surfaces, shell layout
    Plain CSS on purpose: no Tailwind arbitrary values anywhere,
    which is what was tripping the Turbopack RangeError.
    ============================================================ */
@@ -16,13 +16,14 @@
   --tams-text: var(--ink);
   --tams-text-muted: var(--ink-muted);
   --tams-text-faint: var(--ink-faint);
-  --tams-accent: var(--primary);
+  --tams-accent: var(--navy);
   --tams-accent-soft: var(--primary-soft);
   --tams-accent-2: var(--accent-deep);
   --tams-success: var(--success);
   --tams-warning: var(--warning);
-  --tams-danger:  var(--danger);
-  --tams-glow-rgb: 249, 210, 186;     /* peach, for MagicBento rgba() */
+  --tams-danger: var(--danger);
+  --tams-glow-rgb: 249, 210, 186;
+  /* peach, for MagicBento rgba() */
   --tams-radius: var(--radius);
   --tams-radius-sm: var(--radius-sm);
   --tams-shadow: var(--shadow);
@@ -72,33 +73,18 @@
 
 /* ============================ glass ============================ */
 
-.tams-glass {
-  background: var(--tams-glass);
-  border: 1px solid var(--tams-glass-border);
-  border-radius: var(--tams-radius);
-  backdrop-filter: blur(18px) saturate(150%);
-  -webkit-backdrop-filter: blur(18px) saturate(150%);
-  box-shadow: inset 0 1px 0 hsl(0 0% 100% / 0.6), var(--tams-shadow);
-}
-
-.tams-glass-strong {
-  background: var(--tams-glass-strong);
-  border: 1px solid var(--tams-glass-border);
-  backdrop-filter: blur(26px) saturate(160%);
-  -webkit-backdrop-filter: blur(26px) saturate(160%);
-  box-shadow: inset 0 1px 0 hsl(0 0% 100% / 0.6);
-}
-
 .tams-card {
   position: relative;
-  padding: 1.25rem 1.35rem;
-  transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+  background: var(--surface-1);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 1.5rem 1.5rem 1.35rem;
+  transition: border-color 0.18s ease, background 0.18s ease;
 }
 
 .tams-card:hover {
-  transform: translateY(-2px);
-  border-color: var(--tams-glass-border-hover);
-  box-shadow: inset 0 1px 0 hsl(0 0% 100% / 0.6), var(--tams-shadow-lift);
+  border-color: var(--line-strong);
+  background: var(--surface-2);
 }
 
 .tams-card__title {
@@ -118,12 +104,10 @@
 .tams-rule {
   height: 1px;
   border: 0;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    var(--tams-glass-border-hover),
-    transparent
-  );
+  background: linear-gradient(90deg,
+      transparent,
+      var(--tams-glass-border-hover),
+      transparent);
 }
 
 /* Auth panel extraction */
@@ -289,6 +273,8 @@
   position: sticky;
   top: 0;
   z-index: 15;
+  background: var(--surface-0);
+  border-bottom: 1px solid var(--line);
   height: var(--tams-topbar-h);
   display: flex;
   align-items: center;
@@ -391,8 +377,9 @@
 /* ============================ data surfaces ============================ */
 
 .tams-table-wrap {
-  overflow: auto;
-  border-radius: var(--tams-radius);
+  width: 100%;
+  overflow-x: auto;
+  border-radius: 3px;
 }
 
 .tams-table {
@@ -402,24 +389,25 @@
 }
 
 .tams-table thead th {
-  position: sticky;
-  top: 0;
-  text-align: left;
-  font-family: var(--font-mono);
-  font-size: 0.66rem;
-  letter-spacing: 0.13em;
+  background-color: var(--navy);
+  color: var(--primary-fg);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.09em;
   text-transform: uppercase;
-  color: var(--tams-text-faint);
-  padding: 0.85rem 1rem;
-  background: var(--tams-glass-strong);
-  backdrop-filter: blur(14px);
-  border-bottom: 1px solid var(--tams-glass-border);
+  padding: 0.7rem 0.9rem;
+  text-align: left;
+  border-bottom: none;
+}
+
+.tams-table thead th.tams-numeral {
+  text-align: right;
 }
 
 .tams-table tbody td {
   padding: 0.8rem 1rem;
   border-bottom: 1px solid var(--line);
-  color: var(--tams-text);
+  color: var(--ink);
 }
 
 .tams-table tbody tr {
@@ -427,40 +415,34 @@
 }
 
 .tams-table tbody tr:hover {
-  background: var(--accent-soft);
+  background: var(--surface-1);
 }
 
 .tams-pill {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  padding: 0.24rem 0.6rem;
-  border-radius: 999px;
-  font-family: var(--font-mono);
-  font-size: 0.68rem;
-  letter-spacing: 0.06em;
+  padding: 0.2rem 0.5rem;
+  font-family: var(--font-body);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
-  border: 1px solid var(--tams-glass-border);
-  color: var(--tams-text-muted);
-  background: var(--surface-1);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  background: transparent;
 }
 
 .tams-pill[data-tone="open"] {
-  color: var(--warning);
-  border-color: var(--warning-soft);
-  background: var(--warning-soft);
+  border-color: var(--warning);
 }
 
 .tams-pill[data-tone="done"] {
-  color: var(--success);
-  border-color: var(--success-soft);
-  background: var(--success-soft);
+  border-color: var(--success);
 }
 
 .tams-pill[data-tone="late"] {
-  color: var(--danger);
-  border-color: var(--danger-soft);
-  background: var(--danger-soft);
+  border-color: var(--danger);
 }
 
 /* scrollbars */
@@ -479,9 +461,263 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+
   .tams-rail,
   .tams-card,
   .tams-iconbtn {
     transition: none;
   }
+}
+
+.tams-stat {
+  position: relative;
+  background: var(--surface-1);
+  border: 1px solid var(--line);
+  border-top: 2px solid var(--stat-rule, var(--line-strong));
+  border-radius: 4px;
+  padding: 1.35rem 1.4rem 1.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  transition: border-color 0.18s ease, background 0.18s ease;
+}
+
+.tams-stat:hover {
+  background: var(--surface-2);
+}
+
+/* The scale gap between label and value IS the design. */
+.tams-stat__label {
+  font-family: var(--font-body);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+  margin: 0;
+}
+
+.tams-stat__value {
+  font-family: var(--font-display);
+  font-size: 2.75rem;
+  font-weight: 600;
+  line-height: 0.95;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  margin: 0;
+}
+
+.tams-stat__foot {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  border-top: 1px solid var(--line);
+  padding-top: 0.7rem;
+  margin-top: auto;
+}
+
+.tams-stat__meta {
+  font-size: 0.75rem;
+  color: var(--ink-muted);
+  margin: 0;
+}
+
+.tams-stat__icon {
+  position: absolute;
+  top: 1.2rem;
+  right: 1.3rem;
+  color: var(--line-strong);
+  opacity: 0.9;
+}
+
+.tams-stat[data-cat="count"] {
+  --stat-rule: var(--navy);
+}
+
+.tams-stat[data-cat="pending"] {
+  --stat-rule: var(--tan);
+}
+
+.tams-stat[data-cat="neutral"] {
+  --stat-rule: var(--sage);
+}
+
+@media (max-width: 640px) {
+  .tams-stat__value {
+    font-size: 2.25rem;
+  }
+}
+
+.tams-pagehead {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  border-bottom: 2px solid var(--ink);
+  padding-bottom: 0.85rem;
+  margin-bottom: 1.75rem;
+}
+
+.tams-pagehead__eyebrow {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+  margin: 0 0 0.3rem;
+}
+
+.tams-pagehead__title {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  margin: 0;
+}
+
+/* ---- Cursor highlight ---- */
+.tams-card,
+.tams-stat {
+  --mx: 50%;
+  --my: 50%;
+  overflow: hidden;
+}
+
+.tams-card::after,
+.tams-stat::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.25s ease-out;
+  background: radial-gradient(120px circle at var(--mx) var(--my),
+      hsl(0 0% 100% / 0.55),
+      hsl(0 0% 100% / 0.2) 40%,
+      transparent 70%);
+}
+
+.tams-card:hover::after,
+.tams-stat:hover::after {
+  opacity: 1;
+}
+
+.tams-card:hover,
+.tams-stat:hover {
+  border-color: var(--tan);
+}
+
+.rb-line__item {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.5rem 0.75rem;
+  border-radius: 3px;
+  border-left: 2px solid transparent;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.rb-line__item:hover {
+  background: var(--surface-2);
+  color: var(--ink);
+}
+
+.rb-line__item[data-active="true"] {
+  background: transparent;
+  border-left-color: var(--navy);
+  color: var(--navy);
+  font-weight: 700;
+}
+
+a.tams-stat {
+  text-decoration: none;
+  color: inherit;
+  display: flex;
+}
+
+.tams-expand-icon {
+  color: var(--ink-muted);
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+}
+[data-expanded="true"] .tams-expand-icon {
+  transform: rotate(180deg);
+}
+
+.tams-inset {
+  background: var(--surface-2);
+  border: 1px solid transparent;
+  border-radius: 3px;
+  transition: background 0.18s ease, border-color 0.18s ease;
+}
+
+.tams-card:hover .tams-inset,
+.tams-stat:hover .tams-inset {
+  background: var(--surface-0);
+  border-color: var(--line-strong);
+}
+
+.tams-bubble {
+  background: var(--surface-2);
+  border: 1px solid transparent;
+  transition: background 0.18s ease, border-color 0.18s ease;
+}
+
+.tams-card:hover .tams-bubble,
+.tams-stat:hover .tams-bubble {
+  background: var(--surface-0);
+  border-color: var(--line-strong);
+}
+
+.tams-table tbody tr {
+  background: var(--surface-1);
+}
+
+.tams-table tbody tr:nth-child(even) {
+  background: var(--surface-0);
+}
+
+.tams-table tbody tr:hover {
+  background: var(--accent-soft);
+}
+
+
+
+.tams-select {
+  appearance: none;
+  background: var(--surface-1);
+  border: 1px solid var(--line-strong);
+  border-radius: 3px;
+  padding: 0.5rem 2rem 0.5rem 0.75rem;
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  color: var(--ink);
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.tams-select:hover:not(:disabled) {
+  border-color: var(--navy);
+  background: var(--surface-0);
+}
+
+.tams-select:focus-visible {
+  outline: 2px solid var(--line-focus);
+  outline-offset: 2px;
+}
+
+.tams-select:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.tams-select__pending {
+  margin-left: 0.75rem;
+  font-size: 0.8rem;
+  color: var(--ink-muted);
 }

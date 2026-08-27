@@ -92,10 +92,10 @@ export function QueryThread({ queryId, isOpen }: QueryThreadProps) {
               <div
                 key={r.id}
                 className={cn(
-                  "rounded-lg px-3 py-2 text-sm max-w-[85%]",
+                  "tams-bubble rounded-lg px-3 py-2 text-sm max-w-[85%]",
                   isTA
-                    ? "bg-primary/10 ml-auto text-right"
-                    : "bg-muted"
+                    ? "ml-auto text-right"
+                    : ""
                 )}
               >
                 <div className="flex items-center gap-2 mb-0.5">

@@ -169,12 +169,10 @@ export default function StudentQueriesPage() {
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center justify-between">
+      <div className="tams-pagehead">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">My Queries</h1>
-          <p className="text-muted-foreground">
-            Submit re-evaluation requests or ask questions about your grades.
-          </p>
+          <p className="tams-pagehead__eyebrow">STUDENT</p>
+          <h1 className="tams-pagehead__title">My Queries</h1>
         </div>
         <Button onClick={() => setShowForm(!showForm)}>
           <Plus className="mr-2 h-4 w-4" />
@@ -184,7 +182,7 @@ export default function StudentQueriesPage() {
 
       {/* Create Form */}
       {showForm && (
-        <Card>
+        <Card data-edge>
           <CardHeader>
             <CardTitle>Submit a Query</CardTitle>
             <CardDescription>
@@ -287,7 +285,7 @@ export default function StudentQueriesPage() {
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
         </div>
       ) : queries.length === 0 ? (
-        <Card>
+        <Card data-edge>
           <CardContent className="py-12 text-center">
             <p className="text-muted-foreground">
               You haven&apos;t submitted any queries yet.
@@ -297,7 +295,7 @@ export default function StudentQueriesPage() {
       ) : (
         <div className="space-y-4">
           {queries.map((q) => (
-            <Card key={q.id}>
+            <Card data-edge key={q.id}>
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between gap-4">
                   <div>

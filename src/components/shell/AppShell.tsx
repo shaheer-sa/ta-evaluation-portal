@@ -79,12 +79,12 @@ export default function AppShell({ role, userName, title, actions, children }: A
   };
 
   return (
-    <ClickSpark sparkColor="var(--primary)" sparkRadius={17} sparkCount={8} duration={420}>
+    <ClickSpark sparkColor="var(--navy)" sparkRadius={17} sparkCount={8} duration={420}>
       <AmbientField />
 
       <div className="tams-shell">
         <aside
-          className="tams-rail tams-glass tams-glass-strong"
+          className="tams-rail"
           data-collapsed={collapsed ? 'true' : 'false'}
           data-open={drawerOpen ? 'true' : 'false'}
         >
@@ -126,8 +126,8 @@ export default function AppShell({ role, userName, title, actions, children }: A
                 fontSize={0.95}
                 maxShift={12}
                 proximityRadius={105}
-                accentColor="var(--primary)"
-                textColor="var(--ink-muted)"
+                accentColor="var(--navy)"
+                textColor="var(--navy)"
                 markerColor="var(--ink-faint)"
                 ariaLabel={role === 'ta' ? 'Teaching assistant navigation' : 'Student navigation'}
               />
@@ -151,7 +151,7 @@ export default function AppShell({ role, userName, title, actions, children }: A
         )}
 
         <div className="tams-content">
-          <header className="tams-topbar tams-glass tams-glass-strong">
+          <header className="tams-topbar">
             <button
               className="tams-iconbtn tams-mobile-only"
               onClick={() => setDrawerOpen(true)}
