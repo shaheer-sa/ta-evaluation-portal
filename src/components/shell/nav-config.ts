@@ -1,4 +1,4 @@
-export interface NavItem {
+interface NavItem {
   label: string;
   href: string;
   exact: boolean;
@@ -21,10 +21,3 @@ export const STUDENT_NAV: NavItem[] = [
   { href: "/student", label: "My Grades", exact: true, short: "GR" },
   { href: "/student/queries", label: "Queries", exact: false, short: "QU" },
 ];
-
-export function activeIndexFor(items: NavItem[], pathname: string): number | null {
-  const index = items.findIndex((item) =>
-    item.exact ? pathname === item.href : pathname.startsWith(item.href)
-  );
-  return index === -1 ? null : index;
-}
