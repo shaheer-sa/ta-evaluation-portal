@@ -68,42 +68,44 @@ export default async function CourseDetailPage({ params }: PageProps) {
     );
   }
 
-  // Find the section_course link
-  const { data: sectionCourse } = await supabase
-    .from("section_courses")
-    .select("id")
-    .eq("section_id", enrollment.section_id)
-    .eq("course_id", enrollment.course_id)
-    .single();
+  // Group 3: Fetch section_course and marks in parallel
+  const [
+    { data: sectionCourse },
+    { data: marks }
+  ] = await Promise.all([
+    supabase
+      .from("section_courses")
+      .select("id")
+      .eq("section_id", enrollment.section_id)
+      .eq("course_id", enrollment.course_id)
+      .single(),
+    supabase
+      .from("marks")
+      .select("assessment_id, score")
+      .eq("enrollment_id", enrollmentId)
+  ]);
 
-  // Fetch all assessments for this section-course
-  const { data: assessments } = await supabase
-    .from("assessments")
-    .select("id, title, type, max_marks, weight")
-    .eq("section_course_id", sectionCourse?.id || "")
-    .order("created_at", { ascending: true });
+  const scId = sectionCourse?.id || "";
 
-  // Fetch marks for this enrollment
-  const { data: marks } = await supabase
-    .from("marks")
-    .select("assessment_id, score")
-    .eq("enrollment_id", enrollmentId);
+  // Group 4: Fetch assessments and class averages in parallel
+  const [
+    { data: assessments },
+    { data: rawAverages }
+  ] = await Promise.all([
+    supabase
+      .from("assessments")
+      .select("id, title, type, max_marks, weight")
+      .eq("section_course_id", scId)
+      .order("created_at", { ascending: true }),
+    supabase.rpc("class_averages_for_section_course", { p_sc_id: scId })
+  ]);
 
-  // Fetch class averages for each assessment via the database function
   const classAverages = new Map<string, number>();
-  if (assessments) {
-    // Run RPC calls in parallel — these are read-only and independent
-    const avgResults = await Promise.all(
-      assessments.map(async (a) => {
-        const { data } = await supabase.rpc("get_class_average", {
-          p_assessment_id: a.id,
-        });
-        return { id: a.id, avg: data as number | null };
-      })
-    );
-    for (const r of avgResults) {
-      if (r.avg !== null && r.avg !== undefined) {
-        classAverages.set(r.id, r.avg);
+  if (rawAverages) {
+    const avgObj = rawAverages as Record<string, number | null>;
+    for (const [id, avg] of Object.entries(avgObj)) {
+      if (avg !== null && avg !== undefined) {
+        classAverages.set(id, avg);
       }
     }
   }

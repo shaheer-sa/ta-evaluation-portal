@@ -498,6 +498,18 @@ export interface Database {
       [_ in never]: never
     }
     Functions: {
+      class_averages_for_section_course: {
+        Args: {
+          p_sc_id: string
+        }
+        Returns: Json
+      }
+      analytics_for_section_course: {
+        Args: {
+          p_sc_id: string
+        }
+        Returns: Json
+      }
       get_class_average: {
         Args: {
           p_assessment_id: string

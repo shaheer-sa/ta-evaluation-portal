@@ -27,31 +27,34 @@ export default async function StudentDashboardPage() {
 
   if (!user) return null;
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("full_name, roll_number")
-    .eq("id", user.id)
-    .single();
-
-  // Fetch pending queries for the student
-  const { count: pendingQueries } = await supabase
-    .from("queries")
-    .select("*", { count: "exact", head: true })
-    .eq("student_id", user.id)
-    .eq("status", "pending");
-
-  // Fetch the student's enrollments with courses and marks
-  const { data: rawEnrollments } = await supabase
-    .from("enrollments")
-    .select(`
-      id,
-      course_id,
-      section_id,
-      courses:course_id ( id, code, name ),
-      sections:section_id ( name, terms:term_id ( name ) ),
-      marks ( score, assessments:assessment_id ( title, max_marks, weight ) )
-    `)
-    .eq("student_id", user.id);
+  // Fetch profile, queries count, and enrollments in parallel
+  const [
+    { data: profile },
+    { count: pendingQueries },
+    { data: rawEnrollments }
+  ] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("full_name, roll_number")
+      .eq("id", user.id)
+      .single(),
+    supabase
+      .from("queries")
+      .select("*", { count: "exact", head: true })
+      .eq("student_id", user.id)
+      .eq("status", "pending"),
+    supabase
+      .from("enrollments")
+      .select(`
+        id,
+        course_id,
+        section_id,
+        courses:course_id ( id, code, name ),
+        sections:section_id ( name, terms:term_id ( name ) ),
+        marks ( score, assessments:assessment_id ( title, max_marks, weight ) )
+      `)
+      .eq("student_id", user.id)
+  ]);
 
   const enrollments = rawEnrollments as unknown as EnrollmentRow[] | null;
 

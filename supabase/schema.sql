@@ -531,3 +531,95 @@ $$;
 
 revoke all on function get_deletion_impact(text, uuid) from public, anon;
 grant execute on function get_deletion_impact(text, uuid) to authenticated;
+
+-- ── Function: Analytics for Section Course ───────────────────────────────────
+
+create or replace function analytics_for_section_course(p_sc_id uuid)
+returns json
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+declare
+  result json;
+begin
+  if not is_ta() then
+    raise exception 'forbidden';
+  end if;
+
+  with sc as (
+    select id, section_id, course_id
+    from section_courses
+    where id = p_sc_id
+  ),
+  enr as (
+    select e.id, e.student_id, p.full_name, p.roll_number
+    from enrollments e
+    join profiles p on p.id = e.student_id
+    where e.section_id = (select section_id from sc)
+      and e.course_id  = (select course_id  from sc)
+      and e.status = 'active'
+  ),
+  asmt as (
+    select id, max_marks, weight
+    from assessments
+    where section_course_id = p_sc_id
+  ),
+  scored as (
+    select
+      enr.id,
+      enr.full_name,
+      enr.roll_number,
+      count(m.id) as graded,
+      coalesce(sum((m.score / nullif(asmt.max_marks, 0)) * asmt.weight), 0) as obtained,
+      coalesce(sum(asmt.weight), 0) as total_weight
+    from enr
+    left join marks m on m.enrollment_id = enr.id
+    left join asmt on asmt.id = m.assessment_id
+    group by enr.id, enr.full_name, enr.roll_number
+  )
+  select coalesce(json_agg(row_to_json(x) order by x.percentage desc nulls last), '[]'::json)
+  into result
+  from (
+    select
+      full_name,
+      roll_number,
+      graded,
+      round(obtained::numeric, 2) as obtained,
+      round(total_weight::numeric, 2) as total_weight,
+      case when total_weight > 0
+        then round((obtained / total_weight * 100)::numeric, 1)
+        else null
+      end as percentage
+    from scored
+  ) x;
+
+  return result;
+end;
+$$;
+
+revoke all on function analytics_for_section_course(uuid) from public, anon;
+grant execute on function analytics_for_section_course(uuid) to authenticated;
+
+-- ── Function: Class Averages for Section Course ─────────────────────────────
+
+create or replace function class_averages_for_section_course(p_sc_id uuid)
+returns json
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select coalesce(json_object_agg(a.id, avg_score), '{}'::json)
+  from (
+    select a.id, round(avg(m.score)::numeric, 2) as avg_score
+    from assessments a
+    left join marks m on m.assessment_id = a.id
+    where a.section_course_id = p_sc_id
+    group by a.id
+  ) a;
+$$;
+
+revoke all on function class_averages_for_section_course(uuid) from public, anon;
+grant execute on function class_averages_for_section_course(uuid) to authenticated;

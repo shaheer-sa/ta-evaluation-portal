@@ -91,89 +91,25 @@ export default async function AnalyticsPage(props: {
     );
   }
 
-  // STEP 2 — Once ?sc is set, fetch for that section_course:
-  const { data: sectionCourse } = await supabase
-    .from("section_courses")
-    .select("section_id, course_id")
-    .eq("id", scId)
-    .single();
+  // STEP 2 — Once ?sc is set, fetch for that section_course via RPC:
+  const { data: rpcData, error } = await supabase.rpc("analytics_for_section_course", {
+    p_sc_id: scId,
+  });
 
-  if (!sectionCourse) {
-    return <div>Invalid section course.</div>;
+  if (error || !rpcData) {
+    return <div>Invalid section course or data could not be loaded.</div>;
   }
 
-  const { data: enrollments } = await supabase
-    .from("enrollments")
-    .select("id, profiles(full_name, roll_number)")
-    .eq("section_id", sectionCourse.section_id)
-    .eq("course_id", sectionCourse.course_id)
-    .eq("status", "active");
-
-  const { data: assessments } = await supabase
-    .from("assessments")
-    .select("id, title, max_marks, weight")
-    .eq("section_course_id", scId);
-
-  const enrollmentIds = enrollments?.map((e) => e.id) || [];
-  const assessmentIds = assessments?.map((a) => a.id) || [];
-
-  const { data: marks } = await supabase
-    .from("marks")
-    .select("enrollment_id, assessment_id, score")
-    .in("enrollment_id", enrollmentIds)
-    .in("assessment_id", assessmentIds);
-
-  // STEP 3 — Compute per student
   type StudentPerformance = {
-    enrollmentId: string;
-    rollNumber: string;
-    fullName: string;
-    obtainedWeight: number;
-    totalWeight: number;
+    full_name: string;
+    roll_number: string;
+    graded: number;
+    obtained: number;
+    total_weight: number;
     percentage: number | null;
-    gradedCount: number;
   };
 
-  const performance: StudentPerformance[] = [];
-
-  enrollments?.forEach((e) => {
-    let obtained = 0;
-    let total = 0;
-    let graded = 0;
-
-    const studentMarks = marks?.filter(m => m.enrollment_id === e.id) || [];
-    
-    studentMarks.forEach(m => {
-      if (m.score === null || m.score === undefined) return;
-      
-      const score = Number(m.score);
-      const assessment = assessments?.find(a => a.id === m.assessment_id);
-      
-      if (assessment && assessment.max_marks && assessment.max_marks > 0 && !isNaN(score)) {
-        obtained += (score / assessment.max_marks) * (assessment.weight || 0);
-        total += (assessment.weight || 0);
-        graded += 1;
-      }
-    });
-
-    performance.push({
-      enrollmentId: e.id,
-      rollNumber: (e.profiles as { roll_number: string } | null)?.roll_number || "—",
-      fullName: (e.profiles as { full_name: string } | null)?.full_name || "Unknown",
-      obtainedWeight: obtained,
-      totalWeight: total,
-      percentage: total > 0 ? (obtained / total) * 100 : null,
-      gradedCount: graded,
-    });
-  });
-
-  // Sort by percentage descending, ungraded students last.
-  performance.sort((a, b) => {
-    if (a.percentage === null && b.percentage !== null) return 1;
-    if (b.percentage === null && a.percentage !== null) return -1;
-    if (a.percentage !== null && b.percentage !== null) return b.percentage - a.percentage;
-    return 0;
-  });
+  const performance = (rpcData as StudentPerformance[]) || [];
 
   const top3 = performance.filter(p => p.percentage !== null).slice(0, 3);
   const ranks = ["1ST", "2ND", "3RD"];
@@ -197,12 +133,12 @@ export default async function AnalyticsPage(props: {
       {top3.length > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
           {top3.map((p, i) => (
-            <div key={p.enrollmentId} className="tams-stat" data-cat="count">
+            <div key={p.roll_number} className="tams-stat" data-cat="count">
               <div className="tams-stat__header">
                 <span className="tams-stat__label">{ranks[i]}</span>
               </div>
               <div className="tams-stat__value">{p.percentage?.toFixed(1)}%</div>
-              <div className="tams-stat__meta">{p.fullName}</div>
+              <div className="tams-stat__meta">{p.full_name}</div>
             </div>
           ))}
         </div>
@@ -224,20 +160,20 @@ export default async function AnalyticsPage(props: {
             </thead>
             <tbody>
               {performance.map(p => (
-                <tr key={p.enrollmentId} className="transition-colors">
-                  <td>{p.rollNumber}</td>
-                  <td>{p.fullName}</td>
+                <tr key={p.roll_number} className="transition-colors">
+                  <td>{p.roll_number}</td>
+                  <td>{p.full_name}</td>
                   <td className="tams-numeral">
-                    {p.gradedCount === 0 ? "—" : p.gradedCount}
+                    {p.graded === 0 ? "—" : p.graded}
                   </td>
                   <td className="tams-numeral">
-                    {p.gradedCount === 0 ? "—" : p.obtainedWeight.toFixed(2)}
+                    {p.graded === 0 ? "—" : p.obtained}
                   </td>
                   <td className="tams-numeral">
-                    {p.gradedCount === 0 ? "—" : p.totalWeight.toFixed(2)}
+                    {p.graded === 0 ? "—" : p.total_weight}
                   </td>
                   <td className="tams-numeral">
-                    {p.percentage === null ? "—" : `${p.percentage.toFixed(1)}%`}
+                    {p.percentage === null ? "—" : `${p.percentage}%`}
                   </td>
                 </tr>
               ))}
