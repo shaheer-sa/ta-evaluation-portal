@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { createClient } from "@/lib/supabase/client";
 import SpecularButton from "@/components/react-bits/SpecularButton";
-
+import { GlobalSpotlight, ParticleCard } from "@/components/react-bits/MagicBento";
 // ── Schema ──────────────────────────────────────────────────────
 const loginSchema = z.object({
   identifier: z
@@ -48,6 +48,15 @@ export default function LoginPage() {
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const gridRef = useRef<HTMLDivElement>(null);
+  const [canHover, setCanHover] = useState(false);
+
+  useEffect(() => {
+    setCanHover(
+      window.matchMedia("(hover: hover)").matches &&
+      !window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    );
+  }, []);
 
   useEffect(() => {
     if (typeof window !== "undefined" && window.location.hash.includes("access_token=")) {
@@ -104,8 +113,22 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="mc-section w-full">
-      <div className="mc-card mc-card--glow tams-auth-panel animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out">
+    <div
+      className="mc-section w-full"
+      ref={gridRef}
+      style={{ "--mc-glow": "10, 41, 71" } as React.CSSProperties}
+    >
+      {canHover && (
+        <GlobalSpotlight gridRef={gridRef} glowColor="10, 41, 71" spotlightRadius={300} />
+      )}
+      <ParticleCard
+        className="mc-card mc-card--glow tams-auth-panel animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out"
+        particleCount={0}
+        enableTilt={true}
+        enableMagnetism={false}
+        clickEffect={false}
+        disableAnimations={!canHover}
+      >
       {/* ── Header ─────────────────────────────────────────────── */}
       <div style={{ marginBottom: "2rem", textAlign: "center" }}>
         <div
@@ -289,7 +312,7 @@ export default function LoginPage() {
         <br />
         Contact your TA if you don&apos;t have an account.
       </p>
-      </div>
+      </ParticleCard>
     </div>
   );
 }

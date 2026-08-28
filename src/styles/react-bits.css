@@ -210,6 +210,7 @@
 /* ===================== MagicBento ===================== */
 
 .mc-section {
+  perspective: 1000px;
   --glow-x: 50%;
   --glow-y: 50%;
   --glow-intensity: 0;
