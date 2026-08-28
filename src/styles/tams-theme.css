@@ -729,16 +729,17 @@ a.tams-stat {
   position: fixed;
   top: 0;
   left: 0;
-  height: 3px;
+  height: 4px;
   width: 100%;
   z-index: 60;
   pointer-events: none;
   background: linear-gradient(
     90deg,
-    var(--navy) 0%,
-    var(--navy) 40%,
-    var(--tan) 60%,
-    var(--navy) 100%
+    hsl(210 75% 16%) 0%,
+    hsl(210 75% 16%) 35%,
+    hsl(210 60% 42%) 50%,
+    hsl(210 75% 16%) 65%,
+    hsl(210 75% 16%) 100%
   );
   background-size: 200% 100%;
   animation: tams-progress-slide 1.1s linear infinite;

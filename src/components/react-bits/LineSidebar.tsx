@@ -1,11 +1,13 @@
 'use client';
 
 import { useRef, useState, useCallback, useEffect, CSSProperties } from 'react';
+import Link from 'next/link';
 
 type Falloff = 'linear' | 'smooth' | 'sharp';
 
 export interface LineSidebarProps {
   items?: string[];
+  hrefs?: string[];
   accentColor?: string;
   textColor?: string;
   markerColor?: string;
@@ -35,6 +37,7 @@ const FALLOFF_CURVES: Record<Falloff, (p: number) => number> = {
 
 const LineSidebar = ({
   items = [],
+  hrefs,
   accentColor = 'hsl(268 90% 66%)',
   textColor = 'hsl(250 16% 68%)',
   markerColor = 'hsl(250 14% 42%)',
@@ -180,33 +183,55 @@ const LineSidebar = ({
         onPointerLeave={handlePointerLeave}
         className="rb-line__list"
       >
-        {items.map((label, index) => (
-          <li
-            key={`${label}-${index}`}
-            ref={el => {
-              itemRefs.current[index] = el;
-            }}
-            role="link"
-            tabIndex={0}
-            aria-current={activeIndex === index ? 'page' : undefined}
-            data-active={activeIndex === index ? "true" : undefined}
-            style={{ opacity: pressedIndex === index ? 0.6 : 1 }}
-            onClick={() => handleSelect(index, label)}
-            onKeyDown={e => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                handleSelect(index, label);
-              }
-            }}
-            className="rb-line__item"
-          >
-            {showMarker && <span aria-hidden="true" className="rb-line__marker" />}
-            <span className="rb-line__label">
-              {showIndex && <span className="rb-line__index">{String(index + 1).padStart(2, '0')}</span>}
-              <span>{label}</span>
-            </span>
-          </li>
-        ))}
+        {items.map((label, index) => {
+          const hasHref = !!(hrefs && hrefs[index]);
+          const content = (
+            <>
+              {showMarker && <span aria-hidden="true" className="rb-line__marker" />}
+              <span className="rb-line__label">
+                {showIndex && <span className="rb-line__index">{String(index + 1).padStart(2, '0')}</span>}
+                <span>{label}</span>
+              </span>
+            </>
+          );
+
+          return (
+            <li
+              key={`${label}-${index}`}
+              ref={el => {
+                itemRefs.current[index] = el;
+              }}
+              role={hasHref ? undefined : "link"}
+              tabIndex={hasHref ? undefined : 0}
+              aria-current={activeIndex === index ? 'page' : undefined}
+              data-active={activeIndex === index ? "true" : undefined}
+              style={{ opacity: pressedIndex === index ? 0.6 : 1 }}
+              onClick={hasHref ? undefined : () => handleSelect(index, label)}
+              onKeyDown={hasHref ? undefined : e => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  handleSelect(index, label);
+                }
+              }}
+              className="rb-line__item"
+            >
+              {hasHref ? (
+                <Link
+                  href={hrefs[index]}
+                  onClick={() => {
+                    setPressedIndex(index);
+                    onItemClick?.(index, label);
+                  }}
+                  style={{ display: 'flex', alignItems: 'inherit', width: '100%', height: '100%', textDecoration: 'none', color: 'inherit' }}
+                >
+                  {content}
+                </Link>
+              ) : (
+                content
+              )}
+            </li>
+          );
+        })}
       </ul>
     </nav>
   );

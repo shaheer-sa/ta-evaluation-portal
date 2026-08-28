@@ -13,21 +13,7 @@ import AmbientField from "@/components/shell/AmbientField";
 import CardEdgeTracker from "@/components/shell/CardEdgeTracker";
 import RouteProgress from "@/components/shell/RouteProgress";
 
-const TA_NAV = [
-  { href: "/ta", label: "Overview", exact: true },
-  { href: "/ta/courses", label: "Courses & Terms", exact: true },
-  { href: "/ta/sections", label: "Sections", exact: true },
-  { href: "/ta/roster", label: "Students", exact: false },
-  { href: "/ta/assessments", label: "Assessments", exact: true },
-  { href: "/ta/grading", label: "Grading", exact: true },
-  { href: "/ta/queries", label: "Queries", exact: true },
-  { href: "/ta/analytics", label: "Analytics", exact: true },
-];
-
-const STUDENT_NAV = [
-  { href: "/student", label: "My Grades", exact: true },
-  { href: "/student/queries", label: "Queries", exact: false },
-];
+import { TA_NAV, STUDENT_NAV } from "@/components/shell/nav-config";
 
 export default function DashboardLayout({
   children,
@@ -103,6 +89,7 @@ export default function DashboardLayout({
             <div className="tams-rail__nav">
               <LineSidebar 
                 items={navItems.map(n => n.label)}
+                hrefs={navItems.map(n => n.href)}
                 defaultActive={activeIndex >= 0 ? activeIndex : null}
                 accentColor="var(--navy)"
                 textColor="var(--navy)"

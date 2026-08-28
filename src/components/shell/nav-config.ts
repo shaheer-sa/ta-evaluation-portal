@@ -1,37 +1,30 @@
 export interface NavItem {
   label: string;
   href: string;
+  exact: boolean;
   /** two or three characters shown when the rail is collapsed */
   short: string;
 }
 
 export const TA_NAV: NavItem[] = [
-  { label: 'Dashboard', href: '/ta/dashboard', short: 'DS' },
-  { label: 'Courses', href: '/ta/courses', short: 'CO' },
-  { label: 'Sections', href: '/ta/sections', short: 'SE' },
-  { label: 'Students', href: '/ta/students', short: 'ST' },
-  { label: 'Assessments', href: '/ta/assessments', short: 'AS' },
-  { label: 'Grading', href: '/ta/grading', short: 'GR' },
-  { label: 'Queries', href: '/ta/queries', short: 'QU' },
-  { label: 'Sheet sync', href: '/ta/sync', short: 'SY' }
+  { href: "/ta", label: "Overview", exact: true, short: "OV" },
+  { href: "/ta/courses", label: "Courses & Terms", exact: true, short: "CO" },
+  { href: "/ta/sections", label: "Sections", exact: true, short: "SE" },
+  { href: "/ta/roster", label: "Students", exact: false, short: "ST" },
+  { href: "/ta/assessments", label: "Assessments", exact: true, short: "AS" },
+  { href: "/ta/grading", label: "Grading", exact: true, short: "GR" },
+  { href: "/ta/queries", label: "Queries", exact: true, short: "QU" },
+  { href: "/ta/analytics", label: "Analytics", exact: true, short: "AN" },
 ];
 
 export const STUDENT_NAV: NavItem[] = [
-  { label: 'My grades', href: '/student/grades', short: 'GR' },
-  { label: 'My queries', href: '/student/queries', short: 'QU' }
+  { href: "/student", label: "My Grades", exact: true, short: "GR" },
+  { href: "/student/queries", label: "Queries", exact: false, short: "QU" },
 ];
 
-/** Longest matching href wins, so /ta/courses/[id] still highlights Courses. */
 export function activeIndexFor(items: NavItem[], pathname: string): number | null {
-  let best = -1;
-  let bestLen = 0;
-  items.forEach((item, i) => {
-    if (pathname === item.href || pathname.startsWith(`${item.href}/`)) {
-      if (item.href.length > bestLen) {
-        best = i;
-        bestLen = item.href.length;
-      }
-    }
-  });
-  return best === -1 ? null : best;
+  const index = items.findIndex((item) =>
+    item.exact ? pathname === item.href : pathname.startsWith(item.href)
+  );
+  return index === -1 ? null : index;
 }
