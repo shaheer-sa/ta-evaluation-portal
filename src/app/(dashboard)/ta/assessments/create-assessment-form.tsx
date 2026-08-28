@@ -9,9 +9,6 @@ import { createAssessment } from "./actions";
 const ALL_ASSESSMENT_TYPES = [
   { value: "assignment", label: "Assignment", requirement: "enable_assignments" },
   { value: "quiz", label: "Quiz", requirement: "enable_quizzes" },
-  { value: "mid", label: "Midterm Exam", requirement: null },
-  { value: "final", label: "Final Exam", requirement: null },
-  { value: "project", label: "Project", requirement: null },
   { value: "cp", label: "Class Participation", requirement: "enable_cp" },
 ];
 
@@ -97,7 +94,7 @@ export function CreateAssessmentForm({ sectionCourses }: { sectionCourses: any[]
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="weight">Weight (%)</Label>
+          <Label htmlFor="weight">Weight</Label>
           <Input
             id="weight"
             name="weight"

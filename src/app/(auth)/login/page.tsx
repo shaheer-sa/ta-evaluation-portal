@@ -185,7 +185,7 @@ export default function LoginPage() {
           <Input
             id="identifier"
             type="text"
-            placeholder="e.g. ta@university.edu or 22F-1234"
+            placeholder="e.g. f24xxxx@cfd.nu.edu.pk or 24F-xxxx"
             autoComplete="username"
             autoFocus
             disabled={isLoading}

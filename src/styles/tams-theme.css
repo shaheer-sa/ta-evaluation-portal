@@ -722,3 +722,34 @@ a.tams-stat {
   font-size: 0.8rem;
   color: var(--ink-muted);
 }
+
+/* ── Route progress bar ─────────────────────────────────────── */
+
+.tams-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 3px;
+  width: 100%;
+  z-index: 60;
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    var(--navy) 0%,
+    var(--navy) 40%,
+    var(--tan) 60%,
+    var(--navy) 100%
+  );
+  background-size: 200% 100%;
+  animation: tams-progress-slide 1.1s linear infinite;
+  transform-origin: left;
+}
+
+@keyframes tams-progress-slide {
+  from { background-position: 100% 0; }
+  to   { background-position: -100% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tams-progress { animation: none; background: var(--navy); }
+}

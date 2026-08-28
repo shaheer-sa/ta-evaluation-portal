@@ -20,16 +20,18 @@ import {
 
 import type { Database } from "@/types/database";
 
-const ASSESSMENT_TYPES = [
-  { value: "assignment", label: "Assignment" },
-  { value: "quiz", label: "Quiz" },
-  { value: "cp", label: "Class Participation" },
+const ALL_ASSESSMENT_TYPES = [
+  { value: "assignment", label: "Assignment", requirement: "enable_assignments" },
+  { value: "quiz", label: "Quiz", requirement: "enable_quizzes" },
+  { value: "cp", label: "Class Participation", requirement: "enable_cp" },
 ];
 
 export function EditAssessmentDialog({
   assessment,
+  courseFlags,
 }: {
   assessment: Pick<Database["public"]["Tables"]["assessments"]["Row"], "id" | "title" | "type" | "max_marks" | "weight">;
+  courseFlags?: { enable_cp?: boolean; enable_assignments?: boolean; enable_quizzes?: boolean };
 }) {
   const [open, setOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -88,7 +90,11 @@ export function EditAssessmentDialog({
                 required
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
-                {ASSESSMENT_TYPES.map((t) => (
+                {ALL_ASSESSMENT_TYPES.filter((t) => {
+                  if (!courseFlags) return true;
+                  const key = t.requirement as keyof typeof courseFlags;
+                  return courseFlags[key] !== false;
+                }).map((t) => (
                   <option key={t.value} value={t.value}>
                     {t.label}
                   </option>
@@ -108,7 +114,7 @@ export function EditAssessmentDialog({
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="weight">Weight (%)</Label>
+              <Label htmlFor="weight">Weight</Label>
               <Input
                 id="weight"
                 name="weight"

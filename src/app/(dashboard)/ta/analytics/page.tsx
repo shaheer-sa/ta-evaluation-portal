@@ -78,7 +78,7 @@ export default async function AnalyticsPage(props: {
             <h1 className="tams-pagehead__title">Analytics</h1>
           </div>
           <p className="text-sm text-muted-foreground text-right hidden sm:block">
-            Performance metrics and trends for {activeTerm.name}.
+            Performance analysis for {activeTerm.name}.
           </p>
         </div>
         <SectionPicker options={options} />
@@ -186,7 +186,7 @@ export default async function AnalyticsPage(props: {
           <h1 className="tams-pagehead__title">Analytics</h1>
         </div>
         <p className="text-sm text-muted-foreground text-right hidden sm:block">
-          Performance metrics and trends for {activeTerm.name}.
+          Performance analysis for {activeTerm.name}.
         </p>
       </div>
 

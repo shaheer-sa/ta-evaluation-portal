@@ -58,7 +58,7 @@ export default async function AssessmentsPage() {
           <CardHeader>
             <CardTitle>Create Assessment</CardTitle>
             <CardDescription>
-              Add a new graded item (quiz, assignment, exam, etc.)
+              Add a new graded assessment (quiz, assignment, cp, etc.)
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -90,11 +90,14 @@ export default async function AssessmentsPage() {
                       <div>
                         <div className="font-medium">{a.title}</div>
                         <div className="text-xs text-muted-foreground">
-                          {termName} — Sec {sectionName} ({courseCode}) · {a.type} · {a.max_marks} marks · {a.weight}%
+                          {termName} — Sec {sectionName} ({courseCode}) · {a.type} · {a.max_marks} marks · {a.weight}
                         </div>
                       </div>
                       <div className="flex gap-2">
-                        <EditAssessmentDialog assessment={a} />
+                        <EditAssessmentDialog
+                          assessment={a}
+                          courseFlags={sectionCourses.find((sc: { id: string }) => sc.id === a.section_course_id)?.courses}
+                        />
                         <DeleteAssessmentButton
                           assessmentId={a.id}
                           assessmentLabel={`${a.title} — Sec ${sectionName} (${courseCode})`}

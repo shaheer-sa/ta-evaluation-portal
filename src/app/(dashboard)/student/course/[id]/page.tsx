@@ -257,7 +257,7 @@ export default async function CourseDetailPage({ params }: PageProps) {
                                   : "—"}
                               </td>
                               <td className="tams-numeral text-muted-foreground">
-                                {r.weight}%
+                                {r.weight}
                               </td>
                             </tr>
                           ))}

@@ -11,6 +11,7 @@ import LineSidebar from "@/components/react-bits/LineSidebar";
 import ClickSpark from "@/components/react-bits/ClickSpark";
 import AmbientField from "@/components/shell/AmbientField";
 import CardEdgeTracker from "@/components/shell/CardEdgeTracker";
+import RouteProgress from "@/components/shell/RouteProgress";
 
 const TA_NAV = [
   { href: "/ta", label: "Overview", exact: true },
@@ -65,6 +66,7 @@ export default function DashboardLayout({
       <div className="tams-body">
         <div className="tams-shell">
           <AmbientField />
+          <RouteProgress />
           <CardEdgeTracker />
           
           {mobileMenuOpen && (

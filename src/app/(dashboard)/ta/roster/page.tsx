@@ -193,7 +193,7 @@ export default function RosterPage() {
       <div className="tams-pagehead">
         <div>
           <p className="tams-pagehead__eyebrow">TEACHING ASSISTANT</p>
-          <h1 className="tams-pagehead__title">Roster & Google Sync</h1>
+          <h1 className="tams-pagehead__title">Google Sync</h1>
         </div>
         <p className="text-sm text-muted-foreground text-right hidden sm:block max-w-[250px]">
           View enrolled students and perform a live two-way sync with Google Sheets.
@@ -204,7 +204,7 @@ export default function RosterPage() {
         <CardHeader>
           <CardTitle>Select Class & Sync</CardTitle>
           <CardDescription>
-            Choose a mapped section to sync its data with your instructor&apos;s Google Sheet.
+            Choose a section to sync its data with your instructor&apos;s Google Sheet.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -350,7 +350,7 @@ export default function RosterPage() {
       {selectedSectionCourseId && (
         <Card data-edge>
           <CardHeader>
-            <CardTitle>Current Roster</CardTitle>
+            <CardTitle>Current List</CardTitle>
           </CardHeader>
           <CardContent>
             {isLoadingRoster ? (

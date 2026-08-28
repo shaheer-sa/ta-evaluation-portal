@@ -144,7 +144,7 @@ export default async function CoursesPage() {
             <CardHeader>
               <CardTitle>Create New Course</CardTitle>
               <CardDescription>
-                Add a new course you are TAing for.
+                Add a new course.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -156,7 +156,7 @@ export default async function CoursesPage() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="courseName">Course Name</Label>
-                    <Input id="courseName" name="name" required placeholder="Intro to CS" />
+                    <Input id="courseName" name="name" required placeholder="Programming Fundamentals" />
                   </div>
                 </div>
 

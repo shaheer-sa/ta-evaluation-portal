@@ -64,6 +64,7 @@ const LineSidebar = ({
   const activeRef = useRef<number | null>(defaultActive);
   const smoothingRef = useRef(smoothing);
   const [activeIndex, setActiveIndex] = useState<number | null>(defaultActive);
+  const [pressedIndex, setPressedIndex] = useState<number | null>(null);
 
   activeRef.current = activeIndex;
   smoothingRef.current = smoothing;
@@ -128,6 +129,7 @@ const LineSidebar = ({
 
   const handleSelect = useCallback(
     (index: number, label: string) => {
+      setPressedIndex(index);
       setActiveIndex(index);
       onItemClick?.(index, label);
     },
@@ -137,6 +139,7 @@ const LineSidebar = ({
   // keep the highlight in sync when the route drives the active item
   useEffect(() => {
     setActiveIndex(defaultActive);
+    setPressedIndex(null);
   }, [defaultActive]);
 
   useEffect(() => {
@@ -187,6 +190,7 @@ const LineSidebar = ({
             tabIndex={0}
             aria-current={activeIndex === index ? 'page' : undefined}
             data-active={activeIndex === index ? "true" : undefined}
+            style={{ opacity: pressedIndex === index ? 0.6 : 1 }}
             onClick={() => handleSelect(index, label)}
             onKeyDown={e => {
               if (e.key === 'Enter' || e.key === ' ') {

@@ -44,7 +44,7 @@ type QueryItem = Pick<Database["public"]["Tables"]["queries"]["Row"], "id" | "ti
 
 export default function TAQueriesPage() {
   const [queries, setQueries] = useState<QueryItem[]>([]);
-  const [statusFilter, setStatusFilter] = useState("pending");
+  const [statusFilter, setStatusFilter] = useState("all");
   const [isLoading, setIsLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
