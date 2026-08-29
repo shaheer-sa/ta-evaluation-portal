@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Loader2, RefreshCw, CheckCircle2, AlertCircle } from "lucide-react";
@@ -57,6 +57,7 @@ interface Props {
 
 export default function RosterClient({ sections, selectedSectionCourseId, roster, assessments }: Props) {
   const router = useRouter();
+  const [isPending, startTransition] = useTransition();
   const [sheetUrl, setSheetUrl] = useState("");
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState<SyncResult | null>(null);
@@ -134,26 +135,32 @@ export default function RosterClient({ sections, selectedSectionCourseId, roster
         <CardContent className="space-y-6">
           <div className="space-y-2">
             <Label>Section & Course</Label>
-            <select
-              value={selectedSectionCourseId}
-              onChange={(e) => {
-                setSyncResult(null);
-                const val = e.target.value;
-                if (val) {
-                  router.push(`?sc=${val}`);
-                } else {
-                  router.push(`/ta/roster`);
-                }
-              }}
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              <option value="">Select...</option>
-              {sections.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {`${s.sections?.terms?.name || "Term"} - ${s.sections?.name || "Sec"} (${s.courses?.code || "Code"})`}
-                </option>
-              ))}
-            </select>
+            <div className="flex items-center gap-2">
+              <select
+                value={selectedSectionCourseId}
+                disabled={isPending}
+                onChange={(e) => {
+                  setSyncResult(null);
+                  const val = e.target.value;
+                  startTransition(() => {
+                    if (val) {
+                      router.push(`?sc=${val}`);
+                    } else {
+                      router.push(`/ta/roster`);
+                    }
+                  });
+                }}
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+              >
+                <option value="">Select...</option>
+                {sections.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {`${s.sections?.terms?.name || "Term"} - ${s.sections?.name || "Sec"} (${s.courses?.code || "Code"})`}
+                  </option>
+                ))}
+              </select>
+              {isPending && <span className="tams-select__pending">Loading…</span>}
+            </div>
           </div>
 
           {selectedSectionCourseId && (

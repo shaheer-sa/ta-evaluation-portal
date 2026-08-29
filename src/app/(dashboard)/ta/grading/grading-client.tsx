@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Loader2, Save, Search, AlertCircle } from "lucide-react";
@@ -54,6 +54,7 @@ export default function GradingClient({
   maxMarks,
 }: Props) {
   const router = useRouter();
+  const [isPending, startTransition] = useTransition();
   
   const [studentMarks, setStudentMarks] = useState<StudentMark[]>(initialStudentMarks);
   const [searchQuery, setSearchQuery] = useState("");
@@ -152,17 +153,23 @@ export default function GradingClient({
         <CardContent>
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="class-select">Class</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="class-select">Class</Label>
+                {isPending && <span className="tams-select__pending">Loading…</span>}
+              </div>
               <select
                 id="class-select"
                 value={selectedSC}
+                disabled={isPending}
                 onChange={(e) => {
                   const val = e.target.value;
-                  if (val) {
-                    router.push(`?sc=${val}`);
-                  } else {
-                    router.push(`/ta/grading`);
-                  }
+                  startTransition(() => {
+                    if (val) {
+                      router.push(`?sc=${val}`);
+                    } else {
+                      router.push(`/ta/grading`);
+                    }
+                  });
                 }}
                 className={SELECT_CLASS}
               >
@@ -177,19 +184,24 @@ export default function GradingClient({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="assessment-select">Assessment</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="assessment-select">Assessment</Label>
+                {isPending && <span className="tams-select__pending">Loading…</span>}
+              </div>
               <select
                 id="assessment-select"
                 value={selectedAssessment}
+                disabled={!selectedSC || isPending}
                 onChange={(e) => {
                   const val = e.target.value;
-                  if (val) {
-                    router.push(`?sc=${selectedSC}&assessment=${val}`);
-                  } else {
-                    router.push(`?sc=${selectedSC}`);
-                  }
+                  startTransition(() => {
+                    if (val) {
+                      router.push(`?sc=${selectedSC}&assessment=${val}`);
+                    } else {
+                      router.push(`?sc=${selectedSC}`);
+                    }
+                  });
                 }}
-                disabled={!selectedSC}
                 className={SELECT_CLASS}
               >
                 <option value="">Select an assessment…</option>
@@ -215,7 +227,7 @@ export default function GradingClient({
                   {maxMarks} marks
                 </CardDescription>
               </div>
-              <Button onClick={handleSave} disabled={isSaving}>
+              <Button onClick={handleSave} disabled={isSaving || isPending}>
                 {isSaving ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 ) : (

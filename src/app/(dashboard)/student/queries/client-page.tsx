@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Loader2, Plus, MessageSquare } from "lucide-react";
 import { QueryThread } from "@/components/query-thread";
-import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,6 +16,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import type { Database } from "@/types/database";
 
 const STATUS_COLORS: Record<string, string> = {
   pending: "bg-yellow-500/10 text-yellow-600 border-yellow-500/30",
@@ -24,107 +25,44 @@ const STATUS_COLORS: Record<string, string> = {
   rejected: "bg-red-500/10 text-red-600 border-red-500/30",
 };
 
-import type { Database } from "@/types/database";
-
-type QueryItem = Pick<Database["public"]["Tables"]["queries"]["Row"], "id" | "title" | "description" | "priority" | "status" | "created_at"> & {
+export type QueryItem = Pick<Database["public"]["Tables"]["queries"]["Row"], "id" | "title" | "description" | "priority" | "status" | "created_at"> & {
   assessments: Pick<Database["public"]["Tables"]["assessments"]["Row"], "title"> | null;
 };
 
-type EnrollmentRow = Pick<Database["public"]["Tables"]["enrollments"]["Row"], "id" | "section_id" | "course_id"> & {
+export type EnrollmentRow = Pick<Database["public"]["Tables"]["enrollments"]["Row"], "id" | "section_id" | "course_id"> & {
   courses: Pick<Database["public"]["Tables"]["courses"]["Row"], "code" | "name"> | null;
   sections: Pick<Database["public"]["Tables"]["sections"]["Row"], "name"> | null;
 };
 
-type AssessmentRow = Pick<Database["public"]["Tables"]["assessments"]["Row"], "id" | "title" | "type">;
+export type AssessmentRow = Pick<Database["public"]["Tables"]["assessments"]["Row"], "id" | "title" | "type">;
 
 interface ClientProps {
   initialQueries: QueryItem[];
+  enrollments: EnrollmentRow[];
+  assessments: AssessmentRow[];
+  selectedEnrollment: string;
 }
 
-export default function StudentQueriesClient({ initialQueries }: ClientProps) {
-  const supabase = createClient();
-  const [queries, setQueries] = useState<QueryItem[]>(initialQueries);
+export default function StudentQueriesClient({
+  initialQueries,
+  enrollments,
+  assessments,
+  selectedEnrollment,
+}: ClientProps) {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+  
+  // Note: Since `initialQueries` updates via `router.refresh()`, we can just
+  // map over it directly instead of maintaining a local `queries` state.
+  
   const [showForm, setShowForm] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
-  // For the create form
-  const [enrollments, setEnrollments] = useState<EnrollmentRow[]>([]);
-  const [assessments, setAssessments] = useState<AssessmentRow[]>([]);
-  const [selectedEnrollment, setSelectedEnrollment] = useState("");
   const [formTitle, setFormTitle] = useState("");
   const [formDescription, setFormDescription] = useState("");
   const [formPriority, setFormPriority] = useState("medium");
   const [selectedAssessment, setSelectedAssessment] = useState("");
-
-  async function fetchQueries() {
-    try {
-      const res = await fetch("/api/queries?status=all");
-      const data = await res.json();
-      if (res.ok) setQueries(data.queries);
-    } catch {
-      toast.error("Failed to load queries");
-    }
-  }
-
-  // Load enrollments for the form
-  useEffect(() => {
-    async function loadEnrollments() {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data: rawEnrollments, error } = await supabase
-      .from("enrollments")
-      .select(`
-        id,
-        section_id,
-        course_id,
-        courses ( code, name ),
-        sections ( name )
-      `)
-      .eq("student_id", user.id);
-
-    if (error) {
-      console.error(error);
-      return;
-    }
-
-    setEnrollments(rawEnrollments || []);
-    }
-    loadEnrollments();
-  }, [supabase]);
-
-  // Load assessments when enrollment changes
-  useEffect(() => {
-    setSelectedAssessment("");
-    if (!selectedEnrollment) {
-      setAssessments([]);
-      return;
-    }
-
-    const enrollment = enrollments.find((e) => e.id === selectedEnrollment);
-    if (!enrollment) return;
-
-    async function loadAssessments() {
-      // Find section_course for this enrollment
-      const { data: sc } = await supabase
-        .from("section_courses")
-        .select("id")
-        .eq("section_id", enrollment?.section_id || "")
-        .eq("course_id", enrollment?.course_id || "")
-        .single();
-
-      if (sc) {
-        const { data } = await supabase
-          .from("assessments")
-          .select("id, title, type")
-          .eq("section_course_id", sc.id)
-          .order("created_at", { ascending: true });
-        if (data) setAssessments(data);
-      }
-    }
-    loadAssessments();
-  }, [selectedEnrollment, enrollments, supabase]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -147,12 +85,15 @@ export default function StudentQueriesClient({ initialQueries }: ClientProps) {
       setFormTitle("");
       setFormDescription("");
       setFormPriority("medium");
-      setSelectedEnrollment("");
-      fetchQueries();
+      
+      // Update the URL to clear the selected enrollment, closing out the form data state.
+      router.push("/student/queries");
+      router.refresh();
     } catch {
       toast.error("Failed to submit query");
+    } finally {
+      setIsSubmitting(false);
     }
-    setIsSubmitting(false);
   }
 
   function formatDate(dateStr: string) {
@@ -177,7 +118,6 @@ export default function StudentQueriesClient({ initialQueries }: ClientProps) {
         </Button>
       </div>
 
-      {/* Create Form */}
       {showForm && (
         <Card data-edge>
           <CardHeader>
@@ -190,12 +130,25 @@ export default function StudentQueriesClient({ initialQueries }: ClientProps) {
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Course</Label>
+                  <div className="flex items-center justify-between">
+                    <Label>Course</Label>
+                    {isPending && <span className="tams-select__pending">Loading…</span>}
+                  </div>
                   <select
                     value={selectedEnrollment}
-                    onChange={(e) => setSelectedEnrollment(e.target.value)}
+                    disabled={isPending}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      startTransition(() => {
+                        if (val) {
+                          router.push(`?enrollment=${val}`);
+                        } else {
+                          router.push(`/student/queries`);
+                        }
+                      });
+                    }}
                     required
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
                   >
                     <option value="">Select...</option>
                     {enrollments.map((en) => (
@@ -276,8 +229,7 @@ export default function StudentQueriesClient({ initialQueries }: ClientProps) {
         </Card>
       )}
 
-      {/* Query List */}
-      {queries.length === 0 ? (
+      {initialQueries.length === 0 ? (
         <Card data-edge>
           <CardContent className="py-12 text-center">
             <p className="text-muted-foreground">
@@ -287,7 +239,7 @@ export default function StudentQueriesClient({ initialQueries }: ClientProps) {
         </Card>
       ) : (
         <div className="space-y-4">
-          {queries.map((q) => (
+          {initialQueries.map((q) => (
             <Card data-edge key={q.id}>
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between gap-4">
