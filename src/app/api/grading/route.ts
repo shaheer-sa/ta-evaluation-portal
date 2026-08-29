@@ -108,10 +108,14 @@ export async function POST(request: Request) {
     // and raced against itself if two tabs saved at once.
     // Requires a unique constraint on (enrollment_id, assessment_id) --
     // see supabase/schema.sql.
+    const deduped = Array.from(
+      new Map(rows.map((r) => [r.enrollment_id, r])).values()
+    );
+
     const { error: upsertError, count } = await supabase
       .from("marks")
       .upsert(
-        rows.map((r) => ({
+        deduped.map((r) => ({
           enrollment_id: r.enrollment_id,
           assessment_id: assessmentId,
           score: r.score,

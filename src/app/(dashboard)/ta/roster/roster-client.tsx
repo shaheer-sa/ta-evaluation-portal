@@ -32,6 +32,8 @@ interface SyncResult {
   gradesWritten: boolean;
   totalProcessed: number;
   missingFromSheet?: { enrollmentId: string; rollNumber: string; fullName: string }[];
+  rejectedScores?: { rollNo: string; assessment: string; value: string; reason: string }[];
+  skippedAssessments?: string[];
 }
 
 export type SectionCourseRow = Pick<Database["public"]["Tables"]["section_courses"]["Row"], "id" | "section_id" | "course_id"> & {
@@ -215,6 +217,34 @@ export default function RosterClient({ sections, selectedSectionCourseId, roster
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            {((syncResult.rejectedScores && syncResult.rejectedScores.length > 0) || (syncResult.skippedAssessments && syncResult.skippedAssessments.length > 0)) && (
+              <div 
+                className="rounded-md border p-4 mb-4" 
+                style={{ backgroundColor: 'var(--warning-soft, #fffbeb)', borderColor: 'var(--warning, #f59e0b)', color: 'var(--warning, #b45309)' }}
+              >
+                <h4 className="font-semibold flex items-center gap-2 mb-3">
+                  <AlertCircle className="h-5 w-5" />
+                  {syncResult.rejectedScores && syncResult.rejectedScores.length > 0 
+                    ? `${syncResult.rejectedScores.length} score${syncResult.rejectedScores.length === 1 ? '' : 's'} in the sheet w${syncResult.rejectedScores.length === 1 ? 'as' : 'ere'} not imported.` 
+                    : 'Some assessments were skipped.'}
+                </h4>
+                <div className="space-y-2 mb-2 max-h-[200px] overflow-y-auto">
+                  {syncResult.rejectedScores?.map((r, i) => (
+                    <div key={i} className="text-sm">
+                      {r.rollNo} — {r.assessment}: &quot;{r.value}&quot; ({r.reason})
+                    </div>
+                  ))}
+                  {syncResult.skippedAssessments?.map((s, i) => (
+                    <div key={`s-${i}`} className="text-sm font-medium">
+                      {s}: No matching tab found in the sheet.
+                    </div>
+                  ))}
+                </div>
+                <p className="text-sm font-medium opacity-90 mt-2">
+                  The sheet still contains the bad value{syncResult.rejectedScores && syncResult.rejectedScores.length > 1 ? 's' : ''}. You must correct {syncResult.rejectedScores && syncResult.rejectedScores.length > 1 ? 'them' : 'it'} there.
+                </p>
+              </div>
+            )}
             {syncResult.invited.length > 0 && (
               <div>
                 <h4 className="font-medium text-sm text-primary mb-2">

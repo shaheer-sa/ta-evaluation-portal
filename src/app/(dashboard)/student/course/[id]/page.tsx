@@ -85,7 +85,10 @@ export default async function CourseDetailPage({ params }: PageProps) {
       .eq("enrollment_id", enrollmentId)
   ]);
 
-  const scId = sectionCourse?.id || "";
+  if (!sectionCourse?.id) {
+    return <p className="text-muted-foreground">This course isn&apos;t set up yet. Ask your TA.</p>;
+  }
+  const scId = sectionCourse.id;
 
   // Group 4: Fetch assessments and class averages in parallel
   const [
@@ -113,7 +116,9 @@ export default async function CourseDetailPage({ params }: PageProps) {
   // Build the table data
   const marksMap = new Map<string, number>();
   for (const m of marks || []) {
-    marksMap.set(m.assessment_id, m.score ?? 0);
+    // A mark row with no score means "not graded yet", not zero.
+    if (m.score === null || m.score === undefined) continue;
+    marksMap.set(m.assessment_id, Number(m.score));
   }
 
   let totalWeightedScore = 0;

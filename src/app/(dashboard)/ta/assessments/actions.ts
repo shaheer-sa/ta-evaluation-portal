@@ -7,7 +7,7 @@ export async function createAssessment(formData: FormData) {
   const { supabase } = await requireTA();
 
   const sectionCourseId = formData.get("sectionCourseId") as string;
-  const type = formData.get("type") as "assignment" | "quiz" | "mid" | "final" | "project" | "cp";
+  const type = formData.get("type") as "assignment" | "quiz" | "cp";
   const title = formData.get("title") as string;
   const maxMarks = parseFloat(formData.get("maxMarks") as string);
   const weight = parseFloat(formData.get("weight") as string);
@@ -43,10 +43,26 @@ export async function updateAssessment(formData: FormData) {
   const { supabase } = await requireTA();
 
   const assessmentId = formData.get("assessmentId") as string;
-  const type = formData.get("type") as "assignment" | "quiz" | "mid" | "final" | "project" | "cp";
+  const type = formData.get("type") as "assignment" | "quiz" | "cp";
   const title = formData.get("title") as string;
   const maxMarks = parseFloat(formData.get("maxMarks") as string);
   const weight = parseFloat(formData.get("weight") as string);
+
+  if (!Number.isFinite(maxMarks) || maxMarks <= 0) {
+    throw new Error("Max marks must be a number greater than 0.");
+  }
+
+  const { count: overCount } = await supabase
+    .from("marks")
+    .select("id", { count: "exact", head: true })
+    .eq("assessment_id", assessmentId)
+    .gt("score", maxMarks);
+
+  if (overCount && overCount > 0) {
+    throw new Error(
+      `Can't lower the maximum to ${maxMarks} — ${overCount} student(s) already have a higher score. Fix those marks first.`
+    );
+  }
 
   const { error } = await supabase
     .from("assessments")

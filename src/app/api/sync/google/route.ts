@@ -23,6 +23,8 @@ export interface SyncResponse {
   invited: SyncStudentResult[];
   existing: SyncStudentResult[];
   failed: SyncStudentResult[];
+  rejectedScores?: { rollNo: string; assessment: string; value: string; reason: string }[];
+  skippedAssessments?: string[];
   gradesWritten: boolean;
   totalProcessed: number;
   missingFromSheet?: { enrollmentId: string; rollNumber: string; fullName: string }[];
@@ -52,7 +54,7 @@ function generateInitialPassword(rollNumber: string): string {
 
 // ── Utility: Match Assessment Type to Sheet Tab ──────────────────────
 
-function findMatchingTab(type: string, tabMap: Map<string, string>, firstTab: string): string {
+function findMatchingTab(type: string, tabMap: Map<string, string>): string | null {
   const t = type.toLowerCase();
   
   // Custom exact matching for common typos and aliases
@@ -73,7 +75,17 @@ function findMatchingTab(type: string, tabMap: Map<string, string>, firstTab: st
     if (t === 'mid' && (key.includes('mid') || key.includes('sessional-1') || key.includes('sessional-i'))) return value;
     if (t === 'final' && (key.includes('final') || key.includes('sessional-2') || key.includes('sessional-ii'))) return value;
   }
-  return firstTab;
+  return null;
+}
+
+function validateScore(raw: string, maxMarks: number):
+  { ok: true; value: number } | { ok: false; reason: string } {
+  if (!/^-?\d+(\.\d+)?$/.test(raw)) return { ok: false, reason: "not a plain number" };
+  const n = Number(raw);
+  if (!Number.isFinite(n)) return { ok: false, reason: "not a number" };
+  if (n < 0) return { ok: false, reason: "negative" };
+  if (maxMarks > 0 && n > maxMarks) return { ok: false, reason: `above max ${maxMarks}` };
+  return { ok: true, value: n };
 }
 
 // ── Main handler ────────────────────────────────────────────────────
@@ -359,13 +371,19 @@ export async function POST(request: NextRequest) {
 
     // 5. Push TAMS marks back to Google Sheets across multiple tabs
     let gradesWritten = false;
+    const rejectedScores: { rollNo: string; assessment: string; value: string; reason: string }[] = [];
+    const skippedAssessments: string[] = [];
 
     if (assessments && assessments.length > 0) {
       if (currentEnrollments) {
         // Group assessments by their matching tab
         const tabToAssessments = new Map<string, AssessmentRow[]>();
         for (const assessment of assessments) {
-          const tabName = findMatchingTab(assessment.type, tabMap, firstSheetName);
+          const tabName = findMatchingTab(assessment.type, tabMap);
+          if (!tabName) {
+            skippedAssessments.push(assessment.title);
+            continue;
+          }
           if (!tabToAssessments.has(tabName)) tabToAssessments.set(tabName, []);
           tabToAssessments.get(tabName)!.push(assessment);
         }
@@ -433,8 +451,17 @@ export async function POST(request: NextRequest) {
                 const sheetScoreStr = (row[colIdx] || "").toString().trim();
                 let sheetScore: number | null = null;
                 if (sheetScoreStr !== "") {
-                  const parsed = parseFloat(sheetScoreStr);
-                  if (!isNaN(parsed)) sheetScore = parsed;
+                  const valRes = validateScore(sheetScoreStr, Number(assessment.max_marks));
+                  if (valRes.ok) {
+                    sheetScore = valRes.value;
+                  } else {
+                    rejectedScores.push({
+                      rollNo,
+                      assessment: assessment.title,
+                      value: sheetScoreStr,
+                      reason: valRes.reason,
+                    });
+                  }
                 }
 
                 if (existingMark) {
@@ -525,12 +552,20 @@ export async function POST(request: NextRequest) {
 
         // Apply bulk upserts to TAMS database
         if (marksToUpsert.length > 0) {
+          const dedupedMarks = Array.from(
+            new Map(marksToUpsert.map((m) => [`${m.enrollment_id}:${m.assessment_id}`, m])).values()
+          );
+
           const { error: upsertError } = await admin
             .from("marks")
-            .upsert(marksToUpsert, { onConflict: "enrollment_id, assessment_id" });
+            .upsert(dedupedMarks, { onConflict: "enrollment_id, assessment_id" });
           
           if (upsertError) {
              console.error("Failed to sync grades to TAMS DB:", upsertError);
+             return NextResponse.json(
+               { error: "Students were synced but grades could not be saved. Nothing was written to TAMS." },
+               { status: 500 }
+             );
           } else {
              gradesWritten = true; // Signals that grades were processed
           }
@@ -546,6 +581,8 @@ export async function POST(request: NextRequest) {
       invited: results.filter(r => r.outcome === "invited"),
       existing: results.filter(r => r.outcome === "existing"),
       failed: results.filter(r => r.outcome === "failed"),
+      rejectedScores,
+      skippedAssessments,
       gradesWritten,
       totalProcessed: results.length,
       missingFromSheet,

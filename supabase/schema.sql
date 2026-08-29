@@ -578,7 +578,7 @@ begin
       enr.id,
       enr.full_name,
       enr.roll_number,
-      count(m.id) as graded,
+      count(m.score) as graded,
       coalesce(sum((m.score / nullif(asmt.max_marks, 0)) * asmt.weight), 0) as obtained,
       coalesce(sum(asmt.weight), 0) as total_weight
     from enr
@@ -627,6 +627,41 @@ as $$
     group by a.id
   ) a;
 $$;
+
+revoke all on function class_averages_for_section_course(uuid) from public, anon;
+grant execute on function class_averages_for_section_course(uuid) to authenticated;
+-- FIX 2: Ceiling on marks
+create or replace function marks_within_max() returns trigger
+language plpgsql as $def
+declare v_max numeric;
+begin
+  if new.score is null then return new; end if;
+  select max_marks into v_max from assessments where id = new.assessment_id;
+  if v_max is not null and new.score > v_max then
+    raise exception 'score % exceeds max_marks % for assessment %',
+      new.score, v_max, new.assessment_id;
+  end if;
+  return new;
+end $def;
+
+drop trigger if exists marks_max_check on marks;
+create trigger marks_max_check before insert or update on marks
+  for each row execute function marks_within_max();
+
+-- FIX 4: Class Averages Function for Student Dashboard
+create or replace function class_averages_for_section_course(p_sc_id uuid)
+returns json language sql stable security definer set search_path = public as $def
+  select coalesce(json_object_agg(a.id, a.avg_score), '{}'::json)
+  from (
+    select a.id, round(avg(m.score)::numeric, 2) as avg_score
+    from assessments a
+    left join marks m on m.assessment_id = a.id
+    left join enrollments e on e.id = m.enrollment_id and e.status = 'active'
+    where a.section_course_id = p_sc_id
+      and (m.id is null or e.id is not null)
+    group by a.id
+  ) a;
+$def;
 
 revoke all on function class_averages_for_section_course(uuid) from public, anon;
 grant execute on function class_averages_for_section_course(uuid) to authenticated;
