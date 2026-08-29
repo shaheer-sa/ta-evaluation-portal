@@ -42,7 +42,7 @@ export async function sendEmailNotification(
   to: string,
   subject: string,
   html: string
-) {
+): Promise<{ delivered: boolean; reason?: string }> {
   if (
     !process.env.RESEND_API_KEY ||
     process.env.RESEND_API_KEY.includes("placeholder")
@@ -51,11 +51,20 @@ export async function sendEmailNotification(
       to,
       subject,
     });
-    return null;
+    return { delivered: false, reason: "Missing API key" };
+  }
+
+  if (USING_SHARED_SENDER) {
+    console.warn(
+      `Failed to send "${subject}" via the shared onboarding@resend.dev sender. ` +
+        `Delivery to ${to} will only succeed if it matches your Resend ` +
+        `account email. Set RESEND_FROM_EMAIL with a verified domain.`
+    );
+    return { delivered: false, reason: "No verified sender domain configured" };
   }
 
   try {
-    const { data, error } = await resend.emails.send({
+    const { error } = await resend.emails.send({
       from: FROM_EMAIL,
       to,
       subject,
@@ -64,20 +73,13 @@ export async function sendEmailNotification(
 
     if (error) {
       console.error("Resend error:", error);
-      return null;
+      return { delivered: false, reason: error.message };
     }
 
-    if (USING_SHARED_SENDER) {
-      console.warn(
-        `Sent "${subject}" via the shared onboarding@resend.dev sender. ` +
-          `Delivery to ${to} will only succeed if it matches your Resend ` +
-          `account email. Set RESEND_FROM_EMAIL with a verified domain.`
-      );
-    }
-
-    return data;
-  } catch (error) {
+    return { delivered: true };
+  } catch (error: unknown) {
     console.error("Error sending email:", error);
-    return null;
+    const msg = error instanceof Error ? error.message : "Unknown error";
+    return { delivered: false, reason: msg };
   }
 }

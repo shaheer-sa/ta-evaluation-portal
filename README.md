@@ -29,13 +29,12 @@ the whole class in one batched upsert.
 assessment. TAs triage through `pending → in_review → resolved / rejected`
 with a threaded reply conversation and email notifications via Resend.
 
-**Analytics.** Grade distributions and per-section class averages via
-Recharts.
+**Analytics.** Grade distributions and per-section class averages.
 
 ## Tech stack
 
 Next.js 15 (App Router) · TypeScript · Tailwind CSS · shadcn/ui ·
-Supabase (Postgres + Auth) · Google Sheets API · Resend · Recharts
+Supabase (Postgres + Auth) · Google Sheets API · Resend
 
 ## Getting started
 
@@ -86,10 +85,9 @@ Open http://localhost:3000.
 ## How students get accounts
 
 TAs create student accounts in bulk by syncing a Google Sheet roster
-(**Roster & Sync**) or importing a CSV. Accounts are created with a
-cryptographically random password that nobody ever sees or types — students
-claim their account through **Forgot password** on the login page, which
-emails them a reset link.
+(**Roster & Sync**) or importing a CSV. Accounts are created with an
+initial password of `Tams@<roll_number>`. Upon their first login, students
+are required to change this password before accessing the portal.
 
 Students sign in with either their email or their roll number.
 

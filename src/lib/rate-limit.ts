@@ -16,7 +16,11 @@ if (
     token: process.env.UPSTASH_REDIS_REST_TOKEN,
   });
 } else {
-  if (process.env.NODE_ENV !== "test" && !hasLoggedWarning) {
+  if (process.env.NODE_ENV === "production") {
+    throw new Error(
+      "UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN are required in production."
+    );
+  } else if (process.env.NODE_ENV !== "test" && !hasLoggedWarning) {
     console.warn("Upstash Redis credentials missing. Rate limiting is disabled.");
     hasLoggedWarning = true;
   }

@@ -182,12 +182,15 @@ export async function POST(request: Request) {
         // Send email
         const studentEmail = queryData.profiles?.email;
         if (studentEmail) {
-          await sendEmailNotification(
+          const result = await sendEmailNotification(
             studentEmail,
             `Query Status Update: ${queryData.title}`,
             `<p>Your query <strong>"${escapeHtml(queryData.title)}"</strong> has been marked as <strong>${escapeHtml(newStatus.replace("_", " "))}</strong> by the TA.</p>
              <p>Log in to TAMS to view details or reply.</p>`
           );
+          if (!result.delivered) {
+            console.warn(`Failed to send status update email to ${studentEmail}: ${result.reason}`);
+          }
         }
       }
 
@@ -256,9 +259,9 @@ export async function POST(request: Request) {
 
         // Send emails
         // Use Promise.all to send them in parallel
-        await Promise.all(tas.map(ta => {
+        await Promise.all(tas.map(async (ta) => {
           if (ta.email) {
-            return sendEmailNotification(
+            const result = await sendEmailNotification(
               ta.email,
               `New Student Query: ${title}`,
               `<p>A new ${escapeHtml(priority || "medium")}-priority query was raised:</p>
@@ -266,6 +269,9 @@ export async function POST(request: Request) {
                <p><strong>Description:</strong><br/>${escapeHtmlMultiline(description)}</p>
                <p>Log in to TAMS to review it.</p>`
             );
+            if (!result.delivered) {
+              console.warn(`Failed to send new query email to ${ta.email}: ${result.reason}`);
+            }
           }
         }));
       }
