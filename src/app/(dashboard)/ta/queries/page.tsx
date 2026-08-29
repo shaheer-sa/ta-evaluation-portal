@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { Loader2, MessageSquare } from "lucide-react";
+import { fetchJson } from "@/lib/fetch-json";
 import { QueryThread } from "@/components/query-thread";
 import { Button } from "@/components/ui/button";
 import {
@@ -52,9 +53,8 @@ export default function TAQueriesPage() {
   const fetchQueries = useCallback(async () => {
     setIsLoading(true);
     try {
-      const res = await fetch(`/api/queries?status=${statusFilter}`);
-      const data = await res.json();
-      if (res.ok) setQueries(data.queries);
+      const data = await fetchJson(`/api/queries?status=${statusFilter}`);
+      setQueries(data.queries);
     } catch {
       toast.error("Failed to load queries");
     }
@@ -68,18 +68,18 @@ export default function TAQueriesPage() {
   async function updateStatus(queryId: string, newStatus: string) {
     setUpdatingId(queryId);
     try {
-      const res = await fetch("/api/queries", {
+      await fetchJson("/api/queries", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "updateStatus", queryId, newStatus }),
       });
-      if (!res.ok) throw new Error("Failed");
       toast.success(`Query marked as ${newStatus}`);
       fetchQueries();
     } catch {
       toast.error("Failed to update query");
+    } finally {
+      setUpdatingId(null);
     }
-    setUpdatingId(null);
   }
 
   function formatDate(dateStr: string) {

@@ -41,11 +41,9 @@ export default async function TADashboardPage() {
   // Stat: Students enrolled in sections of the active term
   let studentCount = 0;
   if (activeSectionIds.length > 0) {
-    const { count } = await supabase
-      .from("enrollments")
-      .select("student_id", { count: "exact", head: true })
-      .in("section_id", activeSectionIds)
-      .eq("status", "active");
+    const { data: count } = await supabase.rpc("active_student_count", {
+      p_section_ids: activeSectionIds,
+    });
     studentCount = count || 0;
   }
 

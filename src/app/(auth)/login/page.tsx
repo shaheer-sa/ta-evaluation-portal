@@ -11,6 +11,7 @@ import Link from "next/link";
 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { fetchJson } from "@/lib/fetch-json";
 import { createClient } from "@/lib/supabase/client";
 import SpecularButton from "@/components/react-bits/SpecularButton";
 import { GlobalSpotlight, ParticleCard } from "@/components/react-bits/MagicBento";
@@ -89,24 +90,18 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      const res = await fetch("/api/auth/login", {
+      const result = await fetchJson("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
 
-      const result = await res.json();
-
-      if (!res.ok) {
-        toast.error(result.error || "Login failed");
-        return;
-      }
-
       toast.success("Welcome back!");
       router.push(result.role === "ta" ? "/ta" : "/student");
       router.refresh();
-    } catch {
-      toast.error("Something went wrong. Please try again.");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Something went wrong. Please try again.";
+      toast.error(msg);
     } finally {
       setIsLoading(false);
     }

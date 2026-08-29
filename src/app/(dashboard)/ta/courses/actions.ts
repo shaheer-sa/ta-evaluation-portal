@@ -36,18 +36,16 @@ export async function createTerm(formData: FormData) {
 export async function updateTerm(formData: FormData) {
   const { supabase } = await requireTA();
   const id = formData.get("id") as string;
-  const name = formData.get("name") as string;
-  const shouldActivate = formData.get("isActive") === "on";
+  const name = (formData.get("name") as string)?.trim();
+  if (!name) throw new Error("Term name is required.");
 
   const { error } = await supabase.from("terms").update({ name }).eq("id", id);
   if (error) throw new Error(error.message);
 
-  if (shouldActivate) {
+  // Only ever activate from here. Deactivation happens by activating another term.
+  if (formData.get("isActive") === "on") {
     const { error: activateError } = await supabase.rpc("activate_term", { p_term_id: id });
     if (activateError) throw new Error(activateError.message);
-  } else {
-    const { error: deactivateError } = await supabase.from("terms").update({ is_active: false }).eq("id", id);
-    if (deactivateError) throw new Error(deactivateError.message);
   }
 
   revalidatePath("/ta/courses");

@@ -7,6 +7,8 @@ import type { Database } from "@/types/database";
 import { createRateLimiter } from "@/lib/rate-limit";
 import { runInBatches } from "@/lib/batch";
 
+export const maxDuration = 60;
+
 const syncRateLimit = createRateLimiter({ tokens: 5, window: "10 m" });
 
 // ── Types for the structured sync result ────────────────────────────

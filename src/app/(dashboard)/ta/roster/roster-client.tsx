@@ -3,6 +3,7 @@
 import { useState, useEffect, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { fetchJson } from "@/lib/fetch-json";
 import { Loader2, RefreshCw, CheckCircle2, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -85,7 +86,7 @@ export default function RosterClient({ sections, selectedSectionCourseId, roster
     localStorage.setItem("tams_google_sheet_url", sheetUrl);
 
     try {
-      const res = await fetch("/api/sync/google", {
+      const data = await fetchJson("/api/sync/google", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -93,9 +94,6 @@ export default function RosterClient({ sections, selectedSectionCourseId, roster
           spreadsheetUrl: sheetUrl,
         }),
       });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Sync failed");
 
       setSyncResult(data as SyncResult);
 

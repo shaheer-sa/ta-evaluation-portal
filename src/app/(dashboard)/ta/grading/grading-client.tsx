@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect, useMemo, useTransition } from "react";
+import { useState, useEffect, useMemo, useTransition, memo, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { fetchJson } from "@/lib/fetch-json";
 import { Loader2, Save, Search, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -45,6 +46,49 @@ interface Props {
   maxMarks: number;
 }
 
+const MarkRow = memo(function MarkRow({
+  enrollmentId,
+  rollNumber,
+  fullName,
+  score,
+  maxMarks,
+  isInvalid,
+  onChange,
+}: {
+  enrollmentId: string;
+  rollNumber: string;
+  fullName: string;
+  score: string;
+  maxMarks: number;
+  isInvalid: boolean;
+  onChange: (id: string, val: string) => void;
+}) {
+  return (
+    <tr>
+      <td>{rollNumber}</td>
+      <td>{fullName}</td>
+      <td className="tams-numeral">
+        <Input
+          type="number"
+          inputMode="decimal"
+          step="0.5"
+          min={0}
+          max={maxMarks}
+          value={score}
+          onChange={(e) => onChange(enrollmentId, e.target.value)}
+          aria-label={`Score for ${fullName}`}
+          aria-invalid={isInvalid}
+          placeholder="—"
+          className={cn(
+            "ml-auto h-9 w-24 text-right font-mono",
+            isInvalid && "border-destructive focus-visible:ring-destructive"
+          )}
+        />
+      </td>
+    </tr>
+  );
+});
+
 export default function GradingClient({
   sectionCourses,
   assessments,
@@ -59,16 +103,32 @@ export default function GradingClient({
   const [studentMarks, setStudentMarks] = useState<StudentMark[]>(initialStudentMarks);
   const [searchQuery, setSearchQuery] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [isDirty, setIsDirty] = useState(false);
 
   useEffect(() => {
     setStudentMarks(initialStudentMarks);
+    setIsDirty(false);
   }, [initialStudentMarks]);
 
-  function handleScoreChange(enrollmentId: string, value: string) {
+  const dirtyRef = useRef(isDirty);
+  dirtyRef.current = isDirty;
+
+  useEffect(() => {
+    const warn = (e: BeforeUnloadEvent) => {
+      if (!dirtyRef.current) return;
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, []);
+
+  const handleScoreChange = useCallback((enrollmentId: string, value: string) => {
+    setIsDirty(true);
     setStudentMarks((prev) =>
       prev.map((s) => (s.enrollmentId === enrollmentId ? { ...s, score: value } : s))
     );
-  }
+  }, []);
 
   const filteredMarks = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -102,7 +162,7 @@ export default function GradingClient({
 
     setIsSaving(true);
     try {
-      const res = await fetch("/api/grading", {
+      const json = await fetchJson("/api/grading", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -113,12 +173,11 @@ export default function GradingClient({
           })),
         }),
       });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || "Couldn't save marks");
       toast.success(
         `Saved ${json.saved ?? gradedCount} mark${(json.saved ?? gradedCount) === 1 ? "" : "s"}.`
       );
       
+      setIsDirty(false);
       router.refresh();
     } catch (err: unknown) {
       if (err instanceof Error) toast.error(err.message);
@@ -162,6 +221,10 @@ export default function GradingClient({
                 value={selectedSC}
                 disabled={isPending}
                 onChange={(e) => {
+                  if (isDirty && !window.confirm("You have unsaved marks. Switch anyway and lose them?")) {
+                    e.target.value = selectedSC;
+                    return;
+                  }
                   const val = e.target.value;
                   startTransition(() => {
                     if (val) {
@@ -193,6 +256,10 @@ export default function GradingClient({
                 value={selectedAssessment}
                 disabled={!selectedSC || isPending}
                 onChange={(e) => {
+                  if (isDirty && !window.confirm("You have unsaved marks. Switch anyway and lose them?")) {
+                    e.target.value = selectedAssessment;
+                    return;
+                  }
                   const val = e.target.value;
                   startTransition(() => {
                     if (val) {
@@ -227,14 +294,17 @@ export default function GradingClient({
                   {maxMarks} marks
                 </CardDescription>
               </div>
-              <Button onClick={handleSave} disabled={isSaving || isPending}>
-                {isSaving ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <Save className="mr-2 h-4 w-4" />
-                )}
-                Save marks
-              </Button>
+              <div className="flex items-center">
+                {isDirty && <span className="text-sm font-medium text-amber-500 mr-4">Unsaved changes</span>}
+                <Button onClick={handleSave} disabled={isSaving || isPending}>
+                  {isSaving ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Save className="mr-2 h-4 w-4" />
+                  )}
+                  Save marks
+                </Button>
+              </div>
             </div>
           </CardHeader>
 
@@ -288,35 +358,16 @@ export default function GradingClient({
                         n !== null &&
                         (Number.isNaN(n) || n < 0 || (maxMarks > 0 && n > maxMarks));
                       return (
-                        <tr
+                        <MarkRow
                           key={s.enrollmentId}
-                        >
-                          <td>
-                            {s.rollNumber}
-                          </td>
-                          <td>{s.fullName}</td>
-                          <td className="tams-numeral">
-                            <Input
-                              type="number"
-                              inputMode="decimal"
-                              step="0.5"
-                              min={0}
-                              max={maxMarks}
-                              value={s.score}
-                              onChange={(e) =>
-                                handleScoreChange(s.enrollmentId, e.target.value)
-                              }
-                              aria-label={`Score for ${s.fullName}`}
-                              aria-invalid={isInvalid}
-                              placeholder="—"
-                              className={cn(
-                                "ml-auto h-9 w-24 text-right font-mono",
-                                isInvalid &&
-                                  "border-destructive focus-visible:ring-destructive"
-                              )}
-                            />
-                          </td>
-                        </tr>
+                          enrollmentId={s.enrollmentId}
+                          rollNumber={s.rollNumber}
+                          fullName={s.fullName}
+                          score={s.score}
+                          maxMarks={maxMarks}
+                          isInvalid={isInvalid}
+                          onChange={handleScoreChange}
+                        />
                       );
                     })}
                   </tbody>

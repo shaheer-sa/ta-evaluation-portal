@@ -533,6 +533,12 @@ export interface Database {
         }
         Returns: Json
       }
+      active_student_count: {
+        Args: {
+          p_section_ids: string[]
+        }
+        Returns: number
+      }
     }
     Enums: {
       [_ in never]: never

@@ -7,6 +7,7 @@ import { z } from "zod";
 import { toast } from "sonner";
 import { ArrowLeft, Loader2, Mail } from "lucide-react";
 import Link from "next/link";
+import { fetchJson } from "@/lib/fetch-json";
 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -44,21 +45,16 @@ export default function ForgotPasswordPage() {
     setIsLoading(true);
 
     try {
-      const res = await fetch("/api/auth/forgot-password", {
+      await fetchJson("/api/auth/forgot-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
 
-      if (!res.ok) {
-        const result = await res.json();
-        toast.error(result.error || "Something went wrong");
-        return;
-      }
-
       setEmailSent(true);
-    } catch {
-      toast.error("Something went wrong. Please try again.");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Something went wrong. Please try again.";
+      toast.error(msg);
     } finally {
       setIsLoading(false);
     }

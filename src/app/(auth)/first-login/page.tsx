@@ -7,6 +7,7 @@ import { z } from "zod";
 import { toast } from "sonner";
 import { Eye, EyeOff, KeyRound, Loader2 } from "lucide-react";
 
+import { fetchJson } from "@/lib/fetch-json";
 import { createClient } from "@/lib/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -57,25 +58,19 @@ export default function FirstLoginPage() {
 
     try {
       // Send password to the server route which updates password AND clears the flag
-      const res = await fetch("/api/auth/complete-first-login", {
+      await fetchJson("/api/auth/complete-first-login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ password: data.password }),
       });
-      
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        toast.error(errorData.error || "Password changed, but your account could not be unlocked. Contact your TA.");
-        setIsLoading(false);
-        return;
-      }
 
       toast.success("Password updated!");
 
       // 3. hard navigation so middleware re-reads the flag from scratch
       window.location.href = "/student";
-    } catch {
-      toast.error("Something went wrong. Please try again.");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Something went wrong. Please try again.";
+      toast.error(msg);
     } finally {
       setIsLoading(false);
     }

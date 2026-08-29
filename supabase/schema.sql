@@ -669,3 +669,12 @@ grant execute on function class_averages_for_section_course(uuid) to authenticat
 -- FIX: Prevent duplicate assessment titles
 create unique index if not exists assessments_unique_title_per_sc
   on assessments (section_course_id, lower(trim(title)));
+
+-- FIX: TA Dashboard Students count
+create or replace function active_student_count(p_section_ids uuid[])
+returns bigint language sql stable security definer set search_path = public as $$
+  select count(distinct student_id) from enrollments
+  where section_id = any(p_section_ids) and status = 'active';
+$$;
+revoke all on function active_student_count(uuid[]) from public, anon;
+grant execute on function active_student_count(uuid[]) to authenticated;

@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { Loader2, Send } from "lucide-react";
+import { fetchJson } from "@/lib/fetch-json";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -29,11 +30,8 @@ export function QueryThread({ queryId, isOpen }: QueryThreadProps) {
   const fetchReplies = useCallback(async () => {
     setIsLoading(true);
     try {
-      const res = await fetch(`/api/queries/replies?queryId=${queryId}`);
-      if (res.ok) {
-        const data = await res.json();
-        setReplies(data.replies);
-      }
+      const data = await fetchJson(`/api/queries/replies?queryId=${queryId}`);
+      setReplies(data.replies);
     } catch {
       // Silent fail on fetch
     }
@@ -48,15 +46,11 @@ export function QueryThread({ queryId, isOpen }: QueryThreadProps) {
     if (!newReply.trim()) return;
     setIsSending(true);
     try {
-      const res = await fetch("/api/queries/replies", {
+      await fetchJson("/api/queries/replies", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ queryId, message: newReply }),
       });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Failed to send");
-      }
       setNewReply("");
       fetchReplies();
     } catch (err: unknown) {

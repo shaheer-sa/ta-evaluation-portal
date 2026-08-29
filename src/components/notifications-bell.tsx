@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { Bell } from "lucide-react";
+import { fetchJson } from "@/lib/fetch-json";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -21,12 +22,9 @@ export function NotificationsBell() {
 
   const fetchNotifications = useCallback(async () => {
     try {
-      const res = await fetch("/api/notifications");
-      if (res.ok) {
-        const data = await res.json();
-        setNotifications(data.notifications);
-        setUnreadCount(data.unreadCount);
-      }
+      const data = await fetchJson("/api/notifications");
+      setNotifications(data.notifications);
+      setUnreadCount(data.unreadCount);
     } catch {
       // Silently fail — notifications are not critical
     }
