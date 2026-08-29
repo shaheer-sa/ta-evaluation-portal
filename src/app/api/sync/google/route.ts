@@ -452,11 +452,14 @@ export async function POST(request: NextRequest) {
                 // Parse sheet score safely
                 const sheetScoreStr = (row[colIdx] || "").toString().trim();
                 let sheetScore: number | null = null;
+                let cellRejected = false;
+
                 if (sheetScoreStr !== "") {
                   const valRes = validateScore(sheetScoreStr, Number(assessment.max_marks));
                   if (valRes.ok) {
                     sheetScore = valRes.value;
                   } else {
+                    cellRejected = true;
                     rejectedScores.push({
                       rollNo,
                       assessment: assessment.title,
@@ -465,6 +468,10 @@ export async function POST(request: NextRequest) {
                     });
                   }
                 }
+
+                // A cell we refused to READ is a cell we must not WRITE. Leave it untouched
+                // so the TA can find and correct their own value in the sheet.
+                if (cellRejected) continue;
 
                 if (existingMark) {
                   const tamsScore = existingMark.score !== null ? Number(existingMark.score) : null;

@@ -609,30 +609,10 @@ $$;
 revoke all on function analytics_for_section_course(uuid) from public, anon;
 grant execute on function analytics_for_section_course(uuid) to authenticated;
 
--- ── Function: Class Averages for Section Course ─────────────────────────────
 
-create or replace function class_averages_for_section_course(p_sc_id uuid)
-returns json
-language sql
-stable
-security definer
-set search_path = public
-as $$
-  select coalesce(json_object_agg(a.id, avg_score), '{}'::json)
-  from (
-    select a.id, round(avg(m.score)::numeric, 2) as avg_score
-    from assessments a
-    left join marks m on m.assessment_id = a.id
-    where a.section_course_id = p_sc_id
-    group by a.id
-  ) a;
-$$;
-
-revoke all on function class_averages_for_section_course(uuid) from public, anon;
-grant execute on function class_averages_for_section_course(uuid) to authenticated;
 -- FIX 2: Ceiling on marks
 create or replace function marks_within_max() returns trigger
-language plpgsql as $def
+language plpgsql as $def$
 declare v_max numeric;
 begin
   if new.score is null then return new; end if;
@@ -642,7 +622,7 @@ begin
       new.score, v_max, new.assessment_id;
   end if;
   return new;
-end $def;
+end $def$;
 
 drop trigger if exists marks_max_check on marks;
 create trigger marks_max_check before insert or update on marks
@@ -650,7 +630,7 @@ create trigger marks_max_check before insert or update on marks
 
 -- FIX 4: Class Averages Function for Student Dashboard
 create or replace function class_averages_for_section_course(p_sc_id uuid)
-returns json language sql stable security definer set search_path = public as $def
+returns json language sql stable security definer set search_path = public as $def$
   select coalesce(json_object_agg(a.id, a.avg_score), '{}'::json)
   from (
     select a.id, round(avg(m.score)::numeric, 2) as avg_score
@@ -661,7 +641,7 @@ returns json language sql stable security definer set search_path = public as $d
       and (m.id is null or e.id is not null)
     group by a.id
   ) a;
-$def;
+$def$;
 
 revoke all on function class_averages_for_section_course(uuid) from public, anon;
 grant execute on function class_averages_for_section_course(uuid) to authenticated;
