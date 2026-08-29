@@ -355,8 +355,15 @@ create policy profiles_select on profiles for select
 drop policy if exists profiles_update_own on profiles;
 create policy profiles_update_own on profiles for update
   using (id = auth.uid())
-  -- A student must not be able to promote themselves to 'ta'.
-  with check (id = auth.uid() and role::text = current_user_role());
+  with check (
+    id = auth.uid()
+    and role::text = current_user_role()
+    and email = (select email from profiles where id = auth.uid())
+    and roll_number is not distinct from
+        (select roll_number from profiles where id = auth.uid())
+    and must_change_password =
+        (select must_change_password from profiles where id = auth.uid())
+  );
 
 drop policy if exists profiles_ta_all on profiles;
 create policy profiles_ta_all on profiles for all

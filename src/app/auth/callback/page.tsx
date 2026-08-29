@@ -11,7 +11,9 @@ function AuthCallbackContent() {
 
   useEffect(() => {
     const supabase = createClient();
-    const next = searchParams.get("next") ?? "/login";
+    const rawNext = searchParams.get("next") ?? "/login";
+    // Only same-origin paths. Rejects "https://evil.com" and protocol-relative "//evil.com".
+    const next = /^\/(?!\/)/.test(rawNext) ? rawNext : "/login";
 
     // Supabase browser client automatically processes hash fragments 
     // (#access_token=...) in the URL and sets the session on load!

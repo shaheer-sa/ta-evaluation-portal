@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { google } from "googleapis";
+import { escapeLikePattern } from "@/lib/identifiers";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { Database } from "@/types/database";
@@ -250,7 +251,7 @@ export async function POST(request: NextRequest) {
             const { data: byRoll } = await admin
               .from("profiles")
               .select("id")
-              .ilike("roll_number", student.roll_number)
+              .ilike("roll_number", escapeLikePattern(student.roll_number))
               .maybeSingle();
             existingProfile = byRoll;
           }

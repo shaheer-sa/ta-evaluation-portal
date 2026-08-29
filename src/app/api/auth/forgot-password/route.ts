@@ -3,6 +3,7 @@ import { createRateLimiter, getClientIp } from "@/lib/rate-limit";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { z } from "zod";
+import { escapeLikePattern } from "@/lib/identifiers";
 
 const schema = z.object({
   identifier: z.string().min(1, "Enter your email or roll number"),
@@ -61,7 +62,7 @@ export async function POST(request: NextRequest) {
       const { data: profile } = await admin
         .from("profiles")
         .select("email")
-        .ilike("roll_number", identifier)
+        .ilike("roll_number", escapeLikePattern(identifier))
         .single();
 
       email = profile?.email ?? null;

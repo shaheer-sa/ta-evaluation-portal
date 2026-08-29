@@ -56,21 +56,16 @@ export default function FirstLoginPage() {
     setIsLoading(true);
 
     try {
-      const supabase = createClient();
+      // Send password to the server route which updates password AND clears the flag
+      const res = await fetch("/api/auth/complete-first-login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: data.password }),
+      });
       
-      // 1. change the password
-      const { error: pwError } = await supabase.auth.updateUser({ password: data.password });
-      if (pwError) {
-        toast.error(pwError.message);
-        setIsLoading(false);
-        return;
-      }
-
-      // 2. clear the flag server-side (the client session may be stale after
-      //    a password change, so this cannot be done from the browser)
-      const res = await fetch("/api/auth/complete-first-login", { method: "POST" });
       if (!res.ok) {
-        toast.error("Password changed, but your account could not be unlocked. Contact your TA.");
+        const errorData = await res.json().catch(() => ({}));
+        toast.error(errorData.error || "Password changed, but your account could not be unlocked. Contact your TA.");
         setIsLoading(false);
         return;
       }
