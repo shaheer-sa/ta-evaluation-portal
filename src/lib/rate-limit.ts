@@ -16,11 +16,7 @@ if (
     token: process.env.UPSTASH_REDIS_REST_TOKEN,
   });
 } else {
-  if (process.env.NODE_ENV === "production") {
-    throw new Error(
-      "UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN are required in production."
-    );
-  } else if (process.env.NODE_ENV !== "test" && !hasLoggedWarning) {
+  if (process.env.NODE_ENV !== "test" && !hasLoggedWarning && process.env.NODE_ENV !== "production") {
     console.warn("Upstash Redis credentials missing. Rate limiting is disabled.");
     hasLoggedWarning = true;
   }
@@ -28,6 +24,13 @@ if (
 
 export function createRateLimiter(config: { tokens: number; window: `${number} s` | `${number} m` | `${number} h` | `${number} d` }) {
   if (!redis) {
+    if (process.env.NODE_ENV === "production") {
+      // Do not throw at import time — Next collects page data during the
+      // build, when Vercel has not injected runtime env vars yet.
+      console.error(
+        "FATAL: UPSTASH_REDIS_REST_URL/TOKEN missing in production. Rate limiting is DISABLED."
+      );
+    }
     return null;
   }
   return new Ratelimit({

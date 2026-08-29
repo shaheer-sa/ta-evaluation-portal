@@ -24,6 +24,14 @@ const loginSchema = z.object({
 const loginRateLimit = createRateLimiter({ tokens: 5, window: "15 m" });
 
 export async function POST(request: NextRequest) {
+  if (process.env.NODE_ENV === "production" && !loginRateLimit) {
+    console.error("Login blocked: rate limiter unavailable in production.");
+    return NextResponse.json(
+      { error: "Service temporarily unavailable. Please try again shortly." },
+      { status: 503 }
+    );
+  }
+
   try {
     const body = await request.json();
     const parsed = loginSchema.safeParse(body);
