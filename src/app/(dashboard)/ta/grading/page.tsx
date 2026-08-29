@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import GradingClient from "./grading-client";
 import type { SectionCourseRow, AssessmentRow, StudentMark } from "./grading-client";
+import { sortAssessments } from "@/lib/assessment-order";
 import type { Database } from "@/types/database";
 
 type EnrollmentRow = Pick<Database["public"]["Tables"]["enrollments"]["Row"], "id"> & {
@@ -32,10 +33,10 @@ export default async function GradingPage({ searchParams }: PageProps) {
     // 2. Fetch assessments
     const { data: assessData } = await supabase
       .from("assessments")
-      .select("id, title, type, max_marks")
+      .select("id, title, type, max_marks, created_at")
       .eq("section_course_id", selectedSC)
       .order("created_at", { ascending: true });
-    assessments = (assessData as unknown as AssessmentRow[]) || [];
+    assessments = sortAssessments((assessData as unknown as AssessmentRow[]) || []);
 
     if (selectedAssessment) {
       const assessment = assessments.find((a) => a.id === selectedAssessment);

@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useRef } from "react";
-import { ChevronDown } from "lucide-react";
+import { useRef, useState, useEffect } from "react";
+import { usePathname } from "next/navigation";
+import { ChevronDown, Loader2 } from "lucide-react";
 import { ParticleCard, GlobalSpotlight } from "@/components/react-bits/MagicBento";
 
 export interface CourseGrade {
@@ -142,10 +143,17 @@ function MiniBar({ label, score, max }: { label: string; score: number; max: num
 }
 
 export function GradeCard({ course }: { course: CourseGrade }) {
+  const [isPending, setIsPending] = useState(false);
+  const pathname = usePathname();
+
+  useEffect(() => {
+    setIsPending(false);
+  }, [pathname]);
+
   return (
-    <Link href={`/student/course/${course.id}`} className="block h-full cursor-pointer">
+    <Link href={`/student/course/${course.id}`} onClick={() => setIsPending(true)} className="block h-full cursor-pointer">
       <ParticleCard 
-        className="mc-card mc-card--glow h-full p-8 flex flex-col group relative overflow-hidden transition-all hover:-translate-y-1 tams-card" 
+        className={`mc-card mc-card--glow h-full p-8 flex flex-col group relative overflow-hidden transition-all hover:-translate-y-1 tams-card ${isPending ? 'opacity-80' : ''}`} 
         enableTilt={true}
         particleCount={15}
       >
@@ -159,7 +167,11 @@ export function GradeCard({ course }: { course: CourseGrade }) {
               <p className="text-sm uppercase tracking-wider text-muted-foreground mb-1 font-medium">
                 {course.code}
               </p>
-              <ChevronDown size={18} strokeWidth={1.5} className="tams-expand-icon" />
+              {isPending ? (
+                <Loader2 size={18} strokeWidth={1.5} className="animate-spin text-[var(--navy)]" />
+              ) : (
+                <ChevronDown size={18} strokeWidth={1.5} className="tams-expand-icon text-muted-foreground" />
+              )}
             </div>
             <p className="text-4xl font-bold text-foreground mb-2 tracking-tight">
               {course.percentage}%

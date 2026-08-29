@@ -665,3 +665,7 @@ $def;
 
 revoke all on function class_averages_for_section_course(uuid) from public, anon;
 grant execute on function class_averages_for_section_course(uuid) to authenticated;
+
+-- FIX: Prevent duplicate assessment titles
+create unique index if not exists assessments_unique_title_per_sc
+  on assessments (section_course_id, lower(trim(title)));

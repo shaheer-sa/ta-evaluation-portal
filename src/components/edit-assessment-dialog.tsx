@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { Edit2, Loader2 } from "lucide-react";
 import { updateAssessment } from "@/app/(dashboard)/ta/assessments/actions";
@@ -34,25 +34,23 @@ export function EditAssessmentDialog({
   courseFlags?: { enable_cp?: boolean; enable_assignments?: boolean; enable_quizzes?: boolean };
 }) {
   const [open, setOpen] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
+  const [isPending, startTransition] = useTransition();
 
-  async function onSubmit(formData: FormData) {
-    setIsSaving(true);
-    formData.append("assessmentId", assessment.id);
-    
-    try {
-      await updateAssessment(formData);
-      toast.success("Assessment updated successfully!");
-      setOpen(false);
-    } catch (err: unknown) {
-      if (err instanceof Error) {
-        toast.error(err.message);
-      } else {
-        toast.error("Failed to update assessment");
+  function onSubmit(formData: FormData) {
+    startTransition(async () => {
+      formData.append("assessmentId", assessment.id);
+      try {
+        await updateAssessment(formData);
+        toast.success("Assessment updated successfully!");
+        setOpen(false);
+      } catch (err: unknown) {
+        if (err instanceof Error) {
+          toast.error(err.message);
+        } else {
+          toast.error("Failed to update assessment");
+        }
       }
-    } finally {
-      setIsSaving(false);
-    }
+    });
   }
 
   return (
@@ -71,7 +69,8 @@ export function EditAssessmentDialog({
               Make changes to {assessment.title}. Click save when you&apos;re done.
             </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
+          <fieldset disabled={isPending} className="contents group">
+            <div className="grid gap-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="title">Title</Label>
               <Input
@@ -127,16 +126,11 @@ export function EditAssessmentDialog({
               />
             </div>
           </div>
+          </fieldset>
           <DialogFooter>
-            <Button type="submit" disabled={isSaving} className="hover-float">
-              {isSaving ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                "Save changes"
-              )}
+            <Button type="submit" disabled={isPending} className="hover-float">
+              {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Save changes
             </Button>
           </DialogFooter>
         </form>

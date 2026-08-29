@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition, useRef } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,6 +16,8 @@ const ALL_ASSESSMENT_TYPES = [
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function CreateAssessmentForm({ sectionCourses }: { sectionCourses: any[] }) {
   const [selectedSectionCourseId, setSelectedSectionCourseId] = useState("");
+  const [isPending, startTransition] = useTransition();
+  const formRef = useRef<HTMLFormElement>(null);
 
   const selectedCourse = sectionCourses.find(
     (sc) => sc.id === selectedSectionCourseId
@@ -28,7 +31,24 @@ export function CreateAssessmentForm({ sectionCourses }: { sectionCourses: any[]
   });
 
   return (
-    <form action={createAssessment} className="space-y-4">
+    <form
+      ref={formRef}
+      action={(formData) => {
+        startTransition(async () => {
+          try {
+            await createAssessment(formData);
+            toast.success("Assessment created");
+            formRef.current?.reset();
+            setSelectedSectionCourseId("");
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          } catch (err: any) {
+            toast.error(err.message || "Failed to create assessment");
+          }
+        });
+      }}
+      className="space-y-4"
+    >
+      <fieldset disabled={isPending} className="space-y-4 group">
       <div className="space-y-2">
         <Label htmlFor="sectionCourseId">Class</Label>
         <select
@@ -108,7 +128,10 @@ export function CreateAssessmentForm({ sectionCourses }: { sectionCourses: any[]
         </div>
       </div>
 
-      <Button type="submit">Create Assessment</Button>
+      </fieldset>
+      <Button type="submit" disabled={isPending}>
+        {isPending ? "Creating…" : "Create Assessment"}
+      </Button>
     </form>
   );
 }

@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import RosterClient from "./roster-client";
 import type { SectionCourseRow, EnrollmentRow, AssessmentRow } from "./roster-client";
+import { sortAssessments } from "@/lib/assessment-order";
 
 interface PageProps {
   searchParams: Promise<{ sc?: string }>;
@@ -34,11 +35,11 @@ export default async function RosterPage({ searchParams }: PageProps) {
       // 2. Fetch assessments for this section_course
       const { data: assessData } = await supabase
         .from("assessments")
-        .select("id, title, max_marks")
+        .select("id, title, max_marks, type, created_at")
         .eq("section_course_id", selectedSectionCourseId)
         .order("created_at", { ascending: true });
       
-      assessments = (assessData as unknown as AssessmentRow[]) || [];
+      assessments = sortAssessments((assessData as unknown as AssessmentRow[]) || []);
 
       // 3. Fetch enrollments with marks
       const { data: rosterData } = await supabase

@@ -31,7 +31,7 @@ export type SectionCourseRow = Pick<Database["public"]["Tables"]["section_course
   courses: Pick<Database["public"]["Tables"]["courses"]["Row"], "code" | "name"> | null;
 };
 
-export type AssessmentRow = Pick<Database["public"]["Tables"]["assessments"]["Row"], "id" | "title" | "type" | "max_marks">;
+export type AssessmentRow = Pick<Database["public"]["Tables"]["assessments"]["Row"], "id" | "title" | "type" | "max_marks" | "created_at">;
 
 const SELECT_CLASS =
   "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50";

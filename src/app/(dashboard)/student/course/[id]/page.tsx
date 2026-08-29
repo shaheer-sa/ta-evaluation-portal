@@ -9,12 +9,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
+import { sortAssessments } from "@/lib/assessment-order";
 import type { Database } from "@/types/database";
 
 type EnrollmentRow = Pick<Database["public"]["Tables"]["enrollments"]["Row"], "id" | "course_id" | "section_id"> & {
@@ -97,7 +93,7 @@ export default async function CourseDetailPage({ params }: PageProps) {
   ] = await Promise.all([
     supabase
       .from("assessments")
-      .select("id, title, type, max_marks, weight")
+      .select("id, title, type, max_marks, weight, created_at")
       .eq("section_course_id", scId)
       .order("created_at", { ascending: true }),
     supabase.rpc("class_averages_for_section_course", { p_sc_id: scId })
@@ -124,7 +120,9 @@ export default async function CourseDetailPage({ params }: PageProps) {
   let totalWeightedScore = 0;
   let totalWeight = 0;
 
-  const rows = (assessments || []).map((a) => {
+  const sortedAssessments = sortAssessments(assessments || []);
+
+  const rows = sortedAssessments.map((a) => {
     const score = marksMap.get(a.id);
     const hasScore = score !== undefined;
     const abs = hasScore && a.max_marks > 0 ? (score / a.max_marks) * a.weight : null;

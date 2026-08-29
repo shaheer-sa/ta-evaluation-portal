@@ -48,7 +48,7 @@ export type EnrollmentRow = Pick<Database["public"]["Tables"]["enrollments"]["Ro
   marks: Pick<Database["public"]["Tables"]["marks"]["Row"], "assessment_id" | "score">[];
 };
 
-export type AssessmentRow = Pick<Database["public"]["Tables"]["assessments"]["Row"], "id" | "title" | "max_marks">;
+export type AssessmentRow = Pick<Database["public"]["Tables"]["assessments"]["Row"], "id" | "title" | "max_marks" | "type" | "created_at">;
 
 interface Props {
   sections: SectionCourseRow[];

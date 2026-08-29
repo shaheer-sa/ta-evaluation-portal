@@ -9,6 +9,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { sortAssessments } from "@/lib/assessment-order";
 
 import { CreateAssessmentForm } from "./create-assessment-form";
 
@@ -41,7 +42,7 @@ export default async function AssessmentsPage() {
       )
     `)
     .order("created_at", { ascending: true });
-  const assessments = assessmentsData || [];
+  const assessments = sortAssessments(assessmentsData || []);
 
   return (
     <div className="space-y-8">

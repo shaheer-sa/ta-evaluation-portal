@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { createTerm, createCourse, updateTerm, deleteTerm, updateCourse, deleteCourse } from "./actions";
 import { EntityActions } from "@/components/entity-actions";
+import { ClientForm } from "@/components/client-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -53,7 +54,7 @@ export default async function CoursesPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <form action={createTerm} className="space-y-4">
+              <ClientForm action={createTerm} className="space-y-4" submitText="Create Term" pendingText="Creating…" successMessage="Term created">
                 <div className="space-y-2">
                   <Label htmlFor="name">Term Name</Label>
                   <Input id="name" name="name" required placeholder="Spring 2025" />
@@ -70,8 +71,7 @@ export default async function CoursesPage() {
                     Active Term
                   </Label>
                 </div>
-                <Button type="submit">Create Term</Button>
-              </form>
+              </ClientForm>
             </CardContent>
           </Card>
 
@@ -148,7 +148,7 @@ export default async function CoursesPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <form action={createCourse} className="space-y-4">
+              <ClientForm action={createCourse} className="space-y-4" submitText="Create Course" pendingText="Creating…" successMessage="Course created">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="code">Course Code</Label>
@@ -184,8 +184,7 @@ export default async function CoursesPage() {
                     ))}
                   </div>
                 </div>
-                <Button type="submit">Create Course</Button>
-              </form>
+              </ClientForm>
             </CardContent>
           </Card>
 

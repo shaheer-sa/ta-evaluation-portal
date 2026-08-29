@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { createSection, linkCourseToSection, updateSection, deleteSection, unlinkCourseFromSection } from "./actions";
 import { EntityActions } from "@/components/entity-actions";
+import { ClientForm } from "@/components/client-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -90,7 +91,7 @@ export default async function SectionsPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <form action={createSection} className="space-y-4">
+              <ClientForm action={createSection} className="space-y-4" submitText="Create Section" pendingText="Creating…" successMessage="Section created">
                 <div className="space-y-2">
                   <Label htmlFor="termId">Term</Label>
                   <select
@@ -111,8 +112,7 @@ export default async function SectionsPage() {
                   <Label htmlFor="name">Section Name</Label>
                   <Input id="name" name="name" required placeholder="e.g. A" />
                 </div>
-                <Button type="submit">Create Section</Button>
-              </form>
+              </ClientForm>
             </CardContent>
           </Card>
 
@@ -124,7 +124,7 @@ export default async function SectionsPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <form action={linkCourseToSection} className="space-y-4">
+              <ClientForm action={linkCourseToSection} className="space-y-4" submitText="Link Course" pendingText="Linking…" successMessage="Course linked">
                 <div className="space-y-2">
                   <Label htmlFor="sectionId">Section</Label>
                   <select
@@ -157,8 +157,7 @@ export default async function SectionsPage() {
                     ))}
                   </select>
                 </div>
-                <Button type="submit">Link Course</Button>
-              </form>
+              </ClientForm>
             </CardContent>
           </Card>
         </div>

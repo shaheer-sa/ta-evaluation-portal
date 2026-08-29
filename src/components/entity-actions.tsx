@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactNode, useState } from "react";
+import { ReactNode, useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Pencil, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
@@ -48,15 +48,31 @@ export function EntityActions({
 }) {
   const [isEditOpen, setIsEditOpen] = useState(false);
 
+  const [isPending, startTransition] = useTransition();
+
   async function handleEditSubmit(formData: FormData) {
     if (!editAction) return;
-    try {
-      await editAction(formData);
-      setIsEditOpen(false);
-      toast.success("Changes saved successfully!");
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to save changes");
-    }
+    startTransition(async () => {
+      try {
+        await editAction(formData);
+        setIsEditOpen(false);
+        toast.success("Changes saved successfully!");
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Failed to save changes");
+      }
+    });
+  }
+
+  async function handleDeleteSubmit(formData: FormData) {
+    if (!deleteAction) return;
+    startTransition(async () => {
+      try {
+        await deleteAction(formData);
+        toast.success("Deleted successfully");
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Failed to delete");
+      }
+    });
   }
 
   return (
@@ -75,8 +91,10 @@ export function EntityActions({
               {editDescription && <DialogDescription>{editDescription}</DialogDescription>}
             </DialogHeader>
             <form action={handleEditSubmit} className="space-y-4 pt-4">
-              <input type="hidden" name="id" value={id} />
-              {editNode}
+              <fieldset disabled={isPending} className="contents group">
+                <input type="hidden" name="id" value={id} />
+                {editNode}
+              </fieldset>
             </form>
           </DialogContent>
         </Dialog>
@@ -112,11 +130,13 @@ export function EntityActions({
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <form action={deleteAction}>
-              <input type="hidden" name="id" value={id} />
-              <Button type="submit" variant="destructive">
-                {type === "unlink" ? "Yes, unlink it" : "Yes, delete it"}
-              </Button>
+            <form action={handleDeleteSubmit}>
+              <fieldset disabled={isPending} className="contents group">
+                <input type="hidden" name="id" value={id} />
+                <Button type="submit" variant="destructive">
+                  {isPending ? "Processing…" : (type === "unlink" ? "Yes, unlink it" : "Yes, delete it")}
+                </Button>
+              </fieldset>
             </form>
           </AlertDialogFooter>
         </AlertDialogContent>
