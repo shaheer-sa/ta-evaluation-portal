@@ -3,6 +3,7 @@
 import { useTransition, useRef } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import type { ActionResult } from "@/lib/action-result";
 
 export function ClientForm({
   action,
@@ -12,8 +13,7 @@ export function ClientForm({
   children,
   className,
 }: {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  action: (formData: FormData) => Promise<any> | void;
+  action: (formData: FormData) => void | Promise<void> | Promise<ActionResult>;
   successMessage?: string;
   submitText?: string;
   pendingText?: string;
@@ -27,16 +27,17 @@ export function ClientForm({
     <form
       ref={formRef}
       className={className}
-      action={(formData) => {
+      onSubmit={(e) => {
+        e.preventDefault();
+        const formData = new FormData(e.currentTarget);
         startTransition(async () => {
-          try {
-            await action(formData);
-            if (successMessage) toast.success(successMessage);
-            formRef.current?.reset();
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          } catch (err: any) {
-            toast.error(err.message || "Action failed");
+          const result = await action(formData);
+          if (result && (result as ActionResult).ok === false) {
+            toast.error((result as ActionResult & { ok: false }).message);
+            return;
           }
+          if (successMessage) toast.success(successMessage);
+          formRef.current?.reset();
         });
       }}
     >

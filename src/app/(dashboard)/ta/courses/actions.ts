@@ -3,8 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { requireTA } from "@/lib/auth-guard";
 import { friendlyDbError } from "@/lib/db-errors";
+import type { ActionResult } from "@/lib/action-result";
 
-export async function createTerm(formData: FormData) {
+export async function createTerm(formData: FormData): Promise<ActionResult> {
   const { supabase } = await requireTA();
   const name = formData.get("name") as string;
   const shouldActivate = formData.get("isActive") === "on";
@@ -22,45 +23,48 @@ export async function createTerm(formData: FormData) {
     .select("id")
     .single();
 
-  if (error) throw new Error(friendlyDbError(error));
+  if (error) return { ok: false, message: friendlyDbError(error) };
 
   if (shouldActivate && newTerm) {
     const { error: activateError } = await supabase.rpc("activate_term", {
       p_term_id: newTerm.id,
     });
-    if (activateError) throw new Error(activateError.message);
+    if (activateError) return { ok: false, message: activateError.message };
   }
 
   revalidatePath("/ta/courses");
+  return { ok: true };
 }
 
-export async function updateTerm(formData: FormData) {
+export async function updateTerm(formData: FormData): Promise<ActionResult> {
   const { supabase } = await requireTA();
   const id = formData.get("id") as string;
   const name = (formData.get("name") as string)?.trim();
-  if (!name) throw new Error("Term name is required.");
+  if (!name) return { ok: false, message: "Term name is required." };
 
   const { error } = await supabase.from("terms").update({ name }).eq("id", id);
-  if (error) throw new Error(friendlyDbError(error));
+  if (error) return { ok: false, message: friendlyDbError(error) };
 
   // Only ever activate from here. Deactivation happens by activating another term.
   if (formData.get("isActive") === "on") {
     const { error: activateError } = await supabase.rpc("activate_term", { p_term_id: id });
-    if (activateError) throw new Error(activateError.message);
+    if (activateError) return { ok: false, message: activateError.message };
   }
 
   revalidatePath("/ta/courses");
+  return { ok: true };
 }
 
-export async function deleteTerm(formData: FormData) {
+export async function deleteTerm(formData: FormData): Promise<ActionResult> {
   const { supabase } = await requireTA();
   const id = formData.get("id") as string;
   const { error } = await supabase.from("terms").delete().eq("id", id);
-  if (error) throw new Error(friendlyDbError(error));
+  if (error) return { ok: false, message: friendlyDbError(error) };
   revalidatePath("/ta/courses");
+  return { ok: true };
 }
 
-export async function createCourse(formData: FormData) {
+export async function createCourse(formData: FormData): Promise<ActionResult> {
   const { supabase } = await requireTA();
   const code = formData.get("code") as string;
   const name = formData.get("name") as string;
@@ -74,11 +78,12 @@ export async function createCourse(formData: FormData) {
     enable_reeval: formData.get("enableReeval") === "on",
   });
 
-  if (error) throw new Error(friendlyDbError(error));
+  if (error) return { ok: false, message: friendlyDbError(error) };
   revalidatePath("/ta/courses");
+  return { ok: true };
 }
 
-export async function updateCourse(formData: FormData) {
+export async function updateCourse(formData: FormData): Promise<ActionResult> {
   const { supabase } = await requireTA();
   const id = formData.get("id") as string;
   const code = formData.get("code") as string;
@@ -93,14 +98,16 @@ export async function updateCourse(formData: FormData) {
     enable_reeval: formData.get("enableReeval") === "on",
   }).eq("id", id);
 
-  if (error) throw new Error(friendlyDbError(error));
+  if (error) return { ok: false, message: friendlyDbError(error) };
   revalidatePath("/ta/courses");
+  return { ok: true };
 }
 
-export async function deleteCourse(formData: FormData) {
+export async function deleteCourse(formData: FormData): Promise<ActionResult> {
   const { supabase } = await requireTA();
   const id = formData.get("id") as string;
   const { error } = await supabase.from("courses").delete().eq("id", id);
-  if (error) throw new Error(friendlyDbError(error));
+  if (error) return { ok: false, message: friendlyDbError(error) };
   revalidatePath("/ta/courses");
+  return { ok: true };
 }
