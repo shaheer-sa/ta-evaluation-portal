@@ -36,7 +36,7 @@ export default async function AnalyticsPage(props: {
   // Get active sections
   const { data: sections } = await supabase
     .from("sections")
-    .select("id, name, section_courses(id, courses(code))")
+    .select("id, name, section_courses(id, courses(code, name))")
     .eq("term_id", activeTerm.id);
 
   if (!sections || sections.length === 0) {
@@ -59,11 +59,13 @@ export default async function AnalyticsPage(props: {
 
   const options: { id: string; label: string }[] = [];
   sections.forEach((sec) => {
-    sec.section_courses?.forEach((sc: { id: string; courses: { code: string } | null } | null) => {
+    sec.section_courses?.forEach((sc: { id: string; courses: { code: string, name: string } | null } | null) => {
       if (sc && sc.courses?.code) {
+        const cName = sc.courses.name || "";
+        const shortName = cName.length > 40 ? cName.slice(0, 39) + "…" : cName;
         options.push({
           id: sc.id,
-          label: `${sec.name} — ${sc.courses.code}`,
+          label: `${activeTerm.name} — Section ${sec.name} · ${shortName || "Course"} (${sc.courses.code})`,
         });
       }
     });

@@ -64,13 +64,14 @@ export function CreateAssessmentForm({ sectionCourses }: { sectionCourses: any[]
         >
           <option value="">Select a class...</option>
           {sectionCourses?.map((sc) => {
-            const termName = sc.sections?.terms?.name;
-            const sectionName = sc.sections?.name;
-            const courseCode = sc.courses?.code;
-            const courseName = sc.courses?.name;
+            const termName = sc.sections?.terms?.name || "Term";
+            const sectionName = sc.sections?.name || "Sec";
+            const courseCode = sc.courses?.code || "Code";
+            const cName = sc.courses?.name || "";
+            const shortName = cName.length > 40 ? cName.slice(0, 39) + "…" : cName;
             return (
               <option key={sc.id} value={sc.id}>
-                {termName} — Section {sectionName} ({courseCode} {courseName})
+                {termName} — Section {sectionName} · {shortName || "Course"} ({courseCode})
               </option>
             );
           })}

@@ -58,8 +58,12 @@ export async function linkCourseToSection(formData: FormData): Promise<ActionRes
     .from("section_courses")
     .insert({ section_id: sectionId, course_id: courseId });
 
-  // 23505 is unique violation (if it's already linked)
-  if (error && error.code !== "23505") return { ok: false, message: friendlyDbError(error) };
+  if (error) {
+    if (error.code === "23505") {
+      return { ok: false, message: "That course is already linked to this section." };
+    }
+    return { ok: false, message: friendlyDbError(error) };
+  }
   revalidatePath("/ta/sections");
   return { ok: true };
 }

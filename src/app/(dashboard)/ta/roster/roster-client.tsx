@@ -153,11 +153,15 @@ export default function RosterClient({ sections, selectedSectionCourseId, roster
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
               >
                 <option value="">Select...</option>
-                {sections.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {`${s.sections?.terms?.name || "Term"} - ${s.sections?.name || "Sec"} (${s.courses?.code || "Code"})`}
-                  </option>
-                ))}
+                {sections.map((s) => {
+                  const cName = s.courses?.name || "";
+                  const shortName = cName.length > 40 ? cName.slice(0, 39) + "…" : cName;
+                  return (
+                    <option key={s.id} value={s.id}>
+                      {s.sections?.terms?.name || "Term"} — Section {s.sections?.name || "Sec"} · {shortName || "Course"} ({s.courses?.code || "Code"})
+                    </option>
+                  );
+                })}
               </select>
               {isPending && <span className="tams-select__pending">Loading…</span>}
             </div>

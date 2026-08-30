@@ -295,12 +295,15 @@ export default function GradingClient({
                 className={SELECT_CLASS}
               >
                 <option value="">Select a class…</option>
-                {sectionCourses.map((sc) => (
-                  <option key={sc.id} value={sc.id}>
-                    {sc.sections?.terms?.name} — Section {sc.sections?.name} (
-                    {sc.courses?.code})
-                  </option>
-                ))}
+                {sectionCourses.map((sc) => {
+                  const cName = sc.courses?.name || "";
+                  const shortName = cName.length > 40 ? cName.slice(0, 39) + "…" : cName;
+                  return (
+                    <option key={sc.id} value={sc.id}>
+                      {sc.sections?.terms?.name} — Section {sc.sections?.name} · {shortName} ({sc.courses?.code})
+                    </option>
+                  );
+                })}
               </select>
             </div>
 
