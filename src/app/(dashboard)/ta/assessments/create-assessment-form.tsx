@@ -36,13 +36,16 @@ export function CreateAssessmentForm({ sectionCourses }: { sectionCourses: any[]
       action={(formData) => {
         startTransition(async () => {
           try {
-            await createAssessment(formData);
+            const result = await createAssessment(formData);
+            if (!result.ok) {
+              toast.error(result.message);
+              return;
+            }
             toast.success("Assessment created");
             formRef.current?.reset();
             setSelectedSectionCourseId("");
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          } catch (err: any) {
-            toast.error(err.message || "Failed to create assessment");
+          } catch {
+            toast.error("Failed to create assessment");
           }
         });
       }}

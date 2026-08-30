@@ -3,8 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { requireTA } from "@/lib/auth-guard";
 import { friendlyDbError } from "@/lib/db-errors";
+import { ActionResult } from "@/lib/action-result";
 
-export async function createAssessment(formData: FormData) {
+export async function createAssessment(formData: FormData): Promise<ActionResult> {
   const { supabase } = await requireTA();
 
   const sectionCourseId = formData.get("sectionCourseId") as string;
@@ -13,19 +14,19 @@ export async function createAssessment(formData: FormData) {
   const maxMarks = parseFloat(formData.get("maxMarks") as string);
   const weight = parseFloat(formData.get("weight") as string);
 
-  if (!title) throw new Error("Title is required.");
-  if (title.length > 100) throw new Error("Title must be 100 characters or fewer.");
+  if (!title) return { ok: false, message: "Title is required." };
+  if (title.length > 100) return { ok: false, message: "Title must be 100 characters or fewer." };
 
-  if (!sectionCourseId) throw new Error("Please select a class.");
+  if (!sectionCourseId) return { ok: false, message: "Please select a class." };
   if (!["assignment", "quiz", "cp"].includes(type)) {
-    throw new Error("Please select a valid assessment type.");
+    return { ok: false, message: "Please select a valid assessment type." };
   }
 
   if (!Number.isFinite(maxMarks) || maxMarks <= 0) {
-    throw new Error("Max marks must be a number greater than 0.");
+    return { ok: false, message: "Max marks must be a number greater than 0." };
   }
   if (!Number.isFinite(weight) || weight < 0) {
-    throw new Error("Weight must be 0 or more.");
+    return { ok: false, message: "Weight must be 0 or more." };
   }
 
   const { error } = await supabase.from("assessments").insert({
@@ -36,11 +37,12 @@ export async function createAssessment(formData: FormData) {
     weight,
   });
 
-  if (error) throw new Error(friendlyDbError(error));
+  if (error) return { ok: false, message: friendlyDbError(error) };
   revalidatePath("/ta/assessments");
+  return { ok: true };
 }
 
-export async function deleteAssessment(formData: FormData) {
+export async function deleteAssessment(formData: FormData): Promise<ActionResult> {
   const { supabase } = await requireTA();
   const assessmentId = formData.get("assessmentId") as string;
 
@@ -51,11 +53,12 @@ export async function deleteAssessment(formData: FormData) {
     .delete()
     .eq("id", assessmentId);
 
-  if (error) throw new Error(error.message);
+  if (error) return { ok: false, message: error.message };
   revalidatePath("/ta/assessments");
+  return { ok: true };
 }
 
-export async function updateAssessment(formData: FormData) {
+export async function updateAssessment(formData: FormData): Promise<ActionResult> {
   const { supabase } = await requireTA();
 
   const assessmentId = formData.get("assessmentId") as string;
@@ -64,18 +67,18 @@ export async function updateAssessment(formData: FormData) {
   const maxMarks = parseFloat(formData.get("maxMarks") as string);
   const weight = parseFloat(formData.get("weight") as string);
 
-  if (!title) throw new Error("Title is required.");
-  if (title.length > 100) throw new Error("Title must be 100 characters or fewer.");
+  if (!title) return { ok: false, message: "Title is required." };
+  if (title.length > 100) return { ok: false, message: "Title must be 100 characters or fewer." };
 
   if (!["assignment", "quiz", "cp"].includes(type)) {
-    throw new Error("Please select a valid assessment type.");
+    return { ok: false, message: "Please select a valid assessment type." };
   }
 
   if (!Number.isFinite(maxMarks) || maxMarks <= 0) {
-    throw new Error("Max marks must be a number greater than 0.");
+    return { ok: false, message: "Max marks must be a number greater than 0." };
   }
   if (!Number.isFinite(weight) || weight < 0) {
-    throw new Error("Weight must be 0 or more.");
+    return { ok: false, message: "Weight must be 0 or more." };
   }
 
   const { count: overCount } = await supabase
@@ -85,9 +88,7 @@ export async function updateAssessment(formData: FormData) {
     .gt("score", maxMarks);
 
   if (overCount && overCount > 0) {
-    throw new Error(
-      `Can't lower the maximum to ${maxMarks} — ${overCount} student(s) already have a higher score. Fix those marks first.`
-    );
+    return { ok: false, message: `Can't lower the maximum to ${maxMarks} — ${overCount} student(s) already have a higher score. Fix those marks first.` };
   }
 
   const { error } = await supabase
@@ -100,6 +101,7 @@ export async function updateAssessment(formData: FormData) {
     })
     .eq("id", assessmentId);
 
-  if (error) throw new Error(friendlyDbError(error));
+  if (error) return { ok: false, message: friendlyDbError(error) };
   revalidatePath("/ta/assessments");
+  return { ok: true };
 }

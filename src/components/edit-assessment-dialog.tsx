@@ -39,17 +39,13 @@ export function EditAssessmentDialog({
   function onSubmit(formData: FormData) {
     startTransition(async () => {
       formData.append("assessmentId", assessment.id);
-      try {
-        await updateAssessment(formData);
-        toast.success("Assessment updated successfully!");
-        setOpen(false);
-      } catch (err: unknown) {
-        if (err instanceof Error) {
-          toast.error(err.message);
-        } else {
-          toast.error("Failed to update assessment");
-        }
+      const result = await updateAssessment(formData);
+      if (!result.ok) {
+        toast.error(result.message);
+        return;
       }
+      toast.success("Assessment updated successfully!");
+      setOpen(false);
     });
   }
 

@@ -4,6 +4,7 @@ import { ReactNode, useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Pencil, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
+import type { ActionResult } from "@/lib/action-result";
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -37,8 +38,8 @@ export function EntityActions({
 }: {
   id: string;
   itemName: string;
-  deleteAction: (formData: FormData) => void | Promise<void>;
-  editAction?: (formData: FormData) => void | Promise<void>;
+  deleteAction: (formData: FormData) => void | Promise<void> | Promise<ActionResult>;
+  editAction?: (formData: FormData) => void | Promise<void> | Promise<ActionResult>;
   editNode?: ReactNode;
   editTitle?: string;
   editDescription?: string;
@@ -53,25 +54,25 @@ export function EntityActions({
   async function handleEditSubmit(formData: FormData) {
     if (!editAction) return;
     startTransition(async () => {
-      try {
-        await editAction(formData);
-        setIsEditOpen(false);
-        toast.success("Changes saved successfully!");
-      } catch (e) {
-        toast.error(e instanceof Error ? e.message : "Failed to save changes");
+      const result = await editAction(formData);
+      if (result && (result as ActionResult).ok === false) {
+        toast.error((result as ActionResult & { ok: false }).message);
+        return;
       }
+      setIsEditOpen(false);
+      toast.success("Changes saved successfully!");
     });
   }
 
   async function handleDeleteSubmit(formData: FormData) {
     if (!deleteAction) return;
     startTransition(async () => {
-      try {
-        await deleteAction(formData);
-        toast.success("Deleted successfully");
-      } catch (e) {
-        toast.error(e instanceof Error ? e.message : "Failed to delete");
+      const result = await deleteAction(formData);
+      if (result && (result as ActionResult).ok === false) {
+        toast.error((result as ActionResult & { ok: false }).message);
+        return;
       }
+      toast.success("Deleted successfully");
     });
   }
 

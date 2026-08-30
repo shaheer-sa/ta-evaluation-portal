@@ -1,9 +1,10 @@
 "use client";
 
+import { useState, useTransition } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
-  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
@@ -12,6 +13,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import type { ActionResult } from "@/lib/action-result";
 
 export function DeleteAssessmentButton({
   assessmentId,
@@ -20,10 +22,27 @@ export function DeleteAssessmentButton({
 }: {
   assessmentId: string;
   assessmentLabel: string;
-  deleteAction: (formData: FormData) => void | Promise<void>;
+  deleteAction: (formData: FormData) => void | Promise<void> | Promise<ActionResult>;
 }) {
+  const [open, setOpen] = useState(false);
+  const [isPending, startTransition] = useTransition();
+
+  async function handleDelete(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const fd = new FormData(e.currentTarget);
+    startTransition(async () => {
+      const result = await deleteAction(fd);
+      if (result && (result as ActionResult).ok === false) {
+        toast.error((result as ActionResult & { ok: false }).message);
+        return;
+      }
+      toast.success("Assessment deleted");
+      setOpen(false);
+    });
+  }
+
   return (
-    <AlertDialog>
+    <AlertDialog open={open} onOpenChange={setOpen}>
       <AlertDialogTrigger asChild>
         <Button
           type="button"
@@ -44,11 +63,11 @@ export function DeleteAssessmentButton({
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <form action={deleteAction}>
+          <form onSubmit={handleDelete}>
             <input type="hidden" name="assessmentId" value={assessmentId} />
-            <AlertDialogAction type="submit">
-              Yes, delete it
-            </AlertDialogAction>
+            <Button type="submit" variant="destructive" disabled={isPending}>
+              {isPending ? "Deleting…" : "Yes, delete it"}
+            </Button>
           </form>
         </AlertDialogFooter>
       </AlertDialogContent>
