@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireTA } from "@/lib/auth-guard";
+import { friendlyDbError } from "@/lib/db-errors";
 
 export async function createTerm(formData: FormData) {
   const { supabase } = await requireTA();
@@ -21,7 +22,7 @@ export async function createTerm(formData: FormData) {
     .select("id")
     .single();
 
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(friendlyDbError(error));
 
   if (shouldActivate && newTerm) {
     const { error: activateError } = await supabase.rpc("activate_term", {
@@ -40,7 +41,7 @@ export async function updateTerm(formData: FormData) {
   if (!name) throw new Error("Term name is required.");
 
   const { error } = await supabase.from("terms").update({ name }).eq("id", id);
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(friendlyDbError(error));
 
   // Only ever activate from here. Deactivation happens by activating another term.
   if (formData.get("isActive") === "on") {
@@ -55,7 +56,7 @@ export async function deleteTerm(formData: FormData) {
   const { supabase } = await requireTA();
   const id = formData.get("id") as string;
   const { error } = await supabase.from("terms").delete().eq("id", id);
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(friendlyDbError(error));
   revalidatePath("/ta/courses");
 }
 
@@ -73,7 +74,7 @@ export async function createCourse(formData: FormData) {
     enable_reeval: formData.get("enableReeval") === "on",
   });
 
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(friendlyDbError(error));
   revalidatePath("/ta/courses");
 }
 
@@ -92,7 +93,7 @@ export async function updateCourse(formData: FormData) {
     enable_reeval: formData.get("enableReeval") === "on",
   }).eq("id", id);
 
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(friendlyDbError(error));
   revalidatePath("/ta/courses");
 }
 
@@ -100,6 +101,6 @@ export async function deleteCourse(formData: FormData) {
   const { supabase } = await requireTA();
   const id = formData.get("id") as string;
   const { error } = await supabase.from("courses").delete().eq("id", id);
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(friendlyDbError(error));
   revalidatePath("/ta/courses");
 }

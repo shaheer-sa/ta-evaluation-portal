@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireTA } from "@/lib/auth-guard";
+import { friendlyDbError } from "@/lib/db-errors";
 
 export async function createSection(formData: FormData) {
   const { supabase } = await requireTA();
@@ -12,7 +13,7 @@ export async function createSection(formData: FormData) {
     .from("sections")
     .insert({ term_id: termId, name });
 
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(friendlyDbError(error));
   revalidatePath("/ta/sections");
 }
 
@@ -27,7 +28,7 @@ export async function updateSection(formData: FormData) {
     .update({ term_id: termId, name })
     .eq("id", id);
 
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(friendlyDbError(error));
   revalidatePath("/ta/sections");
 }
 
@@ -40,7 +41,7 @@ export async function deleteSection(formData: FormData) {
     .delete()
     .eq("id", id);
 
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(friendlyDbError(error));
   revalidatePath("/ta/sections");
 }
 
@@ -54,7 +55,7 @@ export async function linkCourseToSection(formData: FormData) {
     .insert({ section_id: sectionId, course_id: courseId });
 
   // 23505 is unique violation (if it's already linked)
-  if (error && error.code !== "23505") throw new Error(error.message);
+  if (error && error.code !== "23505") throw new Error(friendlyDbError(error));
   revalidatePath("/ta/sections");
 }
 
@@ -67,6 +68,6 @@ export async function unlinkCourseFromSection(formData: FormData) {
     .delete()
     .eq("id", id);
 
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(friendlyDbError(error));
   revalidatePath("/ta/sections");
 }
