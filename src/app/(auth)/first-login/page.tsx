@@ -18,7 +18,7 @@ const schema = z
     password: z
       .string()
       .min(8, "Password must be at least 8 characters.")
-      .refine((val) => !val.startsWith("Tams@"), {
+      .refine((val) => !val.toLowerCase().startsWith("tams@"), {
         message: "Please choose a different password.",
       }),
     confirmPassword: z.string(),

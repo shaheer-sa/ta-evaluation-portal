@@ -24,13 +24,6 @@ if (
 
 export function createRateLimiter(config: { tokens: number; window: `${number} s` | `${number} m` | `${number} h` | `${number} d` }) {
   if (!redis) {
-    if (process.env.NODE_ENV === "production") {
-      // Do not throw at import time — Next collects page data during the
-      // build, when Vercel has not injected runtime env vars yet.
-      console.error(
-        "FATAL: UPSTASH_REDIS_REST_URL/TOKEN missing in production. Rate limiting is DISABLED."
-      );
-    }
     return null;
   }
   return new Ratelimit({

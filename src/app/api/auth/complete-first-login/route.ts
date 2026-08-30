@@ -33,7 +33,18 @@ export async function POST(request: NextRequest) {
   }
 
   // Reject reuse of the default password.
-  if (parsed.data.password.startsWith("Tams@")) {
+  const { data: prof } = await supabase
+    .from("profiles")
+    .select("roll_number")
+    .eq("id", user.id)
+    .single();
+
+  const chosen = parsed.data.password.toLowerCase();
+  const issued = prof?.roll_number
+    ? `tams@${prof.roll_number}`.toLowerCase()
+    : null;
+
+  if (chosen.startsWith("tams@") || (issued && chosen === issued)) {
     return NextResponse.json(
       { error: "Please choose a different password." },
       { status: 400 }
