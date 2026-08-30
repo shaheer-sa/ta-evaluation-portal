@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo, useTransition, memo, useRef, useCallback 
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { fetchJson } from "@/lib/fetch-json";
-import { Loader2, Save, Search, AlertCircle } from "lucide-react";
+import { Loader2, Save, Search, AlertCircle, Eraser } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -53,7 +53,10 @@ const MarkRow = memo(function MarkRow({
   score,
   maxMarks,
   isInvalid,
+  hasSavedMark,
+  pendingClear,
   onChange,
+  onToggleClear,
 }: {
   enrollmentId: string;
   rollNumber: string;
@@ -61,29 +64,52 @@ const MarkRow = memo(function MarkRow({
   score: string;
   maxMarks: number;
   isInvalid: boolean;
+  hasSavedMark: boolean;
+  pendingClear: boolean;
   onChange: (id: string, val: string) => void;
+  onToggleClear: (id: string) => void;
 }) {
   return (
     <tr>
-      <td>{rollNumber}</td>
-      <td>{fullName}</td>
+      <td className={pendingClear ? "line-through text-muted-foreground" : ""}>{rollNumber}</td>
+      <td className={pendingClear ? "line-through text-muted-foreground" : ""}>
+        {fullName}
+        {pendingClear && <span className="ml-2 text-xs text-destructive rounded-full bg-destructive/10 px-2 py-0.5">will be removed</span>}
+      </td>
       <td className="tams-numeral">
-        <Input
-          type="number"
-          inputMode="decimal"
-          step="0.5"
-          min={0}
-          max={maxMarks}
-          value={score}
-          onChange={(e) => onChange(enrollmentId, e.target.value)}
-          aria-label={`Score for ${fullName}`}
-          aria-invalid={isInvalid}
-          placeholder="—"
-          className={cn(
-            "ml-auto h-9 w-24 text-right font-mono",
-            isInvalid && "border-destructive focus-visible:ring-destructive"
+        <div className="flex items-center justify-end gap-2">
+          <Input
+            type="number"
+            inputMode="decimal"
+            step="0.5"
+            min={0}
+            max={maxMarks}
+            value={score}
+            onChange={(e) => onChange(enrollmentId, e.target.value)}
+            disabled={pendingClear}
+            aria-label={`Score for ${fullName}`}
+            aria-invalid={isInvalid}
+            placeholder="—"
+            className={cn(
+              "h-9 w-24 text-right font-mono",
+              isInvalid && "border-destructive focus-visible:ring-destructive",
+              pendingClear && "opacity-50"
+            )}
+          />
+          {hasSavedMark && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => onToggleClear(enrollmentId)}
+              className={cn("h-8 w-8", pendingClear ? "text-muted-foreground" : "text-destructive hover:bg-destructive/10 hover:text-destructive")}
+              title={pendingClear ? "Restore mark" : "Clear this mark"}
+            >
+              {pendingClear ? <Save className="h-4 w-4" /> : <Eraser className="h-4 w-4" />}
+            </Button>
           )}
-        />
+          {/* Pad empty space if no clear button to keep input aligned */}
+          {!hasSavedMark && <div className="h-8 w-8" />}
+        </div>
       </td>
     </tr>
   );
@@ -101,12 +127,14 @@ export default function GradingClient({
   const [isPending, startTransition] = useTransition();
   
   const [studentMarks, setStudentMarks] = useState<StudentMark[]>(initialStudentMarks);
+  const [pendingClears, setPendingClears] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
 
   useEffect(() => {
     setStudentMarks(initialStudentMarks);
+    setPendingClears(new Set());
     setIsDirty(false);
   }, [initialStudentMarks]);
 
@@ -129,6 +157,26 @@ export default function GradingClient({
       prev.map((s) => (s.enrollmentId === enrollmentId ? { ...s, score: value } : s))
     );
   }, []);
+
+  const handleToggleClear = useCallback((enrollmentId: string) => {
+    setIsDirty(true);
+    setPendingClears((prev) => {
+      const next = new Set(prev);
+      if (next.has(enrollmentId)) {
+        next.delete(enrollmentId);
+        // Restore original score by finding it in initialStudentMarks
+        const orig = initialStudentMarks.find(m => m.enrollmentId === enrollmentId);
+        if (orig) {
+          setStudentMarks((marks) => marks.map((s) => (s.enrollmentId === enrollmentId ? { ...s, score: orig.score } : s)));
+        }
+      } else {
+        next.add(enrollmentId);
+        // Empty the input when pending clear
+        setStudentMarks((marks) => marks.map((s) => (s.enrollmentId === enrollmentId ? { ...s, score: "" } : s)));
+      }
+      return next;
+    });
+  }, [initialStudentMarks]);
 
   const filteredMarks = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -153,6 +201,12 @@ export default function GradingClient({
   const gradedCount = studentMarks.filter((s) => s.score !== "").length;
 
   async function handleSave() {
+    if (pendingClears.size > 0) {
+      if (!window.confirm(`Remove ${pendingClears.size} saved mark(s)? This cannot be undone.`)) {
+        return;
+      }
+    }
+
     if (invalidRows.length > 0) {
       toast.error(
         `${invalidRows.length} score${invalidRows.length === 1 ? " is" : "s are"} outside 0–${maxMarks}. Fix ${invalidRows.length === 1 ? "it" : "them"} before saving.`
@@ -167,16 +221,20 @@ export default function GradingClient({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           assessmentId: selectedAssessment,
-          marks: studentMarks.map((s) => ({
-            enrollmentId: s.enrollmentId,
-            score: s.score,
-          })),
+          clearEnrollmentIds: Array.from(pendingClears),
+          marks: studentMarks
+            .filter((s) => !pendingClears.has(s.enrollmentId))
+            .map((s) => ({
+              enrollmentId: s.enrollmentId,
+              score: s.score,
+            })),
         }),
       });
       toast.success(
         `Saved ${json.saved ?? gradedCount} mark${(json.saved ?? gradedCount) === 1 ? "" : "s"}.`
       );
       
+      setPendingClears(new Set());
       setIsDirty(false);
       router.refresh();
     } catch (err: unknown) {
@@ -357,6 +415,9 @@ export default function GradingClient({
                       const isInvalid =
                         n !== null &&
                         (Number.isNaN(n) || n < 0 || (maxMarks > 0 && n > maxMarks));
+                      const orig = initialStudentMarks.find((m) => m.enrollmentId === s.enrollmentId);
+                      const hasSavedMark = orig ? orig.score !== "" : false;
+                      const pendingClear = pendingClears.has(s.enrollmentId);
                       return (
                         <MarkRow
                           key={s.enrollmentId}
@@ -366,7 +427,10 @@ export default function GradingClient({
                           score={s.score}
                           maxMarks={maxMarks}
                           isInvalid={isInvalid}
+                          hasSavedMark={hasSavedMark}
+                          pendingClear={pendingClear}
                           onChange={handleScoreChange}
+                          onToggleClear={handleToggleClear}
                         />
                       );
                     })}

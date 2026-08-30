@@ -31,10 +31,26 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const { assessmentId, marks } = await request.json();
+    const { assessmentId, marks, clearEnrollmentIds } = await request.json();
 
     if (!assessmentId || !Array.isArray(marks)) {
       return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
+    }
+
+    if (clearEnrollmentIds !== undefined) {
+      if (!Array.isArray(clearEnrollmentIds) || clearEnrollmentIds.length > 1000) {
+        return NextResponse.json({ error: "Invalid clearEnrollmentIds payload" }, { status: 400 });
+      }
+      
+      const clearSet = new Set(clearEnrollmentIds);
+      for (const m of marks as IncomingMark[]) {
+        if (m.enrollmentId && clearSet.has(m.enrollmentId)) {
+          return NextResponse.json(
+            { error: "Cannot submit a mark and clear it in the same request" },
+            { status: 400 }
+          );
+        }
+      }
     }
 
     // Look up the assessment so scores can be validated against its ceiling.
@@ -98,7 +114,7 @@ export async function POST(request: Request) {
       );
     }
 
-    if (rows.length === 0) {
+    if (rows.length === 0 && (!clearEnrollmentIds || clearEnrollmentIds.length === 0)) {
       return NextResponse.json({ success: true, saved: 0 });
     }
 
@@ -112,29 +128,44 @@ export async function POST(request: Request) {
       new Map(rows.map((r) => [r.enrollment_id, r])).values()
     );
 
-    const { error: upsertError, count } = await supabase
-      .from("marks")
-      .upsert(
-        deduped.map((r) => ({
-          enrollment_id: r.enrollment_id,
-          assessment_id: assessmentId,
-          score: r.score,
-          updated_by: user.id,
-        })),
-        { onConflict: "enrollment_id,assessment_id", count: "exact" }
-      );
+    let savedCount = 0;
+    if (rows.length > 0) {
+      const { error: upsertError, count } = await supabase
+        .from("marks")
+        .upsert(
+          deduped.map((r) => ({
+            enrollment_id: r.enrollment_id,
+            assessment_id: assessmentId,
+            score: r.score,
+            updated_by: user.id,
+          })),
+          { onConflict: "enrollment_id,assessment_id", count: "exact" }
+        );
 
-    // The old version discarded this error and returned success anyway, so
-    // the TA saw "Marks saved successfully!" while nothing had been written.
-    if (upsertError) {
-      console.error("Grading upsert failed:", upsertError);
-      return NextResponse.json(
-        { error: `Couldn't save marks: ${upsertError.message}` },
-        { status: 500 }
-      );
+      if (upsertError) {
+        console.error("Grading upsert failed:", upsertError);
+        return NextResponse.json(
+          { error: `Couldn't save marks: ${upsertError.message}` },
+          { status: 500 }
+        );
+      }
+      savedCount = count ?? rows.length;
     }
 
-    return NextResponse.json({ success: true, saved: count ?? rows.length });
+    if (clearEnrollmentIds && clearEnrollmentIds.length > 0) {
+      const { error: delError } = await supabase
+        .from("marks")
+        .delete()
+        .eq("assessment_id", assessmentId)
+        .in("enrollment_id", clearEnrollmentIds);
+
+      if (delError) {
+        console.error("Failed to clear marks:", delError);
+        return NextResponse.json({ error: "Couldn't remove those marks." }, { status: 500 });
+      }
+    }
+
+    return NextResponse.json({ success: true, saved: savedCount });
   } catch (err: unknown) {
     console.error("Grading error:", err);
     return NextResponse.json(
