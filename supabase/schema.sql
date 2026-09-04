@@ -135,6 +135,14 @@ create table if not exists marks (
   unique (enrollment_id, assessment_id)
 );
 
+-- score must stay NULLABLE. Two states use null:
+--   1. a mark row created before the assessment is graded
+--   2. a mark a TA deliberately cleared (score and sheet_synced_score both
+--      null is the signal the sync engine reads to push a blank to the sheet)
+-- The live database had a NOT NULL constraint here that this file never
+-- declared; dropped 2026-09.
+alter table marks alter column score drop not null;
+
 create table if not exists queries (
   id            uuid primary key default gen_random_uuid(),
   student_id    uuid not null references profiles(id) on delete cascade,
