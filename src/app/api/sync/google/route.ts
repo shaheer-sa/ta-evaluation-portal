@@ -487,6 +487,14 @@ export async function POST(request: NextRequest) {
                 // so the TA can find and correct their own value in the sheet.
                 if (cellRejected) continue;
 
+                // The mark row exists but both score and sheet_synced_score are null:
+                // the TA cleared this deliberately. Push the blank OUT to the sheet
+                // rather than pulling the stale sheet value back in.
+                if (existingMark && existingMark.score === null && existingMark.sheet_synced_score === null) {
+                  if (row[colIdx] !== "") { row[colIdx] = ""; sheetUpdated = true; }
+                  continue;
+                }
+
                 if (existingMark) {
                   const tamsScore = existingMark.score !== null ? Number(existingMark.score) : null;
                   const syncedScore = existingMark.sheet_synced_score !== null ? Number(existingMark.sheet_synced_score) : null;

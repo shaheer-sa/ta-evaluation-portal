@@ -38,14 +38,18 @@ export function EditAssessmentDialog({
 
   function onSubmit(formData: FormData) {
     startTransition(async () => {
-      formData.append("assessmentId", assessment.id);
-      const result = await updateAssessment(formData);
-      if (!result.ok) {
-        toast.error(result.message);
-        return;
+      try {
+        formData.append("assessmentId", assessment.id);
+        const result = await updateAssessment(formData);
+        if (!result.ok) {
+          toast.error(result.message);
+          return;
+        }
+        toast.success("Assessment updated successfully!");
+        setOpen(false);
+      } catch {
+        toast.error("Couldn't complete that. Please refresh and sign in again.");
       }
-      toast.success("Assessment updated successfully!");
-      setOpen(false);
     });
   }
 

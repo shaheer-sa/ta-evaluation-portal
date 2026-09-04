@@ -206,17 +206,18 @@ export default function GradingClient({
   const gradedCount = studentMarks.filter((s) => s.score !== "").length;
 
   async function handleSave() {
-    if (pendingClears.size > 0) {
-      if (!window.confirm(`Remove ${pendingClears.size} saved mark(s)? This cannot be undone.`)) {
-        return;
-      }
-    }
-
     if (invalidRows.length > 0) {
       toast.error(
         `${invalidRows.length} score${invalidRows.length === 1 ? " is" : "s are"} outside 0–${maxMarks}. Fix ${invalidRows.length === 1 ? "it" : "them"} before saving.`
       );
       return;
+    }
+
+    const clearsArr = Array.from(pendingClears);
+    if (pendingClears.size > 0) {
+      if (!window.confirm(`Remove ${clearsArr.length} saved mark(s)? The next sync will also clear them from the Google Sheet.`)) {
+        return;
+      }
     }
 
     setIsSaving(true);

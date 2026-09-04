@@ -37,7 +37,7 @@ export async function createAssessment(formData: FormData): Promise<ActionResult
     weight,
   });
 
-  if (error) return { ok: false, message: friendlyDbError(error) };
+  if (error) return { ok: false, message: friendlyDbError(error, "assessment") };
   revalidatePath("/ta/assessments");
   return { ok: true };
 }
@@ -46,14 +46,12 @@ export async function deleteAssessment(formData: FormData): Promise<ActionResult
   const { supabase } = await requireTA();
   const assessmentId = formData.get("assessmentId") as string;
 
-  // Delete related marks first, then the assessment
-  await supabase.from("marks").delete().eq("assessment_id", assessmentId);
   const { error } = await supabase
     .from("assessments")
     .delete()
     .eq("id", assessmentId);
 
-  if (error) return { ok: false, message: error.message };
+  if (error) return { ok: false, message: friendlyDbError(error, "assessment") };
   revalidatePath("/ta/assessments");
   return { ok: true };
 }
@@ -101,7 +99,7 @@ export async function updateAssessment(formData: FormData): Promise<ActionResult
     })
     .eq("id", assessmentId);
 
-  if (error) return { ok: false, message: friendlyDbError(error) };
+  if (error) return { ok: false, message: friendlyDbError(error, "assessment") };
   revalidatePath("/ta/assessments");
   return { ok: true };
 }

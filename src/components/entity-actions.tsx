@@ -54,25 +54,33 @@ export function EntityActions({
   async function handleEditSubmit(formData: FormData) {
     if (!editAction) return;
     startTransition(async () => {
-      const result = await editAction(formData);
-      if (result && (result as ActionResult).ok === false) {
-        toast.error((result as ActionResult & { ok: false }).message);
-        return;
+      try {
+        const result = await editAction(formData);
+        if (result && (result as ActionResult).ok === false) {
+          toast.error((result as ActionResult & { ok: false }).message);
+          return;
+        }
+        setIsEditOpen(false);
+        toast.success("Changes saved successfully!");
+      } catch {
+        toast.error("Couldn't complete that. Please refresh and sign in again.");
       }
-      setIsEditOpen(false);
-      toast.success("Changes saved successfully!");
     });
   }
 
   async function handleDeleteSubmit(formData: FormData) {
     if (!deleteAction) return;
     startTransition(async () => {
-      const result = await deleteAction(formData);
-      if (result && (result as ActionResult).ok === false) {
-        toast.error((result as ActionResult & { ok: false }).message);
-        return;
+      try {
+        const result = await deleteAction(formData);
+        if (result && (result as ActionResult).ok === false) {
+          toast.error((result as ActionResult & { ok: false }).message);
+          return;
+        }
+        toast.success("Deleted successfully");
+      } catch {
+        toast.error("Couldn't complete that. Please refresh and sign in again.");
       }
-      toast.success("Deleted successfully");
     });
   }
 

@@ -7,7 +7,9 @@ import type { ActionResult } from "@/lib/action-result";
 
 export async function createTerm(formData: FormData): Promise<ActionResult> {
   const { supabase } = await requireTA();
-  const name = formData.get("name") as string;
+  const name = (formData.get("name") as string)?.trim();
+  if (!name) return { ok: false, message: "Name is required." };
+  if (name.length > 100) return { ok: false, message: "Name must be 100 characters or fewer." };
   const shouldActivate = formData.get("isActive") === "on";
 
   // Always insert as inactive. Activating a term is a separate,
@@ -23,7 +25,7 @@ export async function createTerm(formData: FormData): Promise<ActionResult> {
     .select("id")
     .single();
 
-  if (error) return { ok: false, message: friendlyDbError(error) };
+  if (error) return { ok: false, message: friendlyDbError(error, "term") };
 
   if (shouldActivate && newTerm) {
     const { error: activateError } = await supabase.rpc("activate_term", {
@@ -40,10 +42,11 @@ export async function updateTerm(formData: FormData): Promise<ActionResult> {
   const { supabase } = await requireTA();
   const id = formData.get("id") as string;
   const name = (formData.get("name") as string)?.trim();
-  if (!name) return { ok: false, message: "Term name is required." };
+  if (!name) return { ok: false, message: "Name is required." };
+  if (name.length > 100) return { ok: false, message: "Name must be 100 characters or fewer." };
 
   const { error } = await supabase.from("terms").update({ name }).eq("id", id);
-  if (error) return { ok: false, message: friendlyDbError(error) };
+  if (error) return { ok: false, message: friendlyDbError(error, "term") };
 
   // Only ever activate from here. Deactivation happens by activating another term.
   if (formData.get("isActive") === "on") {
@@ -59,15 +62,20 @@ export async function deleteTerm(formData: FormData): Promise<ActionResult> {
   const { supabase } = await requireTA();
   const id = formData.get("id") as string;
   const { error } = await supabase.from("terms").delete().eq("id", id);
-  if (error) return { ok: false, message: friendlyDbError(error) };
+  if (error) return { ok: false, message: friendlyDbError(error, "term") };
   revalidatePath("/ta/courses");
   return { ok: true };
 }
 
 export async function createCourse(formData: FormData): Promise<ActionResult> {
   const { supabase } = await requireTA();
-  const code = formData.get("code") as string;
-  const name = formData.get("name") as string;
+  const code = (formData.get("code") as string)?.trim();
+  const name = (formData.get("name") as string)?.trim();
+
+  if (!code) return { ok: false, message: "Code is required." };
+  if (code.length > 20) return { ok: false, message: "Code must be 20 characters or fewer." };
+  if (!name) return { ok: false, message: "Name is required." };
+  if (name.length > 100) return { ok: false, message: "Name must be 100 characters or fewer." };
 
   const { error } = await supabase.from("courses").insert({
     code,
@@ -78,7 +86,7 @@ export async function createCourse(formData: FormData): Promise<ActionResult> {
     enable_reeval: formData.get("enableReeval") === "on",
   });
 
-  if (error) return { ok: false, message: friendlyDbError(error) };
+  if (error) return { ok: false, message: friendlyDbError(error, "course") };
   revalidatePath("/ta/courses");
   return { ok: true };
 }
@@ -86,8 +94,13 @@ export async function createCourse(formData: FormData): Promise<ActionResult> {
 export async function updateCourse(formData: FormData): Promise<ActionResult> {
   const { supabase } = await requireTA();
   const id = formData.get("id") as string;
-  const code = formData.get("code") as string;
-  const name = formData.get("name") as string;
+  const code = (formData.get("code") as string)?.trim();
+  const name = (formData.get("name") as string)?.trim();
+
+  if (!code) return { ok: false, message: "Code is required." };
+  if (code.length > 20) return { ok: false, message: "Code must be 20 characters or fewer." };
+  if (!name) return { ok: false, message: "Name is required." };
+  if (name.length > 100) return { ok: false, message: "Name must be 100 characters or fewer." };
 
   const { error } = await supabase.from("courses").update({
     code,
@@ -98,7 +111,7 @@ export async function updateCourse(formData: FormData): Promise<ActionResult> {
     enable_reeval: formData.get("enableReeval") === "on",
   }).eq("id", id);
 
-  if (error) return { ok: false, message: friendlyDbError(error) };
+  if (error) return { ok: false, message: friendlyDbError(error, "course") };
   revalidatePath("/ta/courses");
   return { ok: true };
 }
@@ -107,7 +120,7 @@ export async function deleteCourse(formData: FormData): Promise<ActionResult> {
   const { supabase } = await requireTA();
   const id = formData.get("id") as string;
   const { error } = await supabase.from("courses").delete().eq("id", id);
-  if (error) return { ok: false, message: friendlyDbError(error) };
+  if (error) return { ok: false, message: friendlyDbError(error, "course") };
   revalidatePath("/ta/courses");
   return { ok: true };
 }

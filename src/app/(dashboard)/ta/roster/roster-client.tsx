@@ -357,9 +357,10 @@ export default function RosterClient({ sections, selectedSectionCourseId, roster
                         </td>
                         {assessments.map(a => {
                           const mark = r.marks.find((m) => m.assessment_id === a.id);
+                          const score = mark?.score;
                           return (
                             <td key={a.id} className="tams-numeral">
-                              {mark ? mark.score : "-"}
+                              {score !== null && score !== undefined ? score : "—"}
                             </td>
                           )
                         })}

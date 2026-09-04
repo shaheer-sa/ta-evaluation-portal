@@ -8,13 +8,15 @@ import type { ActionResult } from "@/lib/action-result";
 export async function createSection(formData: FormData): Promise<ActionResult> {
   const { supabase } = await requireTA();
   const termId = formData.get("termId") as string;
-  const name = formData.get("name") as string; // e.g. "A", "B"
+  const name = (formData.get("name") as string)?.trim();
+  if (!name) return { ok: false, message: "Name is required." };
+  if (name.length > 100) return { ok: false, message: "Name must be 100 characters or fewer." };
 
   const { error } = await supabase
     .from("sections")
     .insert({ term_id: termId, name });
 
-  if (error) return { ok: false, message: friendlyDbError(error) };
+  if (error) return { ok: false, message: friendlyDbError(error, "section") };
   revalidatePath("/ta/sections");
   return { ok: true };
 }
@@ -23,14 +25,16 @@ export async function updateSection(formData: FormData): Promise<ActionResult> {
   const { supabase } = await requireTA();
   const id = formData.get("id") as string;
   const termId = formData.get("termId") as string;
-  const name = formData.get("name") as string;
+  const name = (formData.get("name") as string)?.trim();
+  if (!name) return { ok: false, message: "Name is required." };
+  if (name.length > 100) return { ok: false, message: "Name must be 100 characters or fewer." };
 
   const { error } = await supabase
     .from("sections")
     .update({ term_id: termId, name })
     .eq("id", id);
 
-  if (error) return { ok: false, message: friendlyDbError(error) };
+  if (error) return { ok: false, message: friendlyDbError(error, "section") };
   revalidatePath("/ta/sections");
   return { ok: true };
 }
@@ -44,7 +48,7 @@ export async function deleteSection(formData: FormData): Promise<ActionResult> {
     .delete()
     .eq("id", id);
 
-  if (error) return { ok: false, message: friendlyDbError(error) };
+  if (error) return { ok: false, message: friendlyDbError(error, "section") };
   revalidatePath("/ta/sections");
   return { ok: true };
 }
@@ -62,7 +66,7 @@ export async function linkCourseToSection(formData: FormData): Promise<ActionRes
     if (error.code === "23505") {
       return { ok: false, message: "That course is already linked to this section." };
     }
-    return { ok: false, message: friendlyDbError(error) };
+    return { ok: false, message: friendlyDbError(error, "section") };
   }
   revalidatePath("/ta/sections");
   return { ok: true };
@@ -77,7 +81,7 @@ export async function unlinkCourseFromSection(formData: FormData): Promise<Actio
     .delete()
     .eq("id", id);
 
-  if (error) return { ok: false, message: friendlyDbError(error) };
+  if (error) return { ok: false, message: friendlyDbError(error, "section") };
   revalidatePath("/ta/sections");
   return { ok: true };
 }

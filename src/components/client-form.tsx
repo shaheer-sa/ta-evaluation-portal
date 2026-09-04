@@ -31,13 +31,17 @@ export function ClientForm({
         e.preventDefault();
         const formData = new FormData(e.currentTarget);
         startTransition(async () => {
-          const result = await action(formData);
-          if (result && (result as ActionResult).ok === false) {
-            toast.error((result as ActionResult & { ok: false }).message);
-            return;
+          try {
+            const result = await action(formData);
+            if (result && (result as ActionResult).ok === false) {
+              toast.error((result as ActionResult & { ok: false }).message);
+              return;
+            }
+            if (successMessage) toast.success(successMessage);
+            formRef.current?.reset();
+          } catch {
+            toast.error("Couldn't complete that. Please refresh and sign in again.");
           }
-          if (successMessage) toast.success(successMessage);
-          formRef.current?.reset();
         });
       }}
     >

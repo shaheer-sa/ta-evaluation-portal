@@ -31,13 +31,17 @@ export function DeleteAssessmentButton({
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
     startTransition(async () => {
-      const result = await deleteAction(fd);
-      if (result && (result as ActionResult).ok === false) {
-        toast.error((result as ActionResult & { ok: false }).message);
-        return;
+      try {
+        const result = await deleteAction(fd);
+        if (result && (result as ActionResult).ok === false) {
+          toast.error((result as ActionResult & { ok: false }).message);
+          return;
+        }
+        toast.success("Assessment deleted");
+        setOpen(false);
+      } catch {
+        toast.error("Couldn't complete that. Please refresh and sign in again.");
       }
-      toast.success("Assessment deleted");
-      setOpen(false);
     });
   }
 

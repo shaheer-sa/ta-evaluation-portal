@@ -155,7 +155,7 @@ export async function POST(request: Request) {
     if (clearEnrollmentIds && clearEnrollmentIds.length > 0) {
       const { error: delError } = await supabase
         .from("marks")
-        .delete()
+        .update({ score: null, sheet_synced_score: null, updated_by: user.id })
         .eq("assessment_id", assessmentId)
         .in("enrollment_id", clearEnrollmentIds);
 
