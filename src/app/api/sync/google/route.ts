@@ -5,7 +5,6 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { Database } from "@/types/database";
 import { createRateLimiter } from "@/lib/rate-limit";
-import { runInBatches } from "@/lib/batch";
 
 export const maxDuration = 60;
 
@@ -232,7 +231,20 @@ export async function POST(request: NextRequest) {
     // 4. Invite/enroll students in batches of 5
     const BATCH_SIZE = 5;
 
-    const results = await runInBatches(parsedStudents, BATCH_SIZE, async (student): Promise<SyncStudentResult> => {
+    const startedAt = Date.now();
+    let partial = false;
+    let remaining = 0;
+    const results: SyncStudentResult[] = [];
+
+    for (let i = 0; i < parsedStudents.length; i += BATCH_SIZE) {
+      if (Date.now() - startedAt > 50_000) {
+        partial = true;
+        remaining = parsedStudents.length - i;
+        break;
+      }
+      
+      const batch = parsedStudents.slice(i, i + BATCH_SIZE);
+      const batchResults = await Promise.all(batch.map(async (student): Promise<SyncStudentResult> => {
       try {
         let studentId = "";
 
@@ -331,7 +343,9 @@ export async function POST(request: NextRequest) {
           detail: err instanceof Error ? err.message : "Unknown error",
         };
       }
-    });
+      }));
+      results.push(...batchResults);
+    }
 
     // 4.5 Fetch all active enrollments for this section_course to detect missing students and sync marks
     type AssessmentRow = Pick<Database["public"]["Tables"]["assessments"]["Row"], "id" | "title" | "type" | "max_marks" | "created_at">;
@@ -586,7 +600,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const response: SyncResponse = {
+    const response: SyncResponse & { partial?: boolean; remaining?: number } = {
       invited: results.filter(r => r.outcome === "invited"),
       existing: results.filter(r => r.outcome === "existing"),
       failed: results.filter(r => r.outcome === "failed"),
@@ -596,6 +610,11 @@ export async function POST(request: NextRequest) {
       totalProcessed: results.length,
       missingFromSheet,
     };
+
+    if (partial) {
+      response.partial = true;
+      response.remaining = remaining;
+    }
 
     return NextResponse.json(response);
   } catch (err: unknown) {

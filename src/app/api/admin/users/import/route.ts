@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createRateLimiter } from "@/lib/rate-limit";
-import { runInBatches } from "@/lib/batch";
 import { z } from "zod";
 
 export const maxDuration = 60;
@@ -85,7 +84,19 @@ export async function POST(request: NextRequest) {
     const failed: any[] = [];
     let totalProcessed = 0;
 
-    await runInBatches(students, 5, async (student) => {
+    const startedAt = Date.now();
+    let partial = false;
+    let remaining = 0;
+
+    for (let i = 0; i < students.length; i += 5) {
+      if (Date.now() - startedAt > 50_000) {
+        partial = true;
+        remaining = students.length - i;
+        break;
+      }
+      
+      const batch = students.slice(i, i + 5);
+      await Promise.all(batch.map(async (student) => {
       totalProcessed++;
       const result = {
         email: student.email,
@@ -214,15 +225,24 @@ export async function POST(request: NextRequest) {
       } catch (err: any) {
         failed.push({ ...result, outcome: "failed", detail: err.message });
       }
-    });
+      }));
+    }
 
-    return NextResponse.json({ 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const responsePayload: any = { 
       invited,
       existing,
       failed,
       totalProcessed,
       success: true 
-    });
+    };
+
+    if (partial) {
+      responsePayload.partial = true;
+      responsePayload.remaining = remaining;
+    }
+
+    return NextResponse.json(responsePayload);
   } catch (err: unknown) {
     console.error("Import error:", err);
     return NextResponse.json(

@@ -30,9 +30,7 @@ export async function GET(request: Request) {
     const url = new URL(request.url);
     const status = url.searchParams.get("status");
 
-    let query = supabase
-      .from("queries")
-      .select(`
+    let selectStr = `
         id,
         student_id,
         enrollment_id,
@@ -45,7 +43,15 @@ export async function GET(request: Request) {
         updated_at,
         profiles:student_id ( full_name, roll_number ),
         assessments:assessment_id ( title )
-      `)
+    `;
+
+    if (profile?.role === "ta") {
+      selectStr += `, enrollments!inner ( section_id )`;
+    }
+
+    let query = supabase
+      .from("queries")
+      .select(selectStr)
       .order("created_at", { ascending: false });
 
     // Students only see their own queries
@@ -71,20 +77,11 @@ export async function GET(request: Request) {
         const sectionIds = (activeSections || []).map((s) => s.id);
 
         if (sectionIds.length > 0) {
-          const { data: activeEnrollments } = await supabase
-            .from("enrollments")
-            .select("id")
-            .in("section_id", sectionIds);
-
-          const enrollmentIds = (activeEnrollments || []).map((e) => e.id);
+          query = query.in("enrollments.section_id", sectionIds);
+        } else {
           // An empty term legitimately has no queries; an impossible filter
           // returns the empty list rather than silently falling back to all.
-          query = query.in(
-            "enrollment_id",
-            enrollmentIds.length > 0 ? enrollmentIds : [""]
-          );
-        } else {
-          query = query.in("enrollment_id", [""]);
+          query = query.in("id", ["00000000-0000-0000-0000-000000000000"]);
         }
       }
       // No active term at all -> leave unscoped so the TA can still triage.

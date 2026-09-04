@@ -138,6 +138,11 @@ export default function GradingClient({
     setIsDirty(false);
   }, [initialStudentMarks]);
 
+  const initialByEnrollment = useMemo(
+    () => new Map(initialStudentMarks.map((m) => [m.enrollmentId, m])),
+    [initialStudentMarks]
+  );
+
   const dirtyRef = useRef(isDirty);
   dirtyRef.current = isDirty;
 
@@ -165,7 +170,7 @@ export default function GradingClient({
       if (next.has(enrollmentId)) {
         next.delete(enrollmentId);
         // Restore original score by finding it in initialStudentMarks
-        const orig = initialStudentMarks.find(m => m.enrollmentId === enrollmentId);
+        const orig = initialByEnrollment.get(enrollmentId);
         if (orig) {
           setStudentMarks((marks) => marks.map((s) => (s.enrollmentId === enrollmentId ? { ...s, score: orig.score } : s)));
         }
@@ -176,7 +181,7 @@ export default function GradingClient({
       }
       return next;
     });
-  }, [initialStudentMarks]);
+  }, [initialByEnrollment]);
 
   const filteredMarks = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -418,7 +423,7 @@ export default function GradingClient({
                       const isInvalid =
                         n !== null &&
                         (Number.isNaN(n) || n < 0 || (maxMarks > 0 && n > maxMarks));
-                      const orig = initialStudentMarks.find((m) => m.enrollmentId === s.enrollmentId);
+                      const orig = initialByEnrollment.get(s.enrollmentId);
                       const hasSavedMark = orig ? orig.score !== "" : false;
                       const pendingClear = pendingClears.has(s.enrollmentId);
                       return (
