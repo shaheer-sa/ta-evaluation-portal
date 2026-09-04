@@ -48,6 +48,10 @@ create table if not exists profiles (
   updated_at  timestamptz not null default now()
 );
 
+-- The forced first-login gate reads this and a null would silently skip it.
+-- The live database was missing the NOT NULL constraint.
+alter table profiles alter column must_change_password set not null;
+
 create table if not exists terms (
   id         uuid primary key default gen_random_uuid(),
   name       text not null unique,
@@ -176,12 +180,18 @@ create table if not exists notifications (
 );
 
 create table if not exists activity_logs (
-  id         uuid primary key default gen_random_uuid(),
-  actor_id   uuid references profiles(id) on delete set null,
-  action     text not null,
-  detail     jsonb,
-  created_at timestamptz not null default now()
+  id          uuid primary key default gen_random_uuid(),
+  actor_id    uuid references profiles(id) on delete set null,
+  action      text not null,
+  entity_type text,
+  entity_id   uuid,
+  metadata    jsonb,
+  created_at  timestamptz not null default now()
 );
+
+-- Note: The database also contains `announcements` and `query_attachments` tables
+-- with RLS enabled and policies. However, they are empty and completely unused 
+-- by the application code, so they are intentionally omitted from this schema file.
 
 -- ── Indexes for the app's hot paths ─────────────────────────────────────────
 
@@ -302,8 +312,8 @@ begin
   update terms set is_active = false, updated_at = now() where is_active;
   update terms set is_active = true,  updated_at = now() where id = p_term_id;
 
-  insert into activity_logs (actor_id, action, detail)
-  values (auth.uid(), 'term_activated', jsonb_build_object('term_id', p_term_id));
+  insert into activity_logs (actor_id, action, entity_type, entity_id)
+  values (auth.uid(), 'term.activate', 'terms', p_term_id);
 end;
 $$;
 

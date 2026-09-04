@@ -150,6 +150,27 @@ what's actually been verified and fixed vs. what's still open.
     - Added Class Averages (pie chart) for cross-section and cross-course performance comparisons.
     - The data is scoped dynamically to the currently active term.
 
+14. **Action result and error handling standardization**
+    - Converted all server actions in `courses/actions.ts` and `sections/actions.ts` to return `ActionResult` instead of throwing errors.
+    - Wrapped client-side transitions in `entity-actions.tsx`, `client-form.tsx`, `edit-assessment-dialog.tsx`, and `delete-assessment-button.tsx` with `try/catch` blocks to gracefully handle synchronous throws (like `requireTA()` session failures) and clear pending states.
+    - Parameterized `friendlyDbError` to include the specific entity name (e.g., "That course already exists", "That section is still linked").
+    - Fixed a bug in `linkCourseToSection` where Postgres constraint `23505` (already linked) was swallowed, falsely reporting success.
+
+15. **Mark clearance persistence and Google Sync reconciliation**
+    - Root cause: Deleting a mark via the grading UI removed the row entirely, which caused the next Google Sync to re-import the old grade from the sheet because TAMS no longer had a record of the clearance.
+    - Fix: Modified `api/grading/route.ts` to update the mark to `score = null, sheet_synced_score = null` instead of doing a hard `delete()`. 
+    - Updated `api/sync/google/route.ts` to detect this `null/null` state and push a blank string to the Google Sheet, properly erasing the grade on both sides.
+    - Updated `roster-client.tsx` to treat `null` scores exactly like missing rows, displaying "—" instead of a blank cell.
+
+16. **Input validation enhancements**
+    - Added string trimming, non-empty, and length constraint validations to `createTerm`, `updateTerm`, `createCourse`, `updateCourse`, `createSection`, and `updateSection`.
+    - Corrected the default-password reuse check in `api/auth/complete-first-login/route.ts` to perform a case-insensitive exact match against the student's roll number, preventing bypasses like `tams@...` instead of `Tams@...`.
+    - Swapped the validation order in `grading-client.tsx` so that out-of-bounds `invalidRows` are rejected before prompting the TA to confirm deletions.
+
+17. **Schema Drift Documentation**
+    - Recorded a `drop not null` fix for the `marks.score` column in `supabase/schema.sql` that had previously been applied directly to the live database.
+    - Prepared SQL queries for the TA to run to detect any other schema or constraint drift between `schema.sql` and the live database.
+
 ## Corrected understanding (not "fixed" because nothing was actually broken)
 
 - **"Missing `get_class_average()` function"** — it is NOT missing.
