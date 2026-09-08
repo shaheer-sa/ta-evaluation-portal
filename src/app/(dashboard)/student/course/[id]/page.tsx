@@ -99,12 +99,12 @@ export default async function CourseDetailPage({ params }: PageProps) {
     supabase.rpc("class_averages_for_section_course", { p_sc_id: scId })
   ]);
 
-  const classAverages = new Map<string, number>();
+  const classAverages = new Map<string, { avg: number; high: number; low: number }>();
   if (rawAverages) {
-    const avgObj = rawAverages as Record<string, number | null>;
-    for (const [id, avg] of Object.entries(avgObj)) {
-      if (avg !== null && avg !== undefined) {
-        classAverages.set(id, avg);
+    const avgObj = rawAverages as Record<string, { avg: number | null; high: number | null; low: number | null } | null>;
+    for (const [id, stats] of Object.entries(avgObj)) {
+      if (stats && stats.avg !== null && stats.avg !== undefined) {
+        classAverages.set(id, { avg: stats.avg, high: stats.high as number, low: stats.low as number });
       }
     }
   }
@@ -126,7 +126,10 @@ export default async function CourseDetailPage({ params }: PageProps) {
     const score = marksMap.get(a.id);
     const hasScore = score !== undefined;
     const abs = hasScore && a.max_marks > 0 ? (score / a.max_marks) * a.weight : null;
-    const classAvg = classAverages.get(a.id) ?? null;
+    const classStats = classAverages.get(a.id);
+    const classAvg = classStats?.avg ?? null;
+    const classHigh = classStats?.high ?? null;
+    const classLow = classStats?.low ?? null;
     const classAvgAbs = classAvg !== null && a.max_marks > 0
       ? (classAvg / a.max_marks) * a.weight
       : null;
@@ -145,6 +148,8 @@ export default async function CourseDetailPage({ params }: PageProps) {
       score: hasScore ? score : null,
       abs,
       classAvg,
+      classHigh,
+      classLow,
       classAvgAbs,
     };
   });
@@ -234,9 +239,11 @@ export default async function CourseDetailPage({ params }: PageProps) {
                           <tr>
                             <th>Assessment</th>
                             <th className="tams-numeral">Score</th>
-                            <th className="tams-numeral">Max</th>
+                            <th className="tams-numeral">Total</th>
                             <th className="tams-numeral">Absolutes</th>
                             <th className="tams-numeral">Class Avg</th>
+                            <th className="tams-numeral">Highest</th>
+                            <th className="tams-numeral">Lowest</th>
                             <th className="tams-numeral">Weight</th>
                           </tr>
                         </thead>
@@ -260,6 +267,12 @@ export default async function CourseDetailPage({ params }: PageProps) {
                                 {r.classAvg !== null
                                   ? `${Math.round(r.classAvg * 10) / 10} (${Math.round((r.classAvgAbs ?? 0) * 100) / 100} abs)`
                                   : "—"}
+                              </td>
+                              <td className="tams-numeral text-muted-foreground">
+                                {r.classHigh !== null ? r.classHigh : "—"}
+                              </td>
+                              <td className="tams-numeral text-muted-foreground">
+                                {r.classLow !== null ? r.classLow : "—"}
                               </td>
                               <td className="tams-numeral text-muted-foreground">
                                 {r.weight}

@@ -101,7 +101,7 @@ export function EditAssessmentDialog({
               </select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="maxMarks">Max Marks</Label>
+              <Label htmlFor="maxMarks">Total Marks</Label>
               <Input
                 id="maxMarks"
                 name="maxMarks"

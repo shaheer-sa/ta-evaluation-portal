@@ -106,7 +106,7 @@ export function CreateAssessmentForm({ sectionCourses }: { sectionCourses: any[]
 
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="maxMarks">Max Marks</Label>
+          <Label htmlFor="maxMarks">Total Marks</Label>
           <Input
             id="maxMarks"
             name="maxMarks"

@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent } from "@/components/ui/card";
 import { SectionPicker } from "./section-picker";
+import { sortAssessments } from "@/lib/assessment-order";
 
 export default async function AnalyticsPage(props: {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
@@ -111,7 +112,21 @@ export default async function AnalyticsPage(props: {
     percentage: number | null;
   };
 
-  const performance = (rpcData as StudentPerformance[]) || [];
+  type AssessmentPerformance = {
+    id: string;
+    title: string;
+    type: "assignment" | "quiz" | "mid" | "final" | "project" | "cp";
+    created_at: string;
+    total_marks: number;
+    avg: number | null;
+    high: number | null;
+    low: number | null;
+    graded: number;
+  };
+
+  const { students, assessments } = (rpcData as { students: StudentPerformance[], assessments: AssessmentPerformance[] }) || { students: [], assessments: [] };
+  const performance = students || [];
+  const sortedAssessments = sortAssessments(assessments || []);
 
   const top3 = performance.filter(p => p.percentage !== null).slice(0, 3);
   const ranks = ["1ST", "2ND", "3RD"];
@@ -145,6 +160,45 @@ export default async function AnalyticsPage(props: {
           ))}
         </div>
       )}
+
+      <Card data-edge className="mb-8">
+        <CardContent>
+          <div className="tams-table-wrap">
+            <table className="tams-table">
+              <thead>
+                <tr>
+                  <th>Assessment</th>
+                  <th className="tams-numeral">Total Marks</th>
+                  <th className="tams-numeral">Graded</th>
+                  <th className="tams-numeral">Average</th>
+                  <th className="tams-numeral">Highest</th>
+                  <th className="tams-numeral">Lowest</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sortedAssessments.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="text-center text-muted-foreground py-8">
+                      No assessments found.
+                    </td>
+                  </tr>
+                ) : (
+                  sortedAssessments.map(a => (
+                    <tr key={a.id} className="transition-colors">
+                      <td>{a.title}</td>
+                      <td className="tams-numeral">{a.total_marks}</td>
+                      <td className="tams-numeral">{a.graded}</td>
+                      <td className="tams-numeral">{a.avg !== null ? a.avg : "—"}</td>
+                      <td className="tams-numeral">{a.high !== null ? a.high : "—"}</td>
+                      <td className="tams-numeral">{a.low !== null ? a.low : "—"}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
 
       <Card data-edge>
         <CardContent>

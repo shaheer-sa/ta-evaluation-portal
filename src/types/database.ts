@@ -502,13 +502,39 @@ export interface Database {
         Args: {
           p_sc_id: string
         }
-        Returns: Json
+        Returns: {
+          [key: string]: {
+            avg: number | null
+            high: number | null
+            low: number | null
+          }
+        }
       }
       analytics_for_section_course: {
         Args: {
           p_sc_id: string
         }
-        Returns: Json
+        Returns: {
+          students: {
+            full_name: string
+            roll_number: string
+            graded: number
+            obtained: number
+            total_weight: number
+            percentage: number | null
+          }[]
+          assessments: {
+            id: string
+            title: string
+            type: "assignment" | "quiz" | "mid" | "final" | "project" | "cp"
+            created_at: string
+            total_marks: number
+            avg: number | null
+            high: number | null
+            low: number | null
+            graded: number
+          }[]
+        }
       }
       get_class_average: {
         Args: {

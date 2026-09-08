@@ -357,7 +357,7 @@ export default function GradingClient({
               <div>
                 <CardTitle>{selectedAssessmentObj?.title}</CardTitle>
                 <CardDescription>
-                  {gradedCount} of {studentMarks.length} graded · out of{" "}
+                  {gradedCount} of {studentMarks.length} graded · total{" "}
                   {maxMarks} marks
                 </CardDescription>
               </div>
@@ -414,7 +414,7 @@ export default function GradingClient({
                       <th>Roll number</th>
                       <th>Name</th>
                       <th className="tams-numeral">
-                        Score (out of {maxMarks})
+                        Score (of {maxMarks})
                       </th>
                     </tr>
                   </thead>

@@ -567,7 +567,8 @@ security definer
 set search_path = public
 as $$
 declare
-  result json;
+  v_students json;
+  v_assessments json;
 begin
   if not is_ta() then
     raise exception 'forbidden';
@@ -605,7 +606,7 @@ begin
     group by enr.id, enr.full_name, enr.roll_number
   )
   select coalesce(json_agg(row_to_json(x) order by x.percentage desc nulls last), '[]'::json)
-  into result
+  into v_students
   from (
     select
       full_name,
@@ -620,7 +621,28 @@ begin
     from scored
   ) x;
 
-  return result;
+  select coalesce(json_agg(row_to_json(y)), '[]'::json)
+  into v_assessments
+  from (
+    select
+      a.id,
+      a.title,
+      a.type,
+      a.created_at,
+      a.max_marks as total_marks,
+      round(avg(m.score)::numeric, 2) as avg,
+      max(m.score) as high,
+      min(m.score) as low,
+      count(m.score) as graded
+    from assessments a
+    left join marks m on m.assessment_id = a.id
+    left join enrollments e on e.id = m.enrollment_id and e.status = 'active'
+    where a.section_course_id = p_sc_id
+      and (m.id is null or e.id is not null)
+    group by a.id, a.title, a.type, a.created_at, a.max_marks
+  ) y;
+
+  return json_build_object('students', v_students, 'assessments', v_assessments);
 end;
 $$;
 
@@ -648,10 +670,17 @@ create trigger marks_max_check before insert or update on marks
 
 -- FIX 4: Class Averages Function for Student Dashboard
 create or replace function class_averages_for_section_course(p_sc_id uuid)
-returns json language sql stable security definer set search_path = public as $def$
-  select coalesce(json_object_agg(a.id, a.avg_score), '{}'::json)
+returns json language sql stable security definer set search_path = public as $fn$
+  select coalesce(json_object_agg(a.id, json_build_object(
+           'avg',  a.avg_score,
+           'high', a.high_score,
+           'low',  a.low_score
+         )), '{}'::json)
   from (
-    select a.id, round(avg(m.score)::numeric, 2) as avg_score
+    select a.id,
+           round(avg(m.score)::numeric, 2) as avg_score,
+           max(m.score) as high_score,
+           min(m.score) as low_score
     from assessments a
     left join marks m on m.assessment_id = a.id
     left join enrollments e on e.id = m.enrollment_id and e.status = 'active'
@@ -659,7 +688,7 @@ returns json language sql stable security definer set search_path = public as $d
       and (m.id is null or e.id is not null)
     group by a.id
   ) a;
-$def$;
+$fn$;
 
 revoke all on function class_averages_for_section_course(uuid) from public, anon;
 grant execute on function class_averages_for_section_course(uuid) to authenticated;

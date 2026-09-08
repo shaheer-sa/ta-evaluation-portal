@@ -23,7 +23,7 @@ export async function createAssessment(formData: FormData): Promise<ActionResult
   }
 
   if (!Number.isFinite(maxMarks) || maxMarks <= 0) {
-    return { ok: false, message: "Max marks must be a number greater than 0." };
+    return { ok: false, message: "Total marks must be a number greater than 0." };
   }
   if (!Number.isFinite(weight) || weight < 0) {
     return { ok: false, message: "Weight must be 0 or more." };
@@ -73,7 +73,7 @@ export async function updateAssessment(formData: FormData): Promise<ActionResult
   }
 
   if (!Number.isFinite(maxMarks) || maxMarks <= 0) {
-    return { ok: false, message: "Max marks must be a number greater than 0." };
+    return { ok: false, message: "Total marks must be a number greater than 0." };
   }
   if (!Number.isFinite(weight) || weight < 0) {
     return { ok: false, message: "Weight must be 0 or more." };
