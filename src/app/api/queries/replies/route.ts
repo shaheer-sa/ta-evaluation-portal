@@ -191,6 +191,7 @@ export async function POST(request: Request) {
               kind: "reply",
               message: message,
               queryId,
+              recipientRole: "student",
             }).catch((err) => console.error("SMTP error (reply):", err));
           });
         }
@@ -211,6 +212,30 @@ export async function POST(request: Request) {
             }))
           );
           if (notifyError) console.error("TA notify failed:", notifyError);
+
+          // Get emails for all TAs using the SECURITY DEFINER RPC
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const { data: taProfiles } = await (supabase as any).rpc("get_ta_contacts");
+
+          if (taProfiles && taProfiles.length > 0) {
+            after(() => {
+              for (const taProfile of taProfiles) {
+                if (!taProfile.email) continue;
+                sendQueryEmail({
+                  to: taProfile.email,
+                  studentName: taProfile.full_name || "TA",
+                  queryTitle: queryData.title,
+                  kind: "student_reply",
+                  message: message,
+                  queryId,
+                  recipientRole: "ta",
+                  senderName: profile?.full_name || "A student",
+                }).catch((err) => console.error("SMTP error (student reply):", err));
+              }
+            });
+          } else {
+            console.warn("No TAs found to notify for student reply");
+          }
         }
       }
     }

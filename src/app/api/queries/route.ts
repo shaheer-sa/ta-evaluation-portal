@@ -4,12 +4,8 @@ import { NextResponse } from "next/server";
 import { after } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import type { Database } from "@/types/database";
-import {
-  sendEmailNotification,
-  escapeHtml,
-  escapeHtmlMultiline,
-} from "@/lib/email";
 import { sendQueryEmail } from "@/lib/email/gmail";
+import { formatStatus } from "@/lib/format";
 
 /**
  * GET /api/queries
@@ -181,8 +177,8 @@ export async function POST(request: Request) {
           await supabase.from("notifications").insert({
             recipient_id: queryData.student_id,
             type: "query_update",
-            title: `Query "${queryData.title}" → ${newStatus}`,
-            body: `Your query has been marked as ${newStatus} by the TA.`,
+            title: `Query "${queryData.title}" → ${formatStatus(newStatus)}`,
+            body: `Your query has been marked as ${formatStatus(newStatus)} by the TA.`,
             related_id: queryId,
           });
         } catch (notifErr) {
@@ -198,8 +194,9 @@ export async function POST(request: Request) {
               studentName: queryData.profiles?.full_name || "Student",
               queryTitle: queryData.title,
               kind: "status_change",
-              message: `Status changed to ${newStatus}`,
+              message: `Status changed to ${formatStatus(newStatus)}`,
               queryId,
+              recipientRole: "student",
             }).catch((err) => console.error("SMTP error (status change):", err));
           });
         }
@@ -241,7 +238,7 @@ export async function POST(request: Request) {
         );
       }
 
-      const { error } = await supabase.from("queries").insert({
+      const { data, error } = await supabase.from("queries").insert({
         student_id: user.id,
         enrollment_id: enrollmentId,
         assessment_id: assessmentId || null,
@@ -249,18 +246,17 @@ export async function POST(request: Request) {
         description,
         priority: priority || "medium",
         status: "pending",
-      });
+      }).select("id").single();
 
       if (error) throw error;
 
       // Notify the TA — find TA users
-      const { data: tas } = await supabase
-        .from("profiles")
-        .select("id, email")
-        .eq("role", "ta");
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: tas } = await (supabase as any).rpc("get_ta_contacts");
 
-      if (tas) {
-        const notifications = tas.map((ta) => ({
+      if (tas && tas.length > 0) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const notifications = tas.map((ta: any) => ({
           recipient_id: ta.id,
           type: "new_query",
           title: `New query: "${title}"`,
@@ -269,22 +265,25 @@ export async function POST(request: Request) {
         await supabase.from("notifications").insert(notifications);
 
         // Send emails
-        // Use Promise.all to send them in parallel
-        await Promise.all(tas.map(async (ta) => {
-          if (ta.email) {
-            const result = await sendEmailNotification(
-              ta.email,
-              `New Student Query: ${title}`,
-              `<p>A new ${escapeHtml(priority || "medium")}-priority query was raised:</p>
-               <p><strong>Title:</strong> ${escapeHtml(title)}</p>
-               <p><strong>Description:</strong><br/>${escapeHtmlMultiline(description)}</p>
-               <p>Log in to TAMS to review it.</p>`
-            );
-            if (!result.delivered) {
-              console.warn(`Failed to send new query email to ${ta.email}: ${result.reason}`);
+        after(() => {
+          for (const ta of tas) {
+            if (ta.email) {
+              sendQueryEmail({
+                to: ta.email,
+                studentName: "TA",
+                queryTitle: title,
+                kind: "new_query",
+                message: `Priority: ${priority || "medium"}\n\n${description}`,
+                queryId: data.id,
+                recipientRole: "ta",
+              }).catch((err) =>
+                console.error(`Failed to send new query email to ${ta.email}:`, err)
+              );
             }
           }
-        }));
+        });
+      } else {
+        console.warn("No TAs found to notify for new query");
       }
 
       return NextResponse.json({ success: true });

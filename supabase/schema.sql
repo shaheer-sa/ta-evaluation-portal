@@ -245,6 +245,24 @@ $$;
 revoke execute on function get_tas() from public;
 grant execute on function get_tas() to authenticated;
 
+
+
+-- TA contact details including email. Separate from get_tas() because that
+-- function's return type is depended on by the notifications_insert policy
+-- and cannot be altered in place.
+create or replace function get_ta_contacts()
+returns table (id uuid, full_name text, email text)
+language sql
+stable
+security definer
+set search_path to 'public'
+as $$
+  select id, full_name, email from profiles where role = 'ta';
+$$;
+
+revoke all on function get_ta_contacts() from public, anon;
+grant execute on function get_ta_contacts() to authenticated;
+
 -- ── Trigger: create a profile row for every new auth user ───────────────────
 
 create or replace function handle_new_user()
@@ -709,3 +727,17 @@ returns bigint language sql stable security definer set search_path = public as 
 $$;
 revoke all on function active_student_count(uuid[]) from public, anon;
 grant execute on function active_student_count(uuid[]) to authenticated;
+
+
+create or replace function public.get_ta_contacts()
+returns table (id uuid, full_name text, email text)
+language sql
+stable
+security definer
+set search_path to 'public'
+as $function$
+  select id, full_name, email from profiles where role = 'ta';
+$function$;
+
+revoke all on function public.get_ta_contacts() from public, anon;
+grant execute on function public.get_ta_contacts() to authenticated;

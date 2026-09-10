@@ -18,13 +18,17 @@ export async function sendQueryEmail({
   kind,
   message,
   queryId,
+  recipientRole,
+  senderName,
 }: {
   to: string;
   studentName: string;
   queryTitle: string;
-  kind: "reply" | "status_change";
+  kind: "reply" | "status_change" | "new_query" | "student_reply";
   message: string;
   queryId: string;
+  recipientRole: "student" | "ta";
+  senderName?: string;
 }) {
   const safeName = escapeHtml(studentName);
   const safeTitle = escapeHtml(queryTitle);
@@ -40,13 +44,19 @@ export async function sendQueryEmail({
     console.warn("sendQueryEmail warning: NEXT_PUBLIC_SITE_URL is empty, email links will be broken");
   }
   
-  const link = `${siteUrl}/student/queries?open=${queryId}`;
+  const path = recipientRole === "ta" ? "/ta/queries" : "/student/queries";
+  const link = `${siteUrl}${path}?open=${queryId}`;
 
-  const actionText = kind === "reply" ? "replied to your query" : "changed the status of your query";
+  let intro = `<p>The TA has ${kind === "reply" ? "replied to your query" : "changed the status of your query"} <strong>${safeTitle}</strong>:</p>`;
+  if (kind === "new_query") {
+    intro = `<p>A student has raised a new query <strong>${safeTitle}</strong>:</p>`;
+  } else if (kind === "student_reply") {
+    intro = `<p>${escapeHtml(senderName || "A student")} has replied to the query <strong>${safeTitle}</strong>:</p>`;
+  }
 
   const html = `
     <p>Hi ${safeName},</p>
-    <p>The TA has ${actionText} <strong>${safeTitle}</strong>:</p>
+    ${intro}
     <blockquote style="border-left: 4px solid #ccc; padding-left: 1rem; margin-left: 0; color: #555;">
       ${safeMessage}
     </blockquote>

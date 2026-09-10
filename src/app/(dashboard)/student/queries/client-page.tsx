@@ -27,6 +27,7 @@ const STATUS_COLORS: Record<string, string> = {
 
 export type QueryItem = Pick<Database["public"]["Tables"]["queries"]["Row"], "id" | "title" | "description" | "priority" | "status" | "created_at"> & {
   assessments: Pick<Database["public"]["Tables"]["assessments"]["Row"], "title"> | null;
+  enrollments?: { sections: { name: string } | null } | null;
 };
 
 export type EnrollmentRow = Pick<Database["public"]["Tables"]["enrollments"]["Row"], "id" | "section_id" | "course_id"> & {
@@ -246,7 +247,7 @@ export default function StudentQueriesClient({
                   <div>
                     <CardTitle className="text-base">{q.title}</CardTitle>
                     <CardDescription className="mt-1">
-                      {q.assessments?.title || "General query"} · {q.priority} priority
+                      {q.assessments?.title || "General query"} · {q.priority} priority · {q.enrollments?.sections?.name || "—"}
                     </CardDescription>
                   </div>
                   <span
