@@ -41,6 +41,7 @@ import type { Database } from "@/types/database";
 type QueryItem = Pick<Database["public"]["Tables"]["queries"]["Row"], "id" | "title" | "description" | "priority" | "status" | "created_at"> & {
   profiles: Pick<Database["public"]["Tables"]["profiles"]["Row"], "full_name" | "roll_number"> | null;
   assessments: Pick<Database["public"]["Tables"]["assessments"]["Row"], "title"> | null;
+  enrollments?: { sections: { name: string } | null } | null;
 };
 
 export default function TAQueriesPage() {
@@ -133,7 +134,7 @@ export default function TAQueriesPage() {
                   <div>
                     <CardTitle className="text-base">{q.title}</CardTitle>
                     <CardDescription className="mt-1">
-                      {q.profiles?.full_name} ({q.profiles?.roll_number})
+                      {q.profiles?.roll_number} · {q.profiles?.full_name} · {q.enrollments?.sections?.name || "—"}
                       {q.assessments?.title && ` · ${q.assessments.title}`}
                       {" · "}
                       <span className={PRIORITY_COLORS[q.priority]}>

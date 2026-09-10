@@ -1,5 +1,9 @@
+export const runtime = "nodejs";
+
 import { NextResponse } from "next/server";
+import { after } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { sendQueryEmail } from "@/lib/email/gmail";
 
 /**
  * A query thread is readable and writable by exactly two parties: the
@@ -161,7 +165,7 @@ export async function POST(request: Request) {
     // Notify the other party
     const { data: queryData } = await supabase
       .from("queries")
-      .select("student_id, title")
+      .select("student_id, title, profiles:student_id ( email, full_name )")
       .eq("id", queryId)
       .single();
 
@@ -175,6 +179,21 @@ export async function POST(request: Request) {
           body: `The TA replied to your query.`,
           related_id: queryId,
         });
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const studentProfile = queryData.profiles as any;
+        if (studentProfile?.email) {
+          after(() => {
+            sendQueryEmail({
+              to: studentProfile.email,
+              studentName: studentProfile.full_name || "Student",
+              queryTitle: queryData.title,
+              kind: "reply",
+              message: message,
+              queryId,
+            }).catch((err) => console.error("SMTP error (reply):", err));
+          });
+        }
       } else {
         // Student replied → notify all TAs
         // eslint-disable-next-line @typescript-eslint/no-explicit-any

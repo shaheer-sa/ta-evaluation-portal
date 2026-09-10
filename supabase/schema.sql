@@ -476,20 +476,24 @@ create policy replies_insert on replies for insert
   );
 
 -- notifications -------------------------------------------------------------
-drop policy if exists notifications_select on notifications;
-create policy notifications_select on notifications for select
-  using (recipient_id = auth.uid());
+drop policy if exists notifications_student_select_own on notifications;
+create policy notifications_student_select_own on notifications
+  for select using (recipient_id = auth.uid());
 
-drop policy if exists notifications_update_own on notifications;
-create policy notifications_update_own on notifications for update
-  using (recipient_id = auth.uid()) with check (recipient_id = auth.uid());
+drop policy if exists notifications_student_update_own on notifications;
+create policy notifications_student_update_own on notifications
+  for update using (recipient_id = auth.uid())
+  with check (recipient_id = auth.uid());
 
--- Problem 1: Students may only insert a notification whose recipient is a TA, and TAs may insert to anyone.
 drop policy if exists notifications_insert on notifications;
-create policy notifications_insert on notifications for insert
-  to authenticated with check (
+create policy notifications_insert on notifications
+  for insert with check (
     is_ta() or recipient_id in (select id from get_tas())
   );
+
+drop policy if exists notifications_ta_all on notifications;
+create policy notifications_ta_all on notifications
+  for all using (is_ta()) with check (is_ta());
 
 -- activity_logs -------------------------------------------------------------
 drop policy if exists activity_logs_ta_read on activity_logs;

@@ -1,4 +1,7 @@
+export const runtime = "nodejs";
+
 import { NextResponse } from "next/server";
+import { after } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import type { Database } from "@/types/database";
 import {
@@ -6,6 +9,7 @@ import {
   escapeHtml,
   escapeHtmlMultiline,
 } from "@/lib/email";
+import { sendQueryEmail } from "@/lib/email/gmail";
 
 /**
  * GET /api/queries
@@ -42,11 +46,15 @@ export async function GET(request: Request) {
         created_at,
         updated_at,
         profiles:student_id ( full_name, roll_number ),
-        assessments:assessment_id ( title )
+        assessments:assessment_id ( title ),
+        enrollments ( sections ( name ) )
     `;
 
     if (profile?.role === "ta") {
-      selectStr += `, enrollments!inner ( section_id )`;
+      selectStr = selectStr.replace(
+        "enrollments ( sections ( name ) )",
+        "enrollments!inner ( section_id, sections ( name ) )"
+      );
     }
 
     let query = supabase
@@ -168,26 +176,32 @@ export async function POST(request: Request) {
       const queryData = rawQueryData as unknown as QueryData | null;
 
       if (queryData) {
-        await supabase.from("notifications").insert({
-          recipient_id: queryData.student_id,
-          type: "query_update",
-          title: `Query "${queryData.title}" → ${newStatus}`,
-          body: `Your query has been marked as ${newStatus} by the TA.`,
-          related_id: queryId,
-        });
+        // Create notification for the student
+        try {
+          await supabase.from("notifications").insert({
+            recipient_id: queryData.student_id,
+            type: "query_update",
+            title: `Query "${queryData.title}" → ${newStatus}`,
+            body: `Your query has been marked as ${newStatus} by the TA.`,
+            related_id: queryId,
+          });
+        } catch (notifErr) {
+          console.error("Failed to insert notification:", notifErr);
+        }
 
-        // Send email
+        // Send email via Gmail SMTP without blocking
         const studentEmail = queryData.profiles?.email;
         if (studentEmail) {
-          const result = await sendEmailNotification(
-            studentEmail,
-            `Query Status Update: ${queryData.title}`,
-            `<p>Your query <strong>"${escapeHtml(queryData.title)}"</strong> has been marked as <strong>${escapeHtml(newStatus.replace("_", " "))}</strong> by the TA.</p>
-             <p>Log in to TAMS to view details or reply.</p>`
-          );
-          if (!result.delivered) {
-            console.warn(`Failed to send status update email to ${studentEmail}: ${result.reason}`);
-          }
+          after(() => {
+            sendQueryEmail({
+              to: studentEmail,
+              studentName: queryData.profiles?.full_name || "Student",
+              queryTitle: queryData.title,
+              kind: "status_change",
+              message: `Status changed to ${newStatus}`,
+              queryId,
+            }).catch((err) => console.error("SMTP error (status change):", err));
+          });
         }
       }
 

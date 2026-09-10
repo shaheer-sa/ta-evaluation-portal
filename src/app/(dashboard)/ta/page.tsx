@@ -105,6 +105,8 @@ export default async function TADashboardPage() {
     created_at: string;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     profiles: any;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    enrollments?: any;
   }[] = [];
 
   if (activeSectionIds.length > 0) {
@@ -123,7 +125,8 @@ export default async function TADashboardPage() {
           status,
           priority,
           created_at,
-          profiles:student_id ( full_name, roll_number )
+          profiles:student_id ( full_name, roll_number ),
+          enrollments ( sections ( name ) )
         `)
         .in("enrollment_id", activeEnrollmentIds.map((e) => e.id))
         .order("created_at", { ascending: false })
@@ -231,17 +234,24 @@ export default async function TADashboardPage() {
               {recentQueries.map((q) => (
                 <div
                   key={q.id}
-                  className="tams-inset flex items-center justify-between p-4"
+                  className="tams-inset flex items-center gap-4 p-4"
                 >
-                  <div className="space-y-1">
-                    <p className="font-medium">{q.title}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {q.profiles?.full_name} ({q.profiles?.roll_number}) -{" "}
-                      {q.priority} priority
-                    </p>
+                  <div className="w-[140px] shrink-0">
+                    <p className="font-medium text-sm">{q.profiles?.roll_number}</p>
+                    <p className="text-xs text-muted-foreground truncate">{q.profiles?.full_name}</p>
                   </div>
+
+                  <div className="w-[100px] shrink-0 hidden sm:block text-sm text-muted-foreground">
+                    {q.enrollments?.sections?.name || "—"}
+                  </div>
+
+                  <div className="flex-1 min-w-0 space-y-1">
+                    <p className="font-medium truncate">{q.title}</p>
+                    <p className="text-xs text-muted-foreground">{q.priority} priority</p>
+                  </div>
+
                   <div
-                    className={`tams-pill`}
+                    className={`tams-pill shrink-0`}
                     data-tone={q.status === "pending" ? "open" : q.status === "resolved" ? "done" : q.status === "rejected" ? "late" : "open"}
                   >
                     {q.status}
