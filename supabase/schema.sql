@@ -586,11 +586,12 @@ returns json
 language plpgsql
 stable
 security definer
-set search_path = public
-as $$
+set search_path to 'public'
+as $function$
 declare
   v_students json;
   v_assessments json;
+  v_marks json;
 begin
   if not is_ta() then
     raise exception 'forbidden';
@@ -652,6 +653,7 @@ begin
       a.type,
       a.created_at,
       a.max_marks as total_marks,
+      a.weight,
       round(avg(m.score)::numeric, 2) as avg,
       max(m.score) as high,
       min(m.score) as low,
@@ -661,12 +663,31 @@ begin
     left join enrollments e on e.id = m.enrollment_id and e.status = 'active'
     where a.section_course_id = p_sc_id
       and (m.id is null or e.id is not null)
-    group by a.id, a.title, a.type, a.created_at, a.max_marks
+    group by a.id, a.title, a.type, a.created_at, a.max_marks, a.weight
   ) y;
 
-  return json_build_object('students', v_students, 'assessments', v_assessments);
+  select coalesce(json_agg(row_to_json(z)), '[]'::json)
+  into v_marks
+  from (
+    select p.roll_number, m.assessment_id, m.score
+    from marks m
+    join enrollments e on e.id = m.enrollment_id
+    join profiles p on p.id = e.student_id
+    join assessments a on a.id = m.assessment_id
+    join section_courses s on s.id = p_sc_id
+    where a.section_course_id = p_sc_id
+      and e.status = 'active'
+      and e.section_id = s.section_id
+      and e.course_id = s.course_id
+  ) z;
+
+  return json_build_object(
+    'students', v_students,
+    'assessments', v_assessments,
+    'marks', v_marks
+  );
 end;
-$$;
+$function$;
 
 revoke all on function analytics_for_section_course(uuid) from public, anon;
 grant execute on function analytics_for_section_course(uuid) to authenticated;

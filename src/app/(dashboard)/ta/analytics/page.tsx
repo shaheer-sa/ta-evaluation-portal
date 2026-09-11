@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent } from "@/components/ui/card";
 import { SectionPicker } from "./section-picker";
 import { sortAssessments } from "@/lib/assessment-order";
+import { PerformanceTable, type StudentPerformance, type AssessmentPerformance, type MarkEntry } from "./performance-table";
 
 export default async function AnalyticsPage(props: {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
@@ -103,28 +104,11 @@ export default async function AnalyticsPage(props: {
     return <div>Invalid section course or data could not be loaded.</div>;
   }
 
-  type StudentPerformance = {
-    full_name: string;
-    roll_number: string;
-    graded: number;
-    obtained: number;
-    total_weight: number;
-    percentage: number | null;
-  };
-
-  type AssessmentPerformance = {
-    id: string;
-    title: string;
-    type: "assignment" | "quiz" | "mid" | "final" | "project" | "cp";
-    created_at: string;
-    total_marks: number;
-    avg: number | null;
-    high: number | null;
-    low: number | null;
-    graded: number;
-  };
-
-  const { students, assessments } = (rpcData as { students: StudentPerformance[], assessments: AssessmentPerformance[] }) || { students: [], assessments: [] };
+  const { students, assessments, marks } = (rpcData as { 
+    students: StudentPerformance[], 
+    assessments: AssessmentPerformance[],
+    marks: MarkEntry[] 
+  }) || { students: [], assessments: [], marks: [] };
   const performance = students || [];
   const sortedAssessments = sortAssessments(assessments || []);
 
@@ -200,44 +184,7 @@ export default async function AnalyticsPage(props: {
         </CardContent>
       </Card>
 
-      <Card data-edge>
-        <CardContent>
-        <div className="tams-table-wrap">
-          <table className="tams-table">
-            <thead>
-              <tr>
-                <th>Roll Number</th>
-                <th>Student</th>
-                <th className="tams-numeral">Graded</th>
-                <th className="tams-numeral">Weight Obtained</th>
-                <th className="tams-numeral">Total Weight</th>
-                <th className="tams-numeral">Percentage</th>
-              </tr>
-            </thead>
-            <tbody>
-              {performance.map(p => (
-                <tr key={p.roll_number} className="transition-colors">
-                  <td>{p.roll_number}</td>
-                  <td>{p.full_name}</td>
-                  <td className="tams-numeral">
-                    {p.graded === 0 ? "—" : p.graded}
-                  </td>
-                  <td className="tams-numeral">
-                    {p.graded === 0 ? "—" : p.obtained}
-                  </td>
-                  <td className="tams-numeral">
-                    {p.graded === 0 ? "—" : p.total_weight}
-                  </td>
-                  <td className="tams-numeral">
-                    {p.percentage === null ? "—" : `${p.percentage}%`}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        </CardContent>
-      </Card>
+      <PerformanceTable students={performance} sortedAssessments={sortedAssessments} marks={marks || []} />
     </div>
   );
 }
