@@ -405,7 +405,14 @@ export async function POST(request: NextRequest) {
         }
 
         // Collect marks to upsert into Supabase after we read everything
-        const marksToUpsert: Database["public"]["Tables"]["marks"]["Insert"][] = [];
+        type MarkUpsert = {
+          enrollment_id: string;
+          assessment_id: string;
+          score: number | null;
+          sheet_synced_score: number | null;
+          updated_by: string;
+        };
+        const marksToUpsert: MarkUpsert[] = [];
 
         for (const [tabName, tabAssessments] of tabToAssessments.entries()) {
           const tabData = await sheets.spreadsheets.values.get({ spreadsheetId, range: tabName });
@@ -509,7 +516,6 @@ export async function POST(request: NextRequest) {
                      }
                      // Update memory
                      marksToUpsert.push({
-                        id: existingMark.id,
                         enrollment_id: enrollment.id,
                         assessment_id: assessment.id,
                         score: tamsScore,
@@ -530,7 +536,6 @@ export async function POST(request: NextRequest) {
                         }
                      } else {
                         marksToUpsert.push({
-                           id: existingMark.id,
                            enrollment_id: enrollment.id,
                            assessment_id: assessment.id,
                            score: sheetScore,
@@ -594,7 +599,7 @@ export async function POST(request: NextRequest) {
           if (upsertError) {
              console.error("Failed to sync grades to TAMS DB:", upsertError);
              return NextResponse.json(
-               { error: "Students were synced but grades could not be saved. Nothing was written to TAMS." },
+               { error: "Students were synced, but grade changes could not be saved to TAMS." },
                { status: 500 }
              );
           } else {
