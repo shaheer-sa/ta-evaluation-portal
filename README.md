@@ -135,3 +135,10 @@ supabase/schema.sql  tables, RLS policies, functions, triggers
 | `npm run build` | Production build |
 | `npm run start` | Serve the production build |
 | `npm run lint` | ESLint |
+
+## Recent Updates
+
+- **Google Sheets Sync**: Fixed a major bug where PostgREST bulk upsert crashed when pulling existing grades due to a Primary Key constraint violation on `id`. Sync is now completely stable.
+- **TA Analytics**: Added an expandable "Marks Detail" view inside the Student Performance Table, showing detailed per-assessment grades for every student.
+- **Notifications & Email**: Automated student query emails are now correctly addressed and dispatched to both TAs and students depending on the recipient role.
+- **Query Status**: Statuses are now correctly formatted (e.g. `In review` instead of `in_review`) in all notifications.
