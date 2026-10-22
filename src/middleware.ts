@@ -35,24 +35,44 @@ export async function middleware(request: NextRequest) {
   }
 
   // ── Logged in — resolve role ─────────────────────────────────
-  const { data: profile } = await supabase
+  const { data: profile, error: profileError } = await supabase
     .from("profiles")
     .select("role, must_change_password")
     .eq("id", user.id)
     .single();
 
+  // a temporary db/network problem shouldnt log anyone out
+  // (PGRST116 just means no row came back)
+  if (profileError && profileError.code !== "PGRST116") {
+    return new NextResponse(
+      "Something went wrong loading your account. Please refresh the page.",
+      { status: 503 }
+    );
+  }
+
   const role = profile?.role;
 
   if (!profile || (role !== "ta" && role !== "student")) {
     await supabase.auth.signOut();
-    const url = request.nextUrl.clone();
-    url.pathname = "/login";
-    url.search = "?error=no_access";
-    const redirectResponse = NextResponse.redirect(url);
-    supabaseResponse.cookies.getAll().forEach((cookie) => {
-      redirectResponse.cookies.set(cookie.name, cookie.value, cookie);
-    });
-    return redirectResponse;
+
+    // already on the login page: just show it, otherwise send them there
+    let response: NextResponse;
+    if (pathname === "/login") {
+      response = NextResponse.next();
+    } else {
+      const url = request.nextUrl.clone();
+      url.pathname = "/login";
+      url.search = "?error=no_access";
+      response = NextResponse.redirect(url);
+    }
+
+    // clear the auth cookies here, signOut() cant reach this response
+    request.cookies
+      .getAll()
+      .filter((c) => c.name.startsWith("sb-"))
+      .forEach((c) => response.cookies.delete(c.name));
+
+    return response;
   }
 
   const dashboardPath = role === "ta" ? "/ta" : "/student";
