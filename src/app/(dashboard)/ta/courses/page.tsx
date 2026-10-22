@@ -59,17 +59,21 @@ export default async function CoursesPage() {
                   <Label htmlFor="name">Term Name</Label>
                   <Input id="name" name="name" required placeholder="Spring 2025" />
                 </div>
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    id="isActive"
-                    name="isActive"
-                    defaultChecked
-                    className="h-4 w-4 rounded border-gray-300 bg-background text-primary"
-                  />
-                  <Label htmlFor="isActive" className="font-normal">
-                    Active Term
-                  </Label>
+                <div className="space-y-1">
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="isActive"
+                      name="isActive"
+                      className="h-4 w-4 rounded border-gray-300 bg-background text-primary"
+                    />
+                    <Label htmlFor="isActive" className="font-normal">
+                      Active Term
+                    </Label>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Activating switches students to this term. Only activate after its sections are synced.
+                  </p>
                 </div>
               </ClientForm>
             </CardContent>

@@ -24,12 +24,13 @@ type SectionRow = Pick<Database["public"]["Tables"]["sections"]["Row"], "id" | "
 export default async function SectionsPage() {
   const supabase = await createClient();
 
-  // Fetch active terms for dropdowns
-  const { data: terms } = await supabase
+  // Fetch terms for dropdowns
+  const { data: allTerms } = await supabase
     .from("terms")
     .select("*")
-    .eq("is_active", true)
     .order("created_at", { ascending: false });
+
+  const activeTerms = allTerms?.filter((t) => t.is_active);
 
   // Fetch all courses for dropdowns
   const { data: courses } = await supabase
@@ -101,7 +102,7 @@ export default async function SectionsPage() {
                     className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   >
                     <option value="">Select a term...</option>
-                    {terms?.map((t) => (
+                    {activeTerms?.map((t) => (
                       <option key={t.id} value={t.id}>
                         {t.name}
                       </option>
@@ -201,9 +202,9 @@ export default async function SectionsPage() {
                                   required
                                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                                 >
-                                  {terms?.map((t) => (
+                                  {allTerms?.map((t) => (
                                     <option key={t.id} value={t.id}>
-                                      {t.name}
+                                      {t.is_active ? t.name : `${t.name} (inactive)`}
                                     </option>
                                   ))}
                                 </select>
