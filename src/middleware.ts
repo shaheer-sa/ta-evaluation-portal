@@ -41,12 +41,22 @@ export async function middleware(request: NextRequest) {
     .eq("id", user.id)
     .single();
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const role = (profile as any)?.role;
-  const dashboardPath = role === "ta" ? "/ta" : "/student";
+  const role = profile?.role;
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const mustChange = (profile as any)?.must_change_password === true;
+  if (!profile || (role !== "ta" && role !== "student")) {
+    await supabase.auth.signOut();
+    const url = request.nextUrl.clone();
+    url.pathname = "/login";
+    url.search = "?error=no_access";
+    const redirectResponse = NextResponse.redirect(url);
+    supabaseResponse.cookies.getAll().forEach((cookie) => {
+      redirectResponse.cookies.set(cookie.name, cookie.value, cookie);
+    });
+    return redirectResponse;
+  }
+
+  const dashboardPath = role === "ta" ? "/ta" : "/student";
+  const mustChange = profile.must_change_password === true;
 
   if (mustChange && pathname !== "/first-login") {
     const url = request.nextUrl.clone();

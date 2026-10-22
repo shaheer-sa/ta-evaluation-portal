@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, useRef, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -45,12 +45,21 @@ const inputStyle: React.CSSProperties = {
 };
 
 // ── Component ───────────────────────────────────────────────────
-export default function LoginPage() {
+function LoginFormContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const hasShownError = useRef(false);
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const gridRef = useRef<HTMLDivElement>(null);
   const [canHover, setCanHover] = useState(false);
+
+  useEffect(() => {
+    if (searchParams.get("error") === "no_access" && !hasShownError.current) {
+      hasShownError.current = true;
+      toast.error("Your account isn't active in the current term. Please contact your TA.");
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     setCanHover(
@@ -309,5 +318,13 @@ export default function LoginPage() {
       </p>
       </ParticleCard>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginFormContent />
+    </Suspense>
   );
 }
