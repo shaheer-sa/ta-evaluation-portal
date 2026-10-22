@@ -9,8 +9,23 @@ const PUBLIC_ROUTES = ["/login", "/forgot-password"];
 const RESET_ROUTE = "/reset-password";
 
 export async function middleware(request: NextRequest) {
-  const { supabase, user, supabaseResponse } = await updateSession(request);
   const { pathname } = request.nextUrl;
+
+  if (pathname.startsWith("/api/") && !["GET", "HEAD", "OPTIONS"].includes(request.method)) {
+    const origin = request.headers.get("origin");
+    if (!origin) {
+      return NextResponse.json({ error: "Request blocked." }, { status: 403 });
+    }
+    try {
+      if (new URL(origin).host !== request.nextUrl.host) {
+        return NextResponse.json({ error: "Request blocked." }, { status: 403 });
+      }
+    } catch {
+      return NextResponse.json({ error: "Request blocked." }, { status: 403 });
+    }
+  }
+
+  const { supabase, user, supabaseResponse } = await updateSession(request);
 
   // ── Pass-through routes ──────────────────────────────────────
   // API routes and the auth callback handle their own authentication.
