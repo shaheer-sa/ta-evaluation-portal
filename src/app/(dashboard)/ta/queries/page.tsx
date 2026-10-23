@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { toast } from "sonner";
 import { Loader2, MessageSquare } from "lucide-react";
 import { fetchJson } from "@/lib/fetch-json";
@@ -47,15 +47,18 @@ type QueryItem = Pick<Database["public"]["Tables"]["queries"]["Row"], "id" | "ti
 };
 
 function TAQueriesContent() {
+  const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const openId = searchParams.get("open");
-  const scrolledRef = useRef<string | null>(null);
+  const handledOpenRef = useRef<string | null>(null);
 
   const [queries, setQueries] = useState<QueryItem[]>([]);
   const [statusFilter, setStatusFilter] = useState("all");
   const [isLoading, setIsLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [highlightId, setHighlightId] = useState<string | null>(null);
 
   const fetchQueries = useCallback(async () => {
     setIsLoading(true);
@@ -74,20 +77,40 @@ function TAQueriesContent() {
 
   useEffect(() => {
     if (!openId || isLoading) return;
-    if (scrolledRef.current === openId) return;
+    if (handledOpenRef.current === openId) return;
 
     const found = queries.some((q) => q.id === openId);
     if (found) {
+      handledOpenRef.current = openId;
       setExpandedId(openId);
-      scrolledRef.current = openId;
-      setTimeout(() => {
-        const el = document.getElementById(`query-${openId}`);
-        el?.scrollIntoView({ behavior: "smooth", block: "center" });
-      }, 100);
+      setHighlightId(openId);
+      router.replace(pathname, { scroll: false });
     } else if (statusFilter !== "all") {
       setStatusFilter("all");
+    } else {
+      handledOpenRef.current = openId;
+      toast.info("That query isn't in the current list. It may belong to an old term or was deleted.");
+      router.replace(pathname, { scroll: false });
     }
-  }, [openId, queries, isLoading, statusFilter]);
+  }, [openId, queries, isLoading, statusFilter, router, pathname]);
+
+  useEffect(() => {
+    if (!highlightId) return;
+
+    const scrollTimer = setTimeout(() => {
+      const el = document.getElementById(`query-${highlightId}`);
+      el?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 200);
+
+    const clearTimer = setTimeout(() => {
+      setHighlightId(null);
+    }, 3000);
+
+    return () => {
+      clearTimeout(scrollTimer);
+      clearTimeout(clearTimer);
+    };
+  }, [highlightId]);
 
   async function updateStatus(queryId: string, newStatus: string) {
     setUpdatingId(queryId);
@@ -151,7 +174,14 @@ function TAQueriesContent() {
       ) : (
         <div className="space-y-4">
           {queries.map((q) => (
-            <Card data-edge key={q.id} id={`query-${q.id}`}>
+            <Card
+              data-edge
+              key={q.id}
+              id={`query-${q.id}`}
+              className={cn(
+                highlightId === q.id && "ring-2 ring-primary ring-offset-2 motion-safe:animate-pulse"
+              )}
+            >
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between gap-4">
                   <div>

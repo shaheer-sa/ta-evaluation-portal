@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition, useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { fetchJson } from "@/lib/fetch-json";
 import { Loader2, Plus, MessageSquare } from "lucide-react";
@@ -55,30 +55,51 @@ export default function StudentQueriesClient({
   openQueryId,
 }: ClientProps) {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const openId = searchParams.get("open") || openQueryId;
+  const handledOpenRef = useRef<string | null>(null);
   const [isPending, startTransition] = useTransition();
-  const scrolledRef = useRef<string | null>(null);
-  
-  // Note: Since `initialQueries` updates via `router.refresh()`, we can just
-  // map over it directly instead of maintaining a local `queries` state.
   
   const [showForm, setShowForm] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [highlightId, setHighlightId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!openQueryId) return;
-    if (scrolledRef.current === openQueryId) return;
+    if (!openId) return;
+    if (handledOpenRef.current === openId) return;
 
-    const found = initialQueries.some((q) => q.id === openQueryId);
+    const found = initialQueries.some((q) => q.id === openId);
     if (found) {
-      setExpandedId(openQueryId);
-      scrolledRef.current = openQueryId;
-      setTimeout(() => {
-        const el = document.getElementById(`query-${openQueryId}`);
-        el?.scrollIntoView({ behavior: "smooth", block: "center" });
-      }, 100);
+      handledOpenRef.current = openId;
+      setExpandedId(openId);
+      setHighlightId(openId);
+      router.replace(pathname, { scroll: false });
+    } else {
+      handledOpenRef.current = openId;
+      toast.info("That query isn't in the current list. It may belong to an old term or was deleted.");
+      router.replace(pathname, { scroll: false });
     }
-  }, [openQueryId, initialQueries]);
+  }, [openId, initialQueries, router, pathname]);
+
+  useEffect(() => {
+    if (!highlightId) return;
+
+    const scrollTimer = setTimeout(() => {
+      const el = document.getElementById(`query-${highlightId}`);
+      el?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 200);
+
+    const clearTimer = setTimeout(() => {
+      setHighlightId(null);
+    }, 3000);
+
+    return () => {
+      clearTimeout(scrollTimer);
+      clearTimeout(clearTimer);
+    };
+  }, [highlightId]);
 
   const [formTitle, setFormTitle] = useState("");
   const [formDescription, setFormDescription] = useState("");
@@ -265,7 +286,14 @@ export default function StudentQueriesClient({
       ) : (
         <div className="space-y-4">
           {initialQueries.map((q) => (
-            <Card data-edge key={q.id} id={`query-${q.id}`}>
+            <Card
+              data-edge
+              key={q.id}
+              id={`query-${q.id}`}
+              className={cn(
+                highlightId === q.id && "ring-2 ring-primary ring-offset-2 motion-safe:animate-pulse"
+              )}
+            >
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between gap-4">
                   <div>
