@@ -23,6 +23,14 @@ const transport = nodemailer.createTransport({
   },
 });
 
+// name shown in the inbox instead of the raw gmail address
+function sender() {
+  return {
+    name: process.env.GMAIL_FROM_NAME || "TAMS",
+    address: process.env.GMAIL_USER || "",
+  };
+}
+
 async function sendMail({
   to,
   subject,
@@ -42,7 +50,7 @@ async function sendMail({
   const safeSubject = `[TAMS] ${cleanSubject}`;
 
   const info = await transport.sendMail({
-    from: process.env.GMAIL_USER,
+    from: sender(),
     to,
     replyTo: process.env.GMAIL_USER,
     subject: safeSubject,
@@ -59,7 +67,7 @@ export async function sendTestEmail(to: string): Promise<{ ok: true; response: s
   try {
     await transport.verify();
     const info = await transport.sendMail({
-      from: process.env.GMAIL_USER,
+      from: sender(),
       to,
       subject: "[TAMS] Test email",
       html: "<p>If you can read this, TAMS can send emails.</p>",
