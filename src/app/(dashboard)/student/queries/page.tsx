@@ -3,7 +3,7 @@ import StudentQueriesClient from "./client-page";
 import type { EnrollmentRow, AssessmentRow } from "./client-page";
 
 interface PageProps {
-  searchParams: Promise<{ enrollment?: string }>;
+  searchParams: Promise<{ enrollment?: string; open?: string }>;
 }
 
 export default async function StudentQueriesPage({ searchParams }: PageProps) {
@@ -14,6 +14,7 @@ export default async function StudentQueriesPage({ searchParams }: PageProps) {
 
   const params = await searchParams;
   const selectedEnrollment = params.enrollment || "";
+  const openQueryId = params.open;
 
   const { data: rawQueries } = await supabase
     .from("queries")
@@ -24,7 +25,8 @@ export default async function StudentQueriesPage({ searchParams }: PageProps) {
       priority,
       status,
       created_at,
-      assessments:assessment_id ( title )
+      assessments:assessment_id ( title ),
+      enrollments ( sections ( name ) )
     `)
     .eq("student_id", user.id)
     .order("created_at", { ascending: false });
@@ -72,6 +74,7 @@ export default async function StudentQueriesPage({ searchParams }: PageProps) {
       enrollments={enrollments}
       assessments={assessments}
       selectedEnrollment={selectedEnrollment}
+      openQueryId={openQueryId}
     />
   );
 }

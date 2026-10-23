@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { fetchJson } from "@/lib/fetch-json";
@@ -43,6 +43,7 @@ interface ClientProps {
   enrollments: EnrollmentRow[];
   assessments: AssessmentRow[];
   selectedEnrollment: string;
+  openQueryId?: string;
 }
 
 export default function StudentQueriesClient({
@@ -50,9 +51,11 @@ export default function StudentQueriesClient({
   enrollments,
   assessments,
   selectedEnrollment,
+  openQueryId,
 }: ClientProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const scrolledRef = useRef<string | null>(null);
   
   // Note: Since `initialQueries` updates via `router.refresh()`, we can just
   // map over it directly instead of maintaining a local `queries` state.
@@ -60,6 +63,21 @@ export default function StudentQueriesClient({
   const [showForm, setShowForm] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!openQueryId) return;
+    if (scrolledRef.current === openQueryId) return;
+
+    const found = initialQueries.some((q) => q.id === openQueryId);
+    if (found) {
+      setExpandedId(openQueryId);
+      scrolledRef.current = openQueryId;
+      setTimeout(() => {
+        const el = document.getElementById(`query-${openQueryId}`);
+        el?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 100);
+    }
+  }, [openQueryId, initialQueries]);
 
   const [formTitle, setFormTitle] = useState("");
   const [formDescription, setFormDescription] = useState("");
@@ -246,7 +264,7 @@ export default function StudentQueriesClient({
       ) : (
         <div className="space-y-4">
           {initialQueries.map((q) => (
-            <Card data-edge key={q.id}>
+            <Card data-edge key={q.id} id={`query-${q.id}`}>
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between gap-4">
                   <div>

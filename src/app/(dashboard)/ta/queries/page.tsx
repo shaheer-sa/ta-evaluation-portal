@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { Loader2, MessageSquare } from "lucide-react";
 import { fetchJson } from "@/lib/fetch-json";
@@ -44,7 +45,11 @@ type QueryItem = Pick<Database["public"]["Tables"]["queries"]["Row"], "id" | "ti
   enrollments?: { sections: { name: string } | null } | null;
 };
 
-export default function TAQueriesPage() {
+function TAQueriesContent() {
+  const searchParams = useSearchParams();
+  const openId = searchParams.get("open");
+  const scrolledRef = useRef<string | null>(null);
+
   const [queries, setQueries] = useState<QueryItem[]>([]);
   const [statusFilter, setStatusFilter] = useState("all");
   const [isLoading, setIsLoading] = useState(true);
@@ -65,6 +70,23 @@ export default function TAQueriesPage() {
   useEffect(() => {
     fetchQueries();
   }, [fetchQueries]);
+
+  useEffect(() => {
+    if (!openId || isLoading) return;
+    if (scrolledRef.current === openId) return;
+
+    const found = queries.some((q) => q.id === openId);
+    if (found) {
+      setExpandedId(openId);
+      scrolledRef.current = openId;
+      setTimeout(() => {
+        const el = document.getElementById(`query-${openId}`);
+        el?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 100);
+    } else if (statusFilter !== "all") {
+      setStatusFilter("all");
+    }
+  }, [openId, queries, isLoading, statusFilter]);
 
   async function updateStatus(queryId: string, newStatus: string) {
     setUpdatingId(queryId);
@@ -128,7 +150,7 @@ export default function TAQueriesPage() {
       ) : (
         <div className="space-y-4">
           {queries.map((q) => (
-            <Card data-edge key={q.id}>
+            <Card data-edge key={q.id} id={`query-${q.id}`}>
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between gap-4">
                   <div>
@@ -219,5 +241,19 @@ export default function TAQueriesPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function TAQueriesPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex justify-center py-12">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </div>
+      }
+    >
+      <TAQueriesContent />
+    </Suspense>
   );
 }
