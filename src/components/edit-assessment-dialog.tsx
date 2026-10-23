@@ -79,6 +79,9 @@ export function EditAssessmentDialog({
                 defaultValue={assessment.title}
                 required
               />
+              <p className="text-xs text-muted-foreground">
+                Renaming won&apos;t rename the column in Google Sheets. Rename it there too, or sync will add a new column.
+              </p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="type">Type</Label>
