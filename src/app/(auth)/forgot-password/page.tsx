@@ -82,11 +82,10 @@ export default function ForgotPasswordPage() {
             </div>
           </div>
           <h1>
-            Check your email
+            Request sent
           </h1>
           <p>
-            If an account matches what you entered, you&apos;ll receive a
-            password reset email shortly.
+            Your TA has been notified. Check your university email for your temporary password once they&apos;ve reset it.
           </p>
           <div>
             <Link
@@ -131,7 +130,7 @@ export default function ForgotPasswordPage() {
               Reset your password
             </h1>
             <p style={{ marginTop: "0.4rem", fontSize: "0.88rem", color: "var(--ink-muted)" }}>
-              Enter your email or roll number and we&apos;ll send you a reset link.
+              Enter your roll number or university email. Your TA will be asked to reset your password, and you&apos;ll get an email with a temporary password once it&apos;s done.
             </p>
           </div>
 
