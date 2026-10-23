@@ -55,6 +55,7 @@ const MarkRow = memo(function MarkRow({
   isInvalid,
   hasSavedMark,
   pendingClear,
+  isDisabled,
   onChange,
   onToggleClear,
 }: {
@@ -66,6 +67,7 @@ const MarkRow = memo(function MarkRow({
   isInvalid: boolean;
   hasSavedMark: boolean;
   pendingClear: boolean;
+  isDisabled: boolean;
   onChange: (id: string, val: string) => void;
   onToggleClear: (id: string) => void;
 }) {
@@ -86,7 +88,7 @@ const MarkRow = memo(function MarkRow({
             max={maxMarks}
             value={score}
             onChange={(e) => onChange(enrollmentId, e.target.value)}
-            disabled={pendingClear}
+            disabled={isDisabled}
             aria-label={`Score for ${fullName}`}
             aria-invalid={isInvalid}
             placeholder="—"
@@ -165,23 +167,26 @@ export default function GradingClient({
 
   const handleToggleClear = useCallback((enrollmentId: string) => {
     setIsDirty(true);
+    const orig = initialByEnrollment.get(enrollmentId);
     setPendingClears((prev) => {
       const next = new Set(prev);
       if (next.has(enrollmentId)) {
         next.delete(enrollmentId);
-        // Restore original score by finding it in initialStudentMarks
-        const orig = initialByEnrollment.get(enrollmentId);
         if (orig) {
           setStudentMarks((marks) => marks.map((s) => (s.enrollmentId === enrollmentId ? { ...s, score: orig.score } : s)));
         }
       } else {
-        next.add(enrollmentId);
-        // Empty the input when pending clear
-        setStudentMarks((marks) => marks.map((s) => (s.enrollmentId === enrollmentId ? { ...s, score: "" } : s)));
+        const current = studentMarks.find((s) => s.enrollmentId === enrollmentId);
+        if (orig && orig.score !== "" && current?.score === "") {
+          setStudentMarks((marks) => marks.map((s) => (s.enrollmentId === enrollmentId ? { ...s, score: orig.score } : s)));
+        } else {
+          next.add(enrollmentId);
+          setStudentMarks((marks) => marks.map((s) => (s.enrollmentId === enrollmentId ? { ...s, score: "" } : s)));
+        }
       }
       return next;
     });
-  }, [initialByEnrollment]);
+  }, [initialByEnrollment, studentMarks]);
 
   const filteredMarks = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -213,8 +218,16 @@ export default function GradingClient({
       return;
     }
 
-    const clearsArr = Array.from(pendingClears);
-    if (pendingClears.size > 0) {
+    const allClears = new Set(pendingClears);
+    for (const s of studentMarks) {
+      const orig = initialByEnrollment.get(s.enrollmentId);
+      if (orig && orig.score !== "" && s.score === "") {
+        allClears.add(s.enrollmentId);
+      }
+    }
+
+    const clearsArr = Array.from(allClears);
+    if (clearsArr.length > 0) {
       if (!window.confirm(`Remove ${clearsArr.length} saved mark(s)? The next sync will also clear them from the Google Sheet.`)) {
         return;
       }
@@ -227,9 +240,9 @@ export default function GradingClient({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           assessmentId: selectedAssessment,
-          clearEnrollmentIds: Array.from(pendingClears),
+          clearEnrollmentIds: clearsArr,
           marks: studentMarks
-            .filter((s) => !pendingClears.has(s.enrollmentId))
+            .filter((s) => !allClears.has(s.enrollmentId))
             .map((s) => ({
               enrollmentId: s.enrollmentId,
               score: s.score,
@@ -426,7 +439,8 @@ export default function GradingClient({
                         (Number.isNaN(n) || n < 0 || (maxMarks > 0 && n > maxMarks));
                       const orig = initialByEnrollment.get(s.enrollmentId);
                       const hasSavedMark = orig ? orig.score !== "" : false;
-                      const pendingClear = pendingClears.has(s.enrollmentId);
+                      const isExplicitClear = pendingClears.has(s.enrollmentId);
+                      const pendingClear = isExplicitClear || (hasSavedMark && s.score === "");
                       return (
                         <MarkRow
                           key={s.enrollmentId}
@@ -438,6 +452,7 @@ export default function GradingClient({
                           isInvalid={isInvalid}
                           hasSavedMark={hasSavedMark}
                           pendingClear={pendingClear}
+                          isDisabled={isExplicitClear}
                           onChange={handleScoreChange}
                           onToggleClear={handleToggleClear}
                         />
