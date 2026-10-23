@@ -204,16 +204,18 @@ export async function POST(request: Request) {
         // Send email via Gmail SMTP without blocking
         const studentEmail = queryData.profiles?.email;
         if (studentEmail) {
-          after(() => {
-            sendQueryEmail({
-              to: studentEmail,
-              studentName: queryData.profiles?.full_name || "Student",
-              queryTitle: queryData.title,
-              kind: "status_change",
-              message: `Status changed to ${formatStatus(newStatus)}`,
-              queryId,
-              recipientRole: "student",
-            }).catch((err) => console.error("SMTP error (status change):", err));
+          after(async () => {
+            await Promise.allSettled([
+              sendQueryEmail({
+                to: studentEmail,
+                studentName: queryData.profiles?.full_name || "Student",
+                queryTitle: queryData.title,
+                kind: "status_change",
+                message: `Status changed to ${formatStatus(newStatus)}`,
+                queryId,
+                recipientRole: "student",
+              }).catch((err) => console.error("SMTP error (status change):", err)),
+            ]);
           });
         }
       }
@@ -287,13 +289,17 @@ export async function POST(request: Request) {
           type: "new_query",
           title: `New query: "${title}"`,
           body: `A student raised a ${priority || "medium"} priority query.`,
+          related_id: data.id,
         }));
         await supabase.from("notifications").insert(notifications);
 
         // Send emails
-        after(() => {
-          for (const ta of tas) {
-            if (ta.email) {
+        after(async () => {
+          const emailPromises = tas
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            .filter((ta: any) => ta.email)
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            .map((ta: any) =>
               sendQueryEmail({
                 to: ta.email,
                 studentName: "TA",
@@ -304,9 +310,9 @@ export async function POST(request: Request) {
                 recipientRole: "ta",
               }).catch((err) =>
                 console.error(`Failed to send new query email to ${ta.email}:`, err)
-              );
-            }
-          }
+              )
+            );
+          await Promise.allSettled(emailPromises);
         });
       } else {
         console.warn("No TAs found to notify for new query");

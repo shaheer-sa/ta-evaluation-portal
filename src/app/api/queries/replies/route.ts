@@ -210,16 +210,18 @@ export async function POST(request: Request) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const studentProfile = queryData.profiles as any;
         if (studentProfile?.email) {
-          after(() => {
-            sendQueryEmail({
-              to: studentProfile.email,
-              studentName: studentProfile.full_name || "Student",
-              queryTitle: queryData.title,
-              kind: "reply",
-              message: message,
-              queryId,
-              recipientRole: "student",
-            }).catch((err) => console.error("SMTP error (reply):", err));
+          after(async () => {
+            await Promise.allSettled([
+              sendQueryEmail({
+                to: studentProfile.email,
+                studentName: studentProfile.full_name || "Student",
+                queryTitle: queryData.title,
+                kind: "reply",
+                message: message,
+                queryId,
+                recipientRole: "student",
+              }).catch((err) => console.error("SMTP error (reply):", err)),
+            ]);
           });
         }
       } else {
@@ -245,20 +247,24 @@ export async function POST(request: Request) {
           const { data: taProfiles } = await (supabase as any).rpc("get_ta_contacts");
 
           if (taProfiles && taProfiles.length > 0) {
-            after(() => {
-              for (const taProfile of taProfiles) {
-                if (!taProfile.email) continue;
-                sendQueryEmail({
-                  to: taProfile.email,
-                  studentName: taProfile.full_name || "TA",
-                  queryTitle: queryData.title,
-                  kind: "student_reply",
-                  message: message,
-                  queryId,
-                  recipientRole: "ta",
-                  senderName: profile?.full_name || "A student",
-                }).catch((err) => console.error("SMTP error (student reply):", err));
-              }
+            after(async () => {
+              const emailPromises = taProfiles
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                .filter((taProfile: any) => taProfile.email)
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                .map((taProfile: any) =>
+                  sendQueryEmail({
+                    to: taProfile.email,
+                    studentName: taProfile.full_name || "TA",
+                    queryTitle: queryData.title,
+                    kind: "student_reply",
+                    message: message,
+                    queryId,
+                    recipientRole: "ta",
+                    senderName: profile?.full_name || "A student",
+                  }).catch((err) => console.error("SMTP error (student reply):", err))
+                );
+              await Promise.allSettled(emailPromises);
             });
           } else {
             console.warn("No TAs found to notify for student reply");
