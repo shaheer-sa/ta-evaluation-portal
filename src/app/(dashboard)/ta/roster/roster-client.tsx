@@ -42,6 +42,7 @@ interface SyncResult {
   gradesWritten: boolean;
   totalProcessed: number;
   missingFromSheet?: { enrollmentId: string; rollNumber: string; fullName: string }[];
+  withdrawnInSheet?: { enrollmentId: string; rollNumber: string; fullName: string }[];
   rejectedScores?: { rollNo: string; assessment: string; value: string; reason: string }[];
   skippedAssessments?: string[];
 }
@@ -342,6 +343,16 @@ export default function RosterClient({ sections, selectedSectionCourseId, roster
                 }} 
               />
             )}
+
+            {syncResult.withdrawnInSheet && syncResult.withdrawnInSheet.length > 0 && (
+              <WithdrawnInSheetPanel
+                withdrawnStudents={syncResult.withdrawnInSheet}
+                onReactivateComplete={() => {
+                  setSyncResult(prev => prev ? { ...prev, withdrawnInSheet: [] } : null);
+                  router.refresh();
+                }}
+              />
+            )}
           </CardContent>
         </Card>
       )}
@@ -596,6 +607,99 @@ function MissingStudentsPanel({
           className="hover:bg-black/5"
         >
           Keep all
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function WithdrawnInSheetPanel({ 
+  withdrawnStudents, 
+  onReactivateComplete 
+}: { 
+  withdrawnStudents: { enrollmentId: string; rollNumber: string; fullName: string }[];
+  onReactivateComplete: () => void;
+}) {
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [isReactivating, setIsReactivating] = useState(false);
+
+  const allSelected = withdrawnStudents.length > 0 && selectedIds.size === withdrawnStudents.length;
+
+  const handleReactivate = async () => {
+    if (selectedIds.size === 0) return;
+    setIsReactivating(true);
+    try {
+      const res = await fetch("/api/admin/enrollments/withdraw", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          enrollmentIds: Array.from(selectedIds),
+          status: "active"
+        })
+      });
+      if (!res.ok) throw new Error("Failed to reactivate students");
+      toast.success("Students reactivated successfully.");
+      onReactivateComplete();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Error reactivating students");
+    } finally {
+      setIsReactivating(false);
+    }
+  };
+
+  return (
+    <div 
+      className="mt-6 rounded-md border p-4" 
+      style={{ backgroundColor: 'var(--info-soft, #eff6ff)', borderColor: 'var(--info, #3b82f6)', color: 'var(--info, #1d4ed8)' }}
+    >
+      <div className="flex items-center justify-between mb-3">
+        <h4 className="font-semibold flex items-center gap-2">
+          <AlertCircle className="h-5 w-5" />
+          These withdrawn students are in the sheet again.
+        </h4>
+        <button
+          type="button"
+          onClick={() => {
+            if (allSelected) {
+              setSelectedIds(new Set());
+            } else {
+              setSelectedIds(new Set(withdrawnStudents.map((s) => s.enrollmentId)));
+            }
+          }}
+          className="text-xs font-medium underline underline-offset-2 hover:opacity-80"
+        >
+          {allSelected ? "Clear" : "Select all"}
+        </button>
+      </div>
+      
+      <div className="space-y-2 mb-4 max-h-[300px] overflow-y-auto bg-white/50 p-2 rounded border border-white/20">
+        {withdrawnStudents.map(s => (
+          <div key={s.enrollmentId} className="flex items-center gap-2 text-sm text-black">
+            <input 
+              type="checkbox" 
+              className="rounded"
+              checked={selectedIds.has(s.enrollmentId)}
+              onChange={(e) => {
+                const next = new Set(selectedIds);
+                if (e.target.checked) next.add(s.enrollmentId);
+                else next.delete(s.enrollmentId);
+                setSelectedIds(next);
+              }}
+            />
+            <span className="font-mono text-muted-foreground">{s.rollNumber}</span>
+            <span className="font-medium">{s.fullName}</span>
+          </div>
+        ))}
+      </div>
+      
+      <div className="flex gap-3">
+        <Button 
+          variant="outline" 
+          onClick={handleReactivate} 
+          disabled={isReactivating || selectedIds.size === 0}
+          className="bg-white hover:bg-blue-50 text-blue-600 hover:text-blue-700 border-blue-200"
+        >
+          {isReactivating ? "Processing..." : `Reactivate selected (${selectedIds.size})`}
         </Button>
       </div>
     </div>

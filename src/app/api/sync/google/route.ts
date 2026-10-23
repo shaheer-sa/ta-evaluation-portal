@@ -41,6 +41,7 @@ export interface SyncResponse {
   gradesWritten: boolean;
   totalProcessed: number;
   missingFromSheet?: { enrollmentId: string; rollNumber: string; fullName: string }[];
+  withdrawnInSheet?: { enrollmentId: string; rollNumber: string; fullName: string }[];
 }
 
 // ── Utility: Generate Email from Roll Number ────────────────────────
@@ -297,6 +298,7 @@ export async function POST(request: NextRequest) {
     let partial = false;
     let remaining = 0;
     const results: SyncStudentResult[] = [];
+    const withdrawnInSheet: { enrollmentId: string; rollNumber: string; fullName: string }[] = [];
 
     for (let i = 0; i < parsedStudents.length; i += BATCH_SIZE) {
       if (Date.now() - startedAt > 50_000) {
@@ -370,14 +372,34 @@ export async function POST(request: NextRequest) {
           course_id: mapped.course_id,
         });
 
-        if (enrollError && enrollError.code !== "23505") {
-          return {
-            email: student.email,
-            rollNumber: student.roll_number,
-            fullName: student.full_name,
-            outcome: "failed",
-            detail: `Enrolled in auth but enrollment insert failed: ${enrollError.message}`,
-          };
+        if (enrollError) {
+          if (enrollError.code === "23505") {
+            const { data: existingEnrollment } = await admin
+              .from("enrollments")
+              .select("id, status")
+              .eq("student_id", studentId)
+              .eq("section_id", mapped.section_id)
+              .eq("course_id", mapped.course_id)
+              .maybeSingle();
+
+            if (existingEnrollment?.status === "withdrawn") {
+              if (!withdrawnInSheet.some((w) => w.enrollmentId === existingEnrollment.id)) {
+                withdrawnInSheet.push({
+                  enrollmentId: existingEnrollment.id,
+                  rollNumber: student.roll_number,
+                  fullName: student.full_name,
+                });
+              }
+            }
+          } else {
+            return {
+              email: student.email,
+              rollNumber: student.roll_number,
+              fullName: student.full_name,
+              outcome: "failed",
+              detail: `Enrolled in auth but enrollment insert failed: ${enrollError.message}`,
+            };
+          }
         }
 
         if (authError) {
@@ -684,6 +706,7 @@ export async function POST(request: NextRequest) {
       gradesWritten,
       totalProcessed: results.length,
       missingFromSheet,
+      withdrawnInSheet,
     };
 
     if (partial) {
