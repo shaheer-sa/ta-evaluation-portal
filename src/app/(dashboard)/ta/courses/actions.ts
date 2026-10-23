@@ -126,7 +126,15 @@ export async function deleteCourse(formData: FormData): Promise<ActionResult> {
   const { supabase } = await requireTA();
   const id = formData.get("id") as string;
   const { error } = await supabase.from("courses").delete().eq("id", id);
-  if (error) return { ok: false, message: friendlyDbError(error, "course") };
+  if (error) {
+    if (error.code === "23503") {
+      return {
+        ok: false,
+        message: "This course is still linked to a section. Unlink it from all sections first, then delete it.",
+      };
+    }
+    return { ok: false, message: friendlyDbError(error, "course") };
+  }
   revalidatePath("/ta/courses");
   return { ok: true };
 }

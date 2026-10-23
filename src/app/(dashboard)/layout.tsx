@@ -93,8 +93,7 @@ export default function DashboardLayout({
                 defaultActive={activeIndex >= 0 ? activeIndex : null}
                 accentColor="var(--navy)"
                 textColor="var(--navy)"
-                onItemClick={(idx) => {
-                   router.push(navItems[idx].href);
+                onItemClick={() => {
                    setMobileMenuOpen(false);
                 }}
               />
