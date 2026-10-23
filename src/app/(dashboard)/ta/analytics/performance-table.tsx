@@ -29,7 +29,7 @@ export type AssessmentPerformance = {
 export type MarkEntry = {
   roll_number: string;
   assessment_id: string;
-  score: number;
+  score: number | null;
 };
 
 export function PerformanceTable({
@@ -122,7 +122,7 @@ export function PerformanceTable({
                                   let weightedStr = "—";
                                   let scoreStr = "—";
 
-                                  if (mark) {
+                                  if (mark && mark.score !== null && mark.score !== undefined) {
                                     const weighted =
                                       (mark.score / a.total_marks) * a.weight;
                                     totalCalculatedWeight += weighted;
