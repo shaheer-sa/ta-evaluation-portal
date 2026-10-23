@@ -83,11 +83,23 @@ const MarkRow = memo(function MarkRow({
           <Input
             type="number"
             inputMode="decimal"
-            step="0.5"
+            step="any"
             min={0}
             max={maxMarks}
             value={score}
+            data-score-input
             onChange={(e) => onChange(enrollmentId, e.target.value)}
+            onWheel={(e) => (e.target as HTMLInputElement).blur()}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                const inputs = Array.from(document.querySelectorAll<HTMLInputElement>("[data-score-input]"));
+                const currentIndex = inputs.indexOf(e.currentTarget);
+                if (currentIndex !== -1 && currentIndex + 1 < inputs.length) {
+                  inputs[currentIndex + 1].focus();
+                }
+              }
+            }}
             disabled={isDisabled}
             aria-label={`Score for ${fullName}`}
             aria-invalid={isInvalid}
@@ -441,47 +453,52 @@ export default function GradingClient({
                 No students match &ldquo;{searchQuery}&rdquo;.
               </p>
             ) : (
-              <div className="tams-table-wrap">
-                <table className="tams-table">
-                  <thead>
-                    <tr>
-                      <th>Roll number</th>
-                      <th>Name</th>
-                      <th className="tams-numeral">
-                        Score (of {maxMarks})
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredMarks.map((s) => {
-                      const n = s.score === "" ? null : Number(s.score);
-                      const isInvalid =
-                        n !== null &&
-                        (Number.isNaN(n) || n < 0 || (maxMarks > 0 && n > maxMarks));
-                      const orig = initialByEnrollment.get(s.enrollmentId);
-                      const hasSavedMark = orig ? orig.score !== "" : false;
-                      const isExplicitClear = pendingClears.has(s.enrollmentId);
-                      const pendingClear = isExplicitClear || (hasSavedMark && s.score === "");
-                      return (
-                        <MarkRow
-                          key={s.enrollmentId}
-                          enrollmentId={s.enrollmentId}
-                          rollNumber={s.rollNumber}
-                          fullName={s.fullName}
-                          score={s.score}
-                          maxMarks={maxMarks}
-                          isInvalid={isInvalid}
-                          hasSavedMark={hasSavedMark}
-                          pendingClear={pendingClear}
-                          isDisabled={isExplicitClear}
-                          onChange={handleScoreChange}
-                          onToggleClear={handleToggleClear}
-                        />
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+              <>
+                <div className="tams-table-wrap">
+                  <table className="tams-table">
+                    <thead>
+                      <tr>
+                        <th>Roll number</th>
+                        <th>Name</th>
+                        <th className="tams-numeral">
+                          Score (of {maxMarks})
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredMarks.map((s) => {
+                        const n = s.score === "" ? null : Number(s.score);
+                        const isInvalid =
+                          n !== null &&
+                          (Number.isNaN(n) || n < 0 || (maxMarks > 0 && n > maxMarks));
+                        const orig = initialByEnrollment.get(s.enrollmentId);
+                        const hasSavedMark = orig ? orig.score !== "" : false;
+                        const isExplicitClear = pendingClears.has(s.enrollmentId);
+                        const pendingClear = isExplicitClear || (hasSavedMark && s.score === "");
+                        return (
+                          <MarkRow
+                            key={s.enrollmentId}
+                            enrollmentId={s.enrollmentId}
+                            rollNumber={s.rollNumber}
+                            fullName={s.fullName}
+                            score={s.score}
+                            maxMarks={maxMarks}
+                            isInvalid={isInvalid}
+                            hasSavedMark={hasSavedMark}
+                            pendingClear={pendingClear}
+                            isDisabled={isExplicitClear}
+                            onChange={handleScoreChange}
+                            onToggleClear={handleToggleClear}
+                          />
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Tip: press Enter to jump to the next student.
+                </p>
+              </>
             )}
           </CardContent>
         </Card>
