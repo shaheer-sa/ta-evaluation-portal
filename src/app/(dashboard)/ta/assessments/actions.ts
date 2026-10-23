@@ -38,7 +38,7 @@ export async function createAssessment(formData: FormData): Promise<ActionResult
   });
 
   if (error) return { ok: false, message: friendlyDbError(error, "assessment") };
-  revalidatePath("/ta/assessments");
+  revalidatePaths();
   return { ok: true };
 }
 
@@ -52,7 +52,7 @@ export async function deleteAssessment(formData: FormData): Promise<ActionResult
     .eq("id", assessmentId);
 
   if (error) return { ok: false, message: friendlyDbError(error, "assessment") };
-  revalidatePath("/ta/assessments");
+  revalidatePaths();
   return { ok: true };
 }
 
@@ -100,49 +100,82 @@ export async function updateAssessment(formData: FormData): Promise<ActionResult
     .eq("id", assessmentId);
 
   if (error) return { ok: false, message: friendlyDbError(error, "assessment") };
-  revalidatePath("/ta/assessments");
+  revalidatePaths();
   return { ok: true };
 }
 
-export async function updateBestOf(formData: FormData): Promise<ActionResult> {
+export async function updateCategorySettings(formData: FormData): Promise<ActionResult> {
   const { supabase } = await requireTA();
 
   const sectionCourseId = formData.get("sectionCourseId") as string;
   if (!sectionCourseId) return { ok: false, message: "Class is required." };
 
-  const rawQuiz = formData.get("bestOfQuizzes");
-  const rawAssignment = formData.get("bestOfAssignments");
-
   const parseBestOf = (raw: FormDataEntryValue | null): { value: number | null; error?: string } => {
-    if (raw === null || raw === undefined) return { value: null };
-    const str = String(raw).trim();
+    const str = raw === null ? "" : String(raw).trim();
     if (str === "") return { value: null };
     const n = Number(str);
     if (!Number.isInteger(n) || n < 1) {
-      return { value: null, error: "Use a whole number of 1 or more, or leave it empty." };
+      return { value: null, error: "Best of must be a whole number of 1 or more, or empty." };
     }
     return { value: n };
   };
 
-  const quizResult = parseBestOf(rawQuiz);
-  if (quizResult.error) return { ok: false, message: quizResult.error };
+  const parseTotal = (raw: FormDataEntryValue | null): { value: number | null; error?: string } => {
+    const str = raw === null ? "" : String(raw).trim();
+    if (str === "") return { value: null };
+    const n = Number(str);
+    if (!Number.isFinite(n) || n <= 0 || n > 100) {
+      return { value: null, error: "Total weight must be more than 0 and at most 100, or empty." };
+    }
+    return { value: n };
+  };
 
-  const assignmentResult = parseBestOf(rawAssignment);
-  if (assignmentResult.error) return { ok: false, message: assignmentResult.error };
+  const update: {
+    best_of_quizzes?: number | null;
+    best_of_assignments?: number | null;
+    quiz_total_weight?: number | null;
+    assignment_total_weight?: number | null;
+  } = {};
 
+  // only touch the fields the form actually showed
+  if (formData.has("bestOfQuizzes")) {
+    const r = parseBestOf(formData.get("bestOfQuizzes"));
+    if (r.error) return { ok: false, message: r.error };
+    update.best_of_quizzes = r.value;
+  }
+  if (formData.has("bestOfAssignments")) {
+    const r = parseBestOf(formData.get("bestOfAssignments"));
+    if (r.error) return { ok: false, message: r.error };
+    update.best_of_assignments = r.value;
+  }
+  if (formData.has("quizTotalWeight")) {
+    const r = parseTotal(formData.get("quizTotalWeight"));
+    if (r.error) return { ok: false, message: r.error };
+    update.quiz_total_weight = r.value;
+  }
+  if (formData.has("assignmentTotalWeight")) {
+    const r = parseTotal(formData.get("assignmentTotalWeight"));
+    if (r.error) return { ok: false, message: r.error };
+    update.assignment_total_weight = r.value;
+  }
+
+  if (Object.keys(update).length === 0) return { ok: true };
+
+  // the database recalculates every weight in this class after this update
   const { error } = await supabase
     .from("section_courses")
-    .update({
-      best_of_quizzes: quizResult.value,
-      best_of_assignments: assignmentResult.value,
-    })
+    .update(update)
     .eq("id", sectionCourseId);
 
   if (error) return { ok: false, message: friendlyDbError(error, "section_course") };
 
-  revalidatePath("/ta/assessments");
-  revalidatePath("/ta/analytics");
-  revalidatePath("/student");
+  revalidatePaths();
   return { ok: true };
 }
 
+// weights can change for the whole class, so refresh everything that shows them
+function revalidatePaths() {
+  revalidatePath("/ta/assessments", "layout");
+  revalidatePath("/ta/analytics", "layout");
+  revalidatePath("/student", "layout");
+}

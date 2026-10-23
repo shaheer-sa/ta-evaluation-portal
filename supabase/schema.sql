@@ -72,6 +72,8 @@ create table public.section_courses (
   id uuid not null default gen_random_uuid(),
   best_of_assignments integer,
   best_of_quizzes integer,
+  quiz_total_weight numeric,
+  assignment_total_weight numeric,
   course_id uuid not null,
   section_id uuid not null,
   created_at timestamptz not null default now(),
@@ -79,6 +81,8 @@ create table public.section_courses (
   constraint section_courses_section_id_course_id_key UNIQUE (section_id, course_id),
   constraint section_courses_best_of_assignments_check CHECK ((best_of_assignments IS NULL) OR (best_of_assignments > 0)),
   constraint section_courses_best_of_quizzes_check CHECK ((best_of_quizzes IS NULL) OR (best_of_quizzes > 0)),
+  constraint section_courses_quiz_total_weight_check CHECK ((quiz_total_weight IS NULL) OR ((quiz_total_weight > 0) AND (quiz_total_weight <= 100))),
+  constraint section_courses_assignment_total_weight_check CHECK ((assignment_total_weight IS NULL) OR ((assignment_total_weight > 0) AND (assignment_total_weight <= 100))),
   constraint section_courses_course_id_fkey FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE RESTRICT,
   constraint section_courses_section_id_fkey FOREIGN KEY (section_id) REFERENCES sections(id) ON DELETE CASCADE
 );
@@ -708,6 +712,97 @@ begin
 end;
 $function$;
 
+-- category total weights (migration 07)
+
+create or replace function public.recalc_category_weights(p_sc_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $function$
+declare
+  v_sc section_courses%rowtype;
+  v_course courses%rowtype;
+  v_type text;
+  v_total numeric;
+  v_best int;
+  v_count int;
+  v_weight numeric;
+begin
+  if p_sc_id is null then
+    return;
+  end if;
+
+  select * into v_sc from section_courses where id = p_sc_id;
+  if not found then
+    return;
+  end if;
+
+  select * into v_course from courses where id = v_sc.course_id;
+
+  foreach v_type in array array['quiz', 'assignment'] loop
+    if v_type = 'quiz' then
+      v_total := v_sc.quiz_total_weight;
+      v_best := v_sc.best_of_quizzes;
+    else
+      v_total := v_sc.assignment_total_weight;
+      v_best := v_sc.best_of_assignments;
+    end if;
+
+    continue when v_total is null;
+    -- type turned off for this course: leave those rows alone
+    continue when v_type = 'quiz' and not coalesce(v_course.enable_quizzes, true);
+    continue when v_type = 'assignment' and not coalesce(v_course.enable_assignments, true);
+
+    select count(*) into v_count
+    from assessments
+    where section_course_id = p_sc_id and type = v_type;
+
+    continue when v_count = 0;
+
+    v_weight := round(v_total / (case when v_best is not null and v_best < v_count
+                                      then v_best else v_count end), 4);
+
+    update assessments
+    set weight = v_weight
+    where section_course_id = p_sc_id
+      and type = v_type
+      and weight is distinct from v_weight;
+  end loop;
+end;
+$function$;
+
+create or replace function public.assessments_recalc_weights()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $function$
+begin
+  if tg_op in ('INSERT', 'UPDATE') then
+    perform recalc_category_weights(new.section_course_id);
+  end if;
+  if tg_op in ('DELETE', 'UPDATE') then
+    if tg_op = 'DELETE' or old.section_course_id is distinct from new.section_course_id then
+      perform recalc_category_weights(old.section_course_id);
+    end if;
+  end if;
+  return null;
+end;
+$function$;
+
+create or replace function public.section_courses_recalc_weights()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $function$
+begin
+  perform recalc_category_weights(new.id);
+  return null;
+end;
+$function$;
+
 -- ── Function access: only logged in users (migration 03) ────────────────────
 
 revoke execute on all functions in schema public from public, anon;
@@ -728,6 +823,11 @@ to authenticated, service_role;
 
 alter default privileges in schema public revoke execute on functions from public, anon;
 
+-- trigger-only helpers, nobody calls these directly
+revoke all on function public.recalc_category_weights(uuid) from public, anon, authenticated;
+revoke all on function public.assessments_recalc_weights() from public, anon, authenticated;
+revoke all on function public.section_courses_recalc_weights() from public, anon, authenticated;
+
 -- ── Triggers ────────────────────────────────────────────────────────────────
 -- (marks has two max-score checks: marks_max_check and trg_marks_validity. Both exist in production.)
 
@@ -742,6 +842,13 @@ CREATE TRIGGER trg_marks_validity BEFORE INSERT OR UPDATE ON public.marks FOR EA
 CREATE TRIGGER trg_profiles_updated_at BEFORE UPDATE ON public.profiles FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 CREATE TRIGGER trg_queries_updated_at BEFORE UPDATE ON public.queries FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 CREATE TRIGGER trg_sections_updated_at BEFORE UPDATE ON public.sections FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+CREATE TRIGGER trg_assessments_recalc_weights
+  after insert or delete or update of type, section_course_id, weight on public.assessments
+  for each row execute function public.assessments_recalc_weights();
+CREATE TRIGGER trg_section_courses_recalc_weights
+  after update of quiz_total_weight, assignment_total_weight, best_of_quizzes, best_of_assignments
+  on public.section_courses
+  for each row execute function public.section_courses_recalc_weights();
 CREATE TRIGGER trg_terms_updated_at BEFORE UPDATE ON public.terms FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 CREATE TRIGGER trg_handle_new_user AFTER INSERT ON auth.users FOR EACH ROW EXECUTE FUNCTION handle_new_user();
 

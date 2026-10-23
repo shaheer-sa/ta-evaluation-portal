@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { Edit2, Loader2 } from "lucide-react";
 import { updateAssessment } from "@/app/(dashboard)/ta/assessments/actions";
+import { formatWeight } from "@/lib/format";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,11 +30,18 @@ const ALL_ASSESSMENT_TYPES = [
 export function EditAssessmentDialog({
   assessment,
   courseFlags,
+  autoTotals,
 }: {
   assessment: Pick<Database["public"]["Tables"]["assessments"]["Row"], "id" | "title" | "type" | "max_marks" | "weight">;
   courseFlags?: { enable_cp?: boolean; enable_assignments?: boolean; enable_quizzes?: boolean };
+  // class total weights, when set the weight is worked out automatically
+  autoTotals?: { quiz?: number | null; assignment?: number | null };
 }) {
   const [open, setOpen] = useState(false);
+  const [type, setType] = useState<string>(assessment.type);
+  const autoTotal =
+    type === "quiz" ? autoTotals?.quiz ?? null : type === "assignment" ? autoTotals?.assignment ?? null : null;
+  const typeLabel = type === "quiz" ? "quizzes" : "assignments";
   const [isPending, startTransition] = useTransition();
 
   function onSubmit(formData: FormData) {
@@ -54,7 +62,13 @@ export function EditAssessmentDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog
+      open={open}
+      onOpenChange={(o) => {
+        setOpen(o);
+        if (o) setType(assessment.type);
+      }}
+    >
       <DialogTrigger asChild>
         <Button variant="outline" size="sm" className="hover-float">
           <Edit2 className="mr-2 h-4 w-4" />
@@ -88,7 +102,8 @@ export function EditAssessmentDialog({
               <select
                 id="type"
                 name="type"
-                defaultValue={assessment.type}
+                value={type}
+                onChange={(e) => setType(e.target.value)}
                 required
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
@@ -117,16 +132,26 @@ export function EditAssessmentDialog({
             </div>
             <div className="space-y-2">
               <Label htmlFor="weight">Weight</Label>
-              <Input
-                id="weight"
-                name="weight"
-                type="number"
-                step="any"
-                min="0"
-                max="100"
-                defaultValue={assessment.weight}
-                required
-              />
+              {autoTotal !== null ? (
+                <>
+                  <input type="hidden" name="weight" value={assessment.weight} />
+                  <p className="rounded-md border border-dashed px-3 py-2 text-sm text-muted-foreground">
+                    Automatic: {typeLabel} share a total of {formatWeight(autoTotal)} for this class.
+                    Change it in the class settings on this page.
+                  </p>
+                </>
+              ) : (
+                <Input
+                  id="weight"
+                  name="weight"
+                  type="number"
+                  step="any"
+                  min="0"
+                  max="100"
+                  defaultValue={assessment.weight}
+                  required
+                />
+              )}
             </div>
           </div>
           </fieldset>

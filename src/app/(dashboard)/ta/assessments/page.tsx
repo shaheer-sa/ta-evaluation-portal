@@ -12,6 +12,12 @@ import { loadAssessmentsData } from "./load-assessments";
 export default async function AssessmentsPage() {
   const { sectionCourses, assessments } = await loadAssessmentsData();
 
+  const typeCounts: Record<string, number> = {};
+  for (const a of assessments) {
+    const key = `${a.section_course_id}:${a.type}`;
+    typeCounts[key] = (typeCounts[key] || 0) + 1;
+  }
+
   return (
     <div className="space-y-8">
       <div className="tams-pagehead">
@@ -26,11 +32,11 @@ export default async function AssessmentsPage() {
           <CardHeader>
             <CardTitle>Create Assessment</CardTitle>
             <CardDescription>
-              Add a new graded assessment (quiz, assignment, cp, etc.)
+              Add a new graded assessment (quiz, assignment, cp, etc.). Set total weights per class on the full list.
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <CreateAssessmentForm sectionCourses={sectionCourses} />
+            <CreateAssessmentForm sectionCourses={sectionCourses} typeCounts={typeCounts} />
           </CardContent>
         </Card>
 

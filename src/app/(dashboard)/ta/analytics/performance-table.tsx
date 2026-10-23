@@ -4,6 +4,7 @@ import { useState, Fragment, type ReactNode } from "react";
 import { ChevronDown, ChevronRight, Search } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { formatWeight } from "@/lib/format";
 
 export type StudentPerformance = {
   full_name: string;
@@ -119,7 +120,7 @@ export function PerformanceTable({
                         {p.graded === 0 ? "—" : p.obtained}
                       </td>
                       <td className="tams-numeral">
-                        {p.graded === 0 ? "—" : p.total_weight}
+                        {p.graded === 0 ? "—" : formatWeight(p.total_weight)}
                       </td>
                       <td className="tams-numeral">
                         {p.percentage === null ? "—" : `${p.percentage.toFixed(1)}%`}

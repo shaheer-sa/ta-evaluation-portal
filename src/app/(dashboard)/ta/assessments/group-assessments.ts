@@ -4,6 +4,8 @@ export type SectionCourseInfo = {
   id: string;
   best_of_quizzes?: number | null;
   best_of_assignments?: number | null;
+  quiz_total_weight?: number | null;
+  assignment_total_weight?: number | null;
   sections?: {
     name?: string | null;
     terms?: {

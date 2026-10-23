@@ -1,3 +1,4 @@
+import { formatWeight } from "@/lib/format";
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -46,6 +47,10 @@ export function AssessmentsSummary({
             g.sectionCourse?.best_of_quizzes && `best ${g.sectionCourse.best_of_quizzes} quizzes`,
             g.sectionCourse?.best_of_assignments && `best ${g.sectionCourse.best_of_assignments} assignments`,
           ].filter(Boolean);
+          const totals = [
+            g.sectionCourse?.quiz_total_weight != null && `quizzes worth ${formatWeight(g.sectionCourse.quiz_total_weight)}`,
+            g.sectionCourse?.assignment_total_weight != null && `assignments worth ${formatWeight(g.sectionCourse.assignment_total_weight)}`,
+          ].filter(Boolean);
           return (
             <Link
               key={g.sectionCourseId}
@@ -57,6 +62,7 @@ export function AssessmentsSummary({
                 <div className="text-xs text-muted-foreground">
                   {parts.join(" · ")}
                   {bestOf.length > 0 && ` · counting ${bestOf.join(", ")}`}
+                  {totals.length > 0 && ` · ${totals.join(", ")}`}
                 </div>
               </div>
               <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />

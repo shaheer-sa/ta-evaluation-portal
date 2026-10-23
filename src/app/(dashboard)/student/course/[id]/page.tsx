@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/card";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
 import { sortAssessments } from "@/lib/assessment-order";
+import { formatWeight } from "@/lib/format";
 import { bestOfFromSectionCourse, countedAssessmentIds } from "@/lib/best-of";
 import type { Database } from "@/types/database";
 
@@ -319,7 +320,7 @@ export default async function CourseDetailPage({ params }: PageProps) {
                                 {r.classLow !== null ? r.classLow : "—"}
                               </td>
                               <td className="tams-numeral text-muted-foreground">
-                                {r.weight}
+                                {formatWeight(r.weight)}
                               </td>
                             </tr>
                           ))}

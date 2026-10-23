@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { createAssessment } from "./actions";
+import { formatWeight } from "@/lib/format";
+import { autoWeight, categoryBestOf, categoryTotal } from "@/lib/category-weight";
 
 const ALL_ASSESSMENT_TYPES = [
   { value: "assignment", label: "Assignment", requirement: "enable_assignments" },
@@ -13,9 +15,17 @@ const ALL_ASSESSMENT_TYPES = [
   { value: "cp", label: "Class Participation", requirement: "enable_cp" },
 ];
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function CreateAssessmentForm({ sectionCourses }: { sectionCourses: any[] }) {
+export function CreateAssessmentForm({
+  sectionCourses,
+  typeCounts,
+}: {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  sectionCourses: any[];
+  // how many of each type a class already has, key is `${sectionCourseId}:${type}`
+  typeCounts: Record<string, number>;
+}) {
   const [selectedSectionCourseId, setSelectedSectionCourseId] = useState("");
+  const [type, setType] = useState("");
   const [isPending, startTransition] = useTransition();
   const formRef = useRef<HTMLFormElement>(null);
 
@@ -29,6 +39,23 @@ export function CreateAssessmentForm({ sectionCourses }: { sectionCourses: any[]
 
     return selectedCourse[type.requirement] !== false;
   });
+
+  // the select shows the first available type when nothing valid is picked
+  const currentType = availableTypes.some((t) => t.value === type) ? type : availableTypes[0]?.value ?? "";
+  const selectedSc = sectionCourses.find((sc) => sc.id === selectedSectionCourseId);
+  const autoTotal = categoryTotal(selectedSc, currentType);
+  let autoInfo: { weight: number; text: string } | null = null;
+  if (autoTotal !== null) {
+    const newCount = (typeCounts[`${selectedSectionCourseId}:${currentType}`] || 0) + 1;
+    const best = categoryBestOf(selectedSc, currentType);
+    const counted = best && best < newCount ? best : newCount;
+    const weight = autoWeight(autoTotal, best, newCount);
+    const plural = currentType === "quiz" ? "quizzes" : "assignments";
+    autoInfo = {
+      weight,
+      text: `${formatWeight(autoTotal)} ÷ ${counted}${best && best < newCount ? ` (best ${best})` : ` ${plural}`} = ${formatWeight(weight)} each. The others update too.`,
+    };
+  }
 
   return (
     <form
@@ -44,6 +71,7 @@ export function CreateAssessmentForm({ sectionCourses }: { sectionCourses: any[]
             toast.success("Assessment created");
             formRef.current?.reset();
             setSelectedSectionCourseId("");
+            setType("");
           } catch {
             toast.error("Failed to create assessment");
           }
@@ -106,6 +134,8 @@ export function CreateAssessmentForm({ sectionCourses }: { sectionCourses: any[]
           id="type"
           name="type"
           required
+          value={currentType}
+          onChange={(e) => setType(e.target.value)}
           className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           {availableTypes.map((t) => (
@@ -141,18 +171,30 @@ export function CreateAssessmentForm({ sectionCourses }: { sectionCourses: any[]
         </div>
         <div className="space-y-2">
           <Label htmlFor="weight">Weight</Label>
-          <Input
-            id="weight"
-            name="weight"
-            type="number"
-            required
-            step="any"
-            min="0"
-            max="100"
-            placeholder="e.g. 10"
-          />
+          {autoInfo ? (
+            <>
+              <input type="hidden" name="weight" value={Math.round(autoInfo.weight * 10000) / 10000} />
+              <div className="flex h-10 items-center rounded-md border border-dashed px-3 text-sm text-muted-foreground">
+                {formatWeight(autoInfo.weight)} (auto)
+              </div>
+            </>
+          ) : (
+            <Input
+              id="weight"
+              name="weight"
+              type="number"
+              required
+              step="any"
+              min="0"
+              max="100"
+              placeholder="e.g. 10"
+            />
+          )}
         </div>
       </div>
+      {autoInfo && (
+        <p className="-mt-2 text-xs text-muted-foreground">{autoInfo.text}</p>
+      )}
 
       </fieldset>
       <Button type="submit" disabled={isPending}>

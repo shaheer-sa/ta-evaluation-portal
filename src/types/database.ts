@@ -411,6 +411,8 @@ export interface Database {
         Row: {
           best_of_assignments: number | null
           best_of_quizzes: number | null
+          quiz_total_weight: number | null
+          assignment_total_weight: number | null
           course_id: string
           created_at: string
           id: string
@@ -419,6 +421,8 @@ export interface Database {
         Insert: {
           best_of_assignments?: number | null
           best_of_quizzes?: number | null
+          quiz_total_weight?: number | null
+          assignment_total_weight?: number | null
           course_id: string
           created_at?: string
           id?: string
@@ -427,6 +431,8 @@ export interface Database {
         Update: {
           best_of_assignments?: number | null
           best_of_quizzes?: number | null
+          quiz_total_weight?: number | null
+          assignment_total_weight?: number | null
           course_id?: string
           created_at?: string
           id?: string

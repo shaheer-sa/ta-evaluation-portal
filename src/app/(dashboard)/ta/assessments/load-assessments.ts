@@ -10,6 +10,8 @@ export async function loadAssessmentsData() {
       id,
       best_of_quizzes,
       best_of_assignments,
+      quiz_total_weight,
+      assignment_total_weight,
       sections ( name, terms ( name, is_active ) ),
       courses ( code, name, enable_cp, enable_assignments, enable_quizzes )
     `),
@@ -27,6 +29,8 @@ export async function loadAssessmentsData() {
           id,
           best_of_quizzes,
           best_of_assignments,
+          quiz_total_weight,
+          assignment_total_weight,
           sections ( name, terms ( name, is_active ) ),
           courses ( code, name, enable_cp, enable_assignments, enable_quizzes )
         )
