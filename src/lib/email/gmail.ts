@@ -41,13 +41,34 @@ async function sendMail({
   const cleanSubject = subject.replace(/[\r\n]/g, "").trim();
   const safeSubject = `[TAMS] ${cleanSubject}`;
 
-  await transport.sendMail({
+  const info = await transport.sendMail({
     from: process.env.GMAIL_USER,
     to,
     replyTo: process.env.GMAIL_USER,
     subject: safeSubject,
     html,
   });
+  console.log("email sent", { to, subject: safeSubject, response: info.response });
+}
+
+// used by the ta email check: tries gmail right away and reports what happened
+export async function sendTestEmail(to: string): Promise<{ ok: true; response: string } | { ok: false; error: string }> {
+  if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
+    return { ok: false, error: "GMAIL_USER or GMAIL_APP_PASSWORD is not set on the server." };
+  }
+  try {
+    await transport.verify();
+    const info = await transport.sendMail({
+      from: process.env.GMAIL_USER,
+      to,
+      subject: "[TAMS] Test email",
+      html: "<p>If you can read this, TAMS can send emails.</p>",
+    });
+    return { ok: true, response: String(info.response) };
+  } catch (err) {
+    console.error("test email failed:", err);
+    return { ok: false, error: err instanceof Error ? err.message : String(err) };
+  }
 }
 
 export async function sendQueryEmail({
