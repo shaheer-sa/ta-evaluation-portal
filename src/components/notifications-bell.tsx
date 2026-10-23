@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useRouter, usePathname } from "next/navigation";
 import { Bell } from "lucide-react";
 import { fetchJson } from "@/lib/fetch-json";
 import { Button } from "@/components/ui/button";
@@ -11,11 +12,14 @@ interface Notification {
   type: string;
   title: string;
   body: string | null;
+  related_id: string | null;
   is_read: boolean;
   created_at: string;
 }
 
 export function NotificationsBell() {
+  const router = useRouter();
+  const pathname = usePathname();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
@@ -45,6 +49,30 @@ export function NotificationsBell() {
     });
     setUnreadCount(0);
     setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
+  }
+
+  async function handleNotificationClick(n: Notification) {
+    if (!n.related_id) return;
+
+    if (!n.is_read) {
+      fetch("/api/notifications", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ notificationIds: [n.id] }),
+      }).catch((err) => console.error("Failed to mark notification read:", err));
+
+      setNotifications((prev) =>
+        prev.map((item) => (item.id === n.id ? { ...item, is_read: true } : item))
+      );
+      setUnreadCount((prev) => Math.max(0, prev - 1));
+    }
+
+    setIsOpen(false);
+
+    const targetUrl = pathname.startsWith("/ta")
+      ? `/ta/queries?open=${n.related_id}`
+      : `/student/queries?open=${n.related_id}`;
+    router.push(targetUrl);
   }
 
   function formatTime(dateStr: string) {
@@ -100,32 +128,56 @@ export function NotificationsBell() {
                   No notifications yet.
                 </p>
               ) : (
-                notifications.map((n) => (
-                  <div
-                    key={n.id}
-                    className={cn(
-                      "border-b p-3 last:border-0 text-sm",
-                      !n.is_read && "bg-primary/5"
-                    )}
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <p className="font-medium">{n.title}</p>
-                        {n.body && (
-                          <p className="text-xs text-muted-foreground mt-0.5">
-                            {n.body}
-                          </p>
+                notifications.map((n) => {
+                  const content = (
+                    <>
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <p className="font-medium">{n.title}</p>
+                          {n.body && (
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                              {n.body}
+                            </p>
+                          )}
+                        </div>
+                        {!n.is_read && (
+                          <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-primary" />
                         )}
                       </div>
-                      {!n.is_read && (
-                        <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-primary" />
+                      <p className="text-[10px] text-muted-foreground mt-1">
+                        {formatTime(n.created_at)}
+                      </p>
+                    </>
+                  );
+
+                  if (n.related_id) {
+                    return (
+                      <button
+                        key={n.id}
+                        type="button"
+                        onClick={() => handleNotificationClick(n)}
+                        className={cn(
+                          "w-full text-left border-b p-3 last:border-0 text-sm hover:bg-muted/50 transition-colors block cursor-pointer",
+                          !n.is_read && "bg-primary/5"
+                        )}
+                      >
+                        {content}
+                      </button>
+                    );
+                  }
+
+                  return (
+                    <div
+                      key={n.id}
+                      className={cn(
+                        "border-b p-3 last:border-0 text-sm",
+                        !n.is_read && "bg-primary/5"
                       )}
+                    >
+                      {content}
                     </div>
-                    <p className="text-[10px] text-muted-foreground mt-1">
-                      {formatTime(n.created_at)}
-                    </p>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
           </div>
