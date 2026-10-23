@@ -409,18 +409,24 @@ export interface Database {
       }
       section_courses: {
         Row: {
+          best_of_assignments: number | null
+          best_of_quizzes: number | null
           course_id: string
           created_at: string
           id: string
           section_id: string
         }
         Insert: {
+          best_of_assignments?: number | null
+          best_of_quizzes?: number | null
           course_id: string
           created_at?: string
           id?: string
           section_id: string
         }
         Update: {
+          best_of_assignments?: number | null
+          best_of_quizzes?: number | null
           course_id?: string
           created_at?: string
           id?: string
@@ -535,10 +541,17 @@ export interface Database {
             type: "assignment" | "quiz" | "mid" | "final" | "project" | "cp"
             created_at: string
             total_marks: number
+            weight: number
             avg: number | null
             high: number | null
             low: number | null
             graded: number
+          }[]
+          marks: {
+            roll_number: string
+            assessment_id: string
+            score: number | null
+            counted: boolean
           }[]
         }
       }

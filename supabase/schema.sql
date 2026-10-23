@@ -2,7 +2,7 @@
 -- TAMS database schema
 --
 -- Matches the live production database as of 2026-10-23
--- (rebuilt from the live catalog + migrations 01-05 in supabase/migrations).
+-- (rebuilt from the live catalog + migrations 01-06 in supabase/migrations).
 --
 -- Use this ONLY to set up a brand new, empty Supabase project.
 -- NEVER run it against the live database: it is not idempotent and will fail
@@ -70,11 +70,15 @@ create table public.sections (
 
 create table public.section_courses (
   id uuid not null default gen_random_uuid(),
+  best_of_assignments integer,
+  best_of_quizzes integer,
   course_id uuid not null,
   section_id uuid not null,
   created_at timestamptz not null default now(),
   constraint section_courses_pkey PRIMARY KEY (id),
   constraint section_courses_section_id_course_id_key UNIQUE (section_id, course_id),
+  constraint section_courses_best_of_assignments_check CHECK ((best_of_assignments IS NULL) OR (best_of_assignments > 0)),
+  constraint section_courses_best_of_quizzes_check CHECK ((best_of_quizzes IS NULL) OR (best_of_quizzes > 0)),
   constraint section_courses_course_id_fkey FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE RESTRICT,
   constraint section_courses_section_id_fkey FOREIGN KEY (section_id) REFERENCES sections(id) ON DELETE CASCADE
 );
@@ -277,7 +281,7 @@ begin
   end if;
 
   with sc as (
-    select id, section_id, course_id
+    select id, section_id, course_id, best_of_quizzes, best_of_assignments
     from section_courses
     where id = p_sc_id
   ),
@@ -289,23 +293,46 @@ begin
       and e.course_id  = (select course_id  from sc)
       and e.status = 'active'
   ),
-  asmt as (
-    select id, max_marks, weight
-    from assessments
-    where section_course_id = p_sc_id
+  ranked as (
+    select
+      m.enrollment_id,
+      m.score,
+      a.max_marks,
+      a.weight,
+      a.type,
+      row_number() over (
+        partition by m.enrollment_id, a.type
+        order by (m.score / nullif(a.max_marks, 0)) desc nulls last, a.created_at, a.id
+      ) as rn
+    from marks m
+    join assessments a on a.id = m.assessment_id
+    where a.section_course_id = p_sc_id
+      and m.score is not null
+      and m.enrollment_id in (select id from enr)
+  ),
+  counted as (
+    select r.*
+    from ranked r
+    where case r.type
+            when 'quiz' then (select best_of_quizzes from sc)
+            when 'assignment' then (select best_of_assignments from sc)
+          end is null
+       or r.rn <= case r.type
+            when 'quiz' then (select best_of_quizzes from sc)
+            when 'assignment' then (select best_of_assignments from sc)
+          end
   ),
   scored as (
     select
       enr.id,
       enr.full_name,
       enr.roll_number,
-      count(m.score) as graded,
-      coalesce(sum((m.score / nullif(asmt.max_marks, 0)) * asmt.weight), 0) as obtained,
-      coalesce(sum(asmt.weight) filter (where m.score is not null), 0) as total_weight
+      (select count(*) from ranked r where r.enrollment_id = enr.id) as graded,
+      coalesce((select sum((c.score / nullif(c.max_marks, 0)) * c.weight)
+                from counted c where c.enrollment_id = enr.id), 0) as obtained,
+      coalesce((select sum(c.weight)
+                from counted c where c.enrollment_id = enr.id), 0) as total_weight
     from enr
-    left join marks m on m.enrollment_id = enr.id
-    left join asmt on asmt.id = m.assessment_id
-    group by enr.id, enr.full_name, enr.roll_number
   )
   select coalesce(json_agg(row_to_json(x) order by x.percentage desc nulls last), '[]'::json)
   into v_students
@@ -345,15 +372,43 @@ begin
     group by a.id, a.title, a.type, a.created_at, a.max_marks, a.weight
   ) y;
 
+  with sc as (
+    select id, section_id, course_id, best_of_quizzes, best_of_assignments
+    from section_courses where id = p_sc_id
+  ),
+  ranked as (
+    select
+      m.id as mark_id,
+      a.type,
+      row_number() over (
+        partition by m.enrollment_id, a.type
+        order by (m.score / nullif(a.max_marks, 0)) desc nulls last, a.created_at, a.id
+      ) as rn
+    from marks m
+    join assessments a on a.id = m.assessment_id
+    where a.section_course_id = p_sc_id
+      and m.score is not null
+  )
   select coalesce(json_agg(row_to_json(z)), '[]'::json)
   into v_marks
   from (
-    select p.roll_number, m.assessment_id, m.score
+    select
+      p.roll_number,
+      m.assessment_id,
+      m.score,
+      case
+        when m.score is null then false
+        when (case a.type when 'quiz' then s.best_of_quizzes
+                          when 'assignment' then s.best_of_assignments end) is null then true
+        else r.rn <= (case a.type when 'quiz' then s.best_of_quizzes
+                                  when 'assignment' then s.best_of_assignments end)
+      end as counted
     from marks m
     join enrollments e on e.id = m.enrollment_id
     join profiles p on p.id = e.student_id
     join assessments a on a.id = m.assessment_id
-    join section_courses s on s.id = p_sc_id
+    join sc s on true
+    left join ranked r on r.mark_id = m.id
     where a.section_course_id = p_sc_id
       and e.status = 'active'
       and e.section_id = s.section_id
