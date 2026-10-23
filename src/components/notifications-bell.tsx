@@ -17,6 +17,26 @@ interface Notification {
   created_at: string;
 }
 
+function getNotificationTargetUrl(n: Notification, pathname: string): string | null {
+  const isTA = pathname.startsWith("/ta");
+
+  if (n.type === "password_reset_request") {
+    if (n.related_id) {
+      return `/ta/roster?student=${n.related_id}`;
+    }
+    return null;
+  }
+
+  if (n.type === "new_query" || n.type === "query_reply" || n.type === "query_update") {
+    if (n.related_id) {
+      return isTA ? `/ta/queries?open=${n.related_id}` : `/student/queries?open=${n.related_id}`;
+    }
+    return isTA ? "/ta/queries" : "/student/queries";
+  }
+
+  return null;
+}
+
 export function NotificationsBell() {
   const router = useRouter();
   const pathname = usePathname();
@@ -52,7 +72,8 @@ export function NotificationsBell() {
   }
 
   async function handleNotificationClick(n: Notification) {
-    if (!n.related_id) return;
+    const targetUrl = getNotificationTargetUrl(n, pathname);
+    if (!targetUrl) return;
 
     if (!n.is_read) {
       fetch("/api/notifications", {
@@ -68,10 +89,6 @@ export function NotificationsBell() {
     }
 
     setIsOpen(false);
-
-    const targetUrl = pathname.startsWith("/ta")
-      ? `/ta/queries?open=${n.related_id}`
-      : `/student/queries?open=${n.related_id}`;
     router.push(targetUrl);
   }
 
@@ -150,7 +167,8 @@ export function NotificationsBell() {
                     </>
                   );
 
-                  if (n.related_id) {
+                  const targetUrl = getNotificationTargetUrl(n, pathname);
+                  if (targetUrl) {
                     return (
                       <button
                         key={n.id}
