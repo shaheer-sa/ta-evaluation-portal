@@ -63,7 +63,7 @@ export function ResetPasswordButton({
           type="button"
           variant="ghost"
           size="sm"
-          className="text-muted-foreground hover:text-foreground"
+          className="text-destructive hover:text-destructive hover:bg-destructive/10"
         >
           Reset password
         </Button>
