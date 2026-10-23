@@ -23,6 +23,33 @@ const transport = nodemailer.createTransport({
   },
 });
 
+async function sendMail({
+  to,
+  subject,
+  html,
+}: {
+  to: string;
+  subject: string;
+  html: string;
+}) {
+  if (!to || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) {
+    console.error("sendMail aborted: invalid email address", to);
+    return;
+  }
+
+  // Prevent header injection by stripping newlines from the subject
+  const cleanSubject = subject.replace(/[\r\n]/g, "").trim();
+  const safeSubject = `[TAMS] ${cleanSubject}`;
+
+  await transport.sendMail({
+    from: process.env.GMAIL_USER,
+    to,
+    replyTo: process.env.GMAIL_USER,
+    subject: safeSubject,
+    html,
+  });
+}
+
 export async function sendQueryEmail({
   to,
   studentName,
@@ -46,11 +73,6 @@ export async function sendQueryEmail({
   const safeTitle = escapeHtml(queryTitle);
   const safeMessage = escapeHtmlMultiline(message);
   
-  if (!to || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) {
-    console.error("sendQueryEmail aborted: invalid email address", to);
-    return;
-  }
-
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "";
   if (!siteUrl) {
     console.warn("sendQueryEmail warning: NEXT_PUBLIC_SITE_URL is empty, email links will be broken");
@@ -75,14 +97,73 @@ export async function sendQueryEmail({
     <p><a href="${link}">View thread in TAMS</a></p>
   `;
 
-  // Prevent header injection by stripping newlines from the subject
-  const safeSubject = `[TAMS] ${safeTitle}`.replace(/[\r\n]/g, "");
-
-  await transport.sendMail({
-    from: process.env.GMAIL_USER,
+  await sendMail({
     to,
-    replyTo: process.env.GMAIL_USER,
-    subject: safeSubject,
+    subject: queryTitle,
+    html,
+  });
+}
+
+export async function sendResetRequestEmail({
+  to,
+  taName,
+  studentName,
+  rollNumber,
+  sectionName,
+  studentId,
+}: {
+  to: string;
+  taName: string;
+  studentName: string;
+  rollNumber: string;
+  sectionName?: string | null;
+  studentId: string;
+}) {
+  const safeTaName = escapeHtml(taName);
+  const safeStudentName = escapeHtml(studentName);
+  const safeRollNumber = escapeHtml(rollNumber);
+  const safeSection = escapeHtml(sectionName || "unknown");
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "";
+  const link = `${siteUrl}/ta/roster?student=${encodeURIComponent(studentId)}`;
+
+  const subject = `Password reset request: ${studentName} (${rollNumber})`;
+  const html = `
+    <p>Hi ${safeTaName},</p>
+    <p>${safeStudentName} (${safeRollNumber}, Section ${safeSection}) asked for a password reset.</p>
+    <p><a href="${link}">Open in TAMS</a></p>
+  `;
+
+  await sendMail({
+    to,
+    subject,
+    html,
+  });
+}
+
+export async function sendPasswordResetDoneEmail({
+  to,
+  studentName,
+  rollNumber,
+}: {
+  to: string;
+  studentName: string;
+  rollNumber: string;
+}) {
+  const safeStudentName = escapeHtml(studentName);
+  const safeRollNumber = escapeHtml(rollNumber);
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "";
+  const loginLink = `${siteUrl}/login`;
+
+  const subject = "Your password has been reset";
+  const html = `
+    <p>Hi ${safeStudentName},</p>
+    <p>Your TA has reset your TAMS password. Temporary password: <b>Tams@${safeRollNumber}</b>.</p>
+    <p>Sign in at <a href="${loginLink}">${loginLink}</a> with your roll number and this password. You'll be asked to choose a new password straight away.</p>
+  `;
+
+  await sendMail({
+    to,
+    subject,
     html,
   });
 }
