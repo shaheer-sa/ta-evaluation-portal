@@ -109,7 +109,7 @@ export function EditAssessmentDialog({
                 id="maxMarks"
                 name="maxMarks"
                 type="number"
-                step="0.5"
+                step="any"
                 min="0"
                 defaultValue={assessment.max_marks}
                 required
@@ -121,7 +121,7 @@ export function EditAssessmentDialog({
                 id="weight"
                 name="weight"
                 type="number"
-                step="0.1"
+                step="any"
                 min="0"
                 max="100"
                 defaultValue={assessment.weight}

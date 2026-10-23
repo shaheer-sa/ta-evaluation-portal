@@ -134,7 +134,7 @@ export function CreateAssessmentForm({ sectionCourses }: { sectionCourses: any[]
             name="maxMarks"
             type="number"
             required
-            step="0.5"
+            step="any"
             min="0"
             placeholder="e.g. 20"
           />
@@ -146,7 +146,7 @@ export function CreateAssessmentForm({ sectionCourses }: { sectionCourses: any[]
             name="weight"
             type="number"
             required
-            step="0.1"
+            step="any"
             min="0"
             max="100"
             placeholder="e.g. 10"
