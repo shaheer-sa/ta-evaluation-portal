@@ -1,0 +1,266 @@
+"use client";
+
+import { useState, useRef, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { DeleteAssessmentButton } from "@/components/delete-assessment-button";
+import { EditAssessmentDialog } from "@/components/edit-assessment-dialog";
+import { deleteAssessment } from "./actions";
+import { sortAssessments } from "@/lib/assessment-order";
+import { cn } from "@/lib/utils";
+
+type SectionCourseInfo = {
+  id: string;
+  best_of_quizzes?: number | null;
+  best_of_assignments?: number | null;
+  sections?: {
+    name?: string | null;
+    terms?: {
+      name?: string | null;
+      is_active?: boolean | null;
+    } | null;
+  } | null;
+  courses?: {
+    code?: string | null;
+    name?: string | null;
+    enable_cp?: boolean | null;
+    enable_assignments?: boolean | null;
+    enable_quizzes?: boolean | null;
+  } | null;
+};
+
+type AssessmentItem = {
+  id: string;
+  section_course_id: string;
+  type: string;
+  title: string;
+  max_marks: number;
+  weight: number;
+  created_at?: string | null;
+  section_courses?: SectionCourseInfo | null;
+};
+
+interface AssessmentsListProps {
+  assessments: AssessmentItem[];
+  sectionCourses: SectionCourseInfo[];
+}
+
+export function AssessmentsList({ assessments, sectionCourses }: AssessmentsListProps) {
+  const [expanded, setExpanded] = useState(false);
+  const [hasOverflow, setHasOverflow] = useState(false);
+  const [desktopHeight, setDesktopHeight] = useState<number | null>(null);
+  const listRef = useRef<HTMLDivElement>(null);
+
+  // Group assessments by section_course_id
+  const groupsMap = new Map<
+    string,
+    {
+      sectionCourseId: string;
+      sectionCourse: SectionCourseInfo | null;
+      assessments: AssessmentItem[];
+    }
+  >();
+
+  for (const a of assessments) {
+    let group = groupsMap.get(a.section_course_id);
+    if (!group) {
+      const sc =
+        a.section_courses ||
+        sectionCourses.find((s) => s.id === a.section_course_id) ||
+        null;
+      group = {
+        sectionCourseId: a.section_course_id,
+        sectionCourse: sc,
+        assessments: [],
+      };
+      groupsMap.set(a.section_course_id, group);
+    }
+    group.assessments.push(a);
+  }
+
+  const groups = Array.from(groupsMap.values());
+
+  // Group order: active term first, then by section name (natural order, "3B" before "3C"), then course code.
+  groups.sort((a, b) => {
+    const termA = a.sectionCourse?.sections?.terms;
+    const termB = b.sectionCourse?.sections?.terms;
+    const activeA = termA?.is_active ? 1 : 0;
+    const activeB = termB?.is_active ? 1 : 0;
+    if (activeA !== activeB) return activeB - activeA;
+
+    const secA = a.sectionCourse?.sections?.name || "";
+    const secB = b.sectionCourse?.sections?.name || "";
+    const secCompare = secA.localeCompare(secB, undefined, {
+      numeric: true,
+      sensitivity: "base",
+    });
+    if (secCompare !== 0) return secCompare;
+
+    const codeA = a.sectionCourse?.courses?.code || "";
+    const codeB = b.sectionCourse?.courses?.code || "";
+    return codeA.localeCompare(codeB, undefined, {
+      numeric: true,
+      sensitivity: "base",
+    });
+  });
+
+  // Inside each group use sortAssessments
+  for (const group of groups) {
+    group.assessments = sortAssessments(group.assessments);
+  }
+
+  const totalCount = assessments.length;
+
+  useEffect(() => {
+    const updateHeight = () => {
+      if (window.innerWidth >= 768) {
+        const createCard = document.getElementById("create-assessment-card");
+        if (createCard) {
+          setDesktopHeight(createCard.offsetHeight);
+        }
+      } else {
+        setDesktopHeight(null);
+      }
+    };
+
+    updateHeight();
+    window.addEventListener("resize", updateHeight);
+    const createCard = document.getElementById("create-assessment-card");
+    let observer: ResizeObserver | null = null;
+    if (createCard && typeof ResizeObserver !== "undefined") {
+      observer = new ResizeObserver(() => updateHeight());
+      observer.observe(createCard);
+    }
+
+    return () => {
+      window.removeEventListener("resize", updateHeight);
+      observer?.disconnect();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (expanded) return;
+    const checkOverflow = () => {
+      const el = listRef.current;
+      if (!el) return;
+      setHasOverflow(el.scrollHeight > el.clientHeight + 4);
+    };
+
+    checkOverflow();
+    window.addEventListener("resize", checkOverflow);
+    return () => window.removeEventListener("resize", checkOverflow);
+  }, [desktopHeight, expanded, groups.length]);
+
+  return (
+    <Card
+      data-edge
+      className={cn(
+        "flex flex-col relative",
+        !expanded && "max-h-[28rem] md:max-h-none"
+      )}
+      style={
+        !expanded && desktopHeight ? { maxHeight: `${desktopHeight}px` } : undefined
+      }
+    >
+      <CardHeader>
+        <CardTitle>Existing Assessments</CardTitle>
+      </CardHeader>
+      <CardContent className="flex flex-1 flex-col min-h-0 relative">
+        {!groups.length ? (
+          <p className="text-sm text-muted-foreground">
+            No assessments created yet.
+          </p>
+        ) : (
+          <>
+            <div
+              ref={listRef}
+              className={cn(
+                "space-y-6",
+                !expanded ? "flex-1 min-h-0 overflow-hidden" : ""
+              )}
+            >
+              {groups.map((group) => {
+                const termName =
+                  group.sectionCourse?.sections?.terms?.name || "Term";
+                const sectionName =
+                  group.sectionCourse?.sections?.name || "Sec";
+                const courseCode =
+                  group.sectionCourse?.courses?.code || "Course";
+                const count = group.assessments.length;
+
+                return (
+                  <div key={group.sectionCourseId} className="space-y-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-b pb-1.5">
+                      <h3 className="font-semibold text-sm">
+                        {termName} — Section {sectionName} · {courseCode}
+                      </h3>
+                      <span className="text-xs text-muted-foreground">
+                        {count} {count === 1 ? "assessment" : "assessments"}
+                      </span>
+                    </div>
+
+                    <div className="space-y-2">
+                      {group.assessments.map((a) => {
+                        const courseFlags = sectionCourses.find(
+                          (sc) => sc.id === a.section_course_id
+                        )?.courses;
+
+                        return (
+                          <div
+                            key={a.id}
+                            className="tams-inset flex items-center justify-between p-3"
+                          >
+                            <div>
+                              <div className="font-medium">{a.title}</div>
+                              <div className="text-xs text-muted-foreground">
+                                {a.type} · {a.max_marks} marks · {a.weight}
+                              </div>
+                            </div>
+                            <div className="flex gap-2">
+                              <EditAssessmentDialog
+                                assessment={a}
+                                courseFlags={courseFlags}
+                              />
+                              <DeleteAssessmentButton
+                                assessmentId={a.id}
+                                assessmentLabel={`${a.title} — Sec ${sectionName} (${courseCode})`}
+                                deleteAction={deleteAssessment}
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {!expanded && hasOverflow && (
+              <div className="pointer-events-none absolute inset-x-6 bottom-14 h-16 bg-gradient-to-t from-card to-transparent" />
+            )}
+
+            {hasOverflow && (
+              <div className="pt-3 mt-auto">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="w-full text-xs"
+                  onClick={() => setExpanded(!expanded)}
+                >
+                  {expanded ? "Show less" : `Show all (${totalCount})`}
+                </Button>
+              </div>
+            )}
+          </>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
