@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter, usePathname } from "next/navigation";
+import { toast } from "sonner";
 import { Bell } from "lucide-react";
 import { fetchJson } from "@/lib/fetch-json";
 import { Button } from "@/components/ui/button";
@@ -71,6 +72,53 @@ export function NotificationsBell() {
     setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
   }
 
+  async function clearAll() {
+    const previousNotifications = notifications;
+    const previousUnread = unreadCount;
+    setNotifications([]);
+    setUnreadCount(0);
+
+    try {
+      const res = await fetch("/api/notifications", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      if (!res.ok) {
+        throw new Error();
+      }
+    } catch {
+      toast.error("Couldn't clear notifications. Please try again.");
+      setNotifications(previousNotifications);
+      setUnreadCount(previousUnread);
+    }
+  }
+
+  async function dismissNotification(e: React.MouseEvent, n: Notification) {
+    e.stopPropagation();
+    const previousNotifications = notifications;
+    const previousUnread = unreadCount;
+    setNotifications((prev) => prev.filter((item) => item.id !== n.id));
+    if (!n.is_read) {
+      setUnreadCount((prev) => Math.max(0, prev - 1));
+    }
+
+    try {
+      const res = await fetch("/api/notifications", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: n.id }),
+      });
+      if (!res.ok) {
+        throw new Error();
+      }
+    } catch {
+      toast.error("Couldn't clear notifications. Please try again.");
+      setNotifications(previousNotifications);
+      setUnreadCount(previousUnread);
+    }
+  }
+
   async function handleNotificationClick(n: Notification) {
     const targetUrl = getNotificationTargetUrl(n, pathname);
     if (!targetUrl) return;
@@ -130,14 +178,24 @@ export function NotificationsBell() {
           <div className="absolute right-0 top-full mt-2 z-50 w-80 rounded-lg border bg-card shadow-lg">
             <div className="flex items-center justify-between border-b p-3">
               <span className="text-sm font-semibold">Notifications</span>
-              {unreadCount > 0 && (
-                <button
-                  onClick={markAllRead}
-                  className="text-xs text-primary hover:underline"
-                >
-                  Mark all read
-                </button>
-              )}
+              <div className="flex items-center gap-2">
+                {unreadCount > 0 && (
+                  <button
+                    onClick={markAllRead}
+                    className="text-xs text-primary hover:underline"
+                  >
+                    Mark all read
+                  </button>
+                )}
+                {notifications.length > 0 && (
+                  <button
+                    onClick={clearAll}
+                    className="text-xs text-muted-foreground hover:text-foreground hover:underline"
+                  >
+                    Clear all
+                  </button>
+                )}
+              </div>
             </div>
             <div className="max-h-72 overflow-y-auto">
               {notifications.length === 0 ? (
@@ -168,31 +226,36 @@ export function NotificationsBell() {
                   );
 
                   const targetUrl = getNotificationTargetUrl(n, pathname);
-                  if (targetUrl) {
-                    return (
-                      <button
-                        key={n.id}
-                        type="button"
-                        onClick={() => handleNotificationClick(n)}
-                        className={cn(
-                          "w-full text-left border-b p-3 last:border-0 text-sm hover:bg-muted/50 transition-colors block cursor-pointer",
-                          !n.is_read && "bg-primary/5"
-                        )}
-                      >
-                        {content}
-                      </button>
-                    );
-                  }
-
                   return (
                     <div
                       key={n.id}
                       className={cn(
-                        "border-b p-3 last:border-0 text-sm",
+                        "flex items-start justify-between border-b last:border-0 hover:bg-muted/50 transition-colors",
                         !n.is_read && "bg-primary/5"
                       )}
                     >
-                      {content}
+                      {targetUrl ? (
+                        <button
+                          type="button"
+                          onClick={() => handleNotificationClick(n)}
+                          className="flex-1 text-left p-3 text-sm cursor-pointer"
+                        >
+                          {content}
+                        </button>
+                      ) : (
+                        <div className="flex-1 p-3 text-sm">
+                          {content}
+                        </div>
+                      )}
+                      <button
+                        type="button"
+                        onClick={(e) => dismissNotification(e, n)}
+                        aria-label="Dismiss notification"
+                        title="Dismiss"
+                        className="p-3 text-muted-foreground hover:text-foreground text-sm font-medium leading-none shrink-0"
+                      >
+                        ×
+                      </button>
                     </div>
                   );
                 })
