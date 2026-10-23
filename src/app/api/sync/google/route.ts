@@ -101,6 +101,16 @@ function validateScore(raw: string, maxMarks: number):
   return { ok: true, value: n };
 }
 
+function colIndexToLetter(colIdx: number): string {
+  let temp = colIdx;
+  let letter = "";
+  while (temp >= 0) {
+    letter = String.fromCharCode((temp % 26) + 65) + letter;
+    temp = Math.floor(temp / 26) - 1;
+  }
+  return letter;
+}
+
 // ── Main handler ────────────────────────────────────────────────────
 
 export async function POST(request: NextRequest) {
@@ -479,7 +489,7 @@ export async function POST(request: NextRequest) {
           
           if (tabRollNumIdx === -1) continue; 
 
-          let sheetUpdated = false;
+          const changedCells: { row: number; col: number; value: string }[] = [];
 
           for (const assessment of tabAssessments) {
             let colIdx = -1;
@@ -502,7 +512,10 @@ export async function POST(request: NextRequest) {
               tabRows[1][colIdx] = dateStr;
               tabRows[2][colIdx] = ""; 
               tabRows[3][colIdx] = String(assessment.max_marks);
-              sheetUpdated = true;
+              changedCells.push({ row: 0, col: colIdx, value: assessment.title });
+              changedCells.push({ row: 1, col: colIdx, value: dateStr });
+              changedCells.push({ row: 2, col: colIdx, value: "" });
+              changedCells.push({ row: 3, col: colIdx, value: String(assessment.max_marks) });
             }
 
             for (let i = 4; i < tabRows.length; i++) {
@@ -556,7 +569,7 @@ export async function POST(request: NextRequest) {
                      const writeVal = tamsScore !== null ? String(tamsScore) : "";
                      if (row[colIdx] !== writeVal) {
                         row[colIdx] = writeVal;
-                        sheetUpdated = true;
+                        changedCells.push({ row: i, col: colIdx, value: writeVal });
                      }
                      // Update memory
                      marksToUpsert.push({
@@ -576,7 +589,7 @@ export async function POST(request: NextRequest) {
                         const writeVal = tamsScore !== null ? String(tamsScore) : "";
                         if (row[colIdx] !== writeVal) {
                            row[colIdx] = writeVal;
-                           sheetUpdated = true;
+                           changedCells.push({ row: i, col: colIdx, value: writeVal });
                         }
                      } else {
                         marksToUpsert.push({
@@ -619,12 +632,17 @@ export async function POST(request: NextRequest) {
             }
           }
 
-          if (sheetUpdated) {
-            await sheets.spreadsheets.values.update({
+          if (changedCells.length > 0) {
+            const escapedTabName = tabName.replace(/'/g, "''");
+            await sheets.spreadsheets.values.batchUpdate({
               spreadsheetId,
-              range: tabName,
-              valueInputOption: "USER_ENTERED",
-              requestBody: { values: tabRows },
+              requestBody: {
+                valueInputOption: "USER_ENTERED",
+                data: changedCells.map(({ row, col, value }) => ({
+                  range: `'${escapedTabName}'!${colIndexToLetter(col)}${row + 1}`,
+                  values: [[value]],
+                })),
+              },
             });
             gradesWritten = true;
           }
