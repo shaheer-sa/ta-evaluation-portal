@@ -19,5 +19,5 @@ export const TA_NAV: NavItem[] = [
 
 export const STUDENT_NAV: NavItem[] = [
   { href: "/student", label: "My Grades", exact: true, short: "GR" },
-  { href: "/student/queries", label: "Queries", exact: false, short: "QU" },
+  { href: "/student/queries", label: "My Queries", exact: false, short: "QU" },
 ];

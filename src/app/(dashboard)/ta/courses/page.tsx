@@ -39,7 +39,7 @@ export default async function CoursesPage() {
       <div className="tams-pagehead">
         <div>
           <p className="tams-pagehead__eyebrow">TEACHING ASSISTANT</p>
-          <h1 className="tams-pagehead__title">Terms & Courses</h1>
+          <h1 className="tams-pagehead__title">Courses & Terms</h1>
         </div>
       </div>
 

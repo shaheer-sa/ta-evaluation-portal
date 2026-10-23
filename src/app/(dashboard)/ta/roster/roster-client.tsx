@@ -191,10 +191,10 @@ export default function RosterClient({
       <div className="tams-pagehead">
         <div>
           <p className="tams-pagehead__eyebrow">TEACHING ASSISTANT</p>
-          <h1 className="tams-pagehead__title">Google Sync</h1>
+          <h1 className="tams-pagehead__title">Students</h1>
         </div>
         <p className="text-sm text-muted-foreground text-right hidden sm:block max-w-[250px]">
-          View enrolled students and perform a live two-way sync with Google Sheets.
+          Enrolled students and two-way sync with Google Sheets.
         </p>
       </div>
 

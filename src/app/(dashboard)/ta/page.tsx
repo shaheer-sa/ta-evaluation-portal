@@ -193,7 +193,7 @@ export default async function TADashboardPage() {
       <div className="tams-pagehead">
         <div>
           <p className="tams-pagehead__eyebrow">TEACHING ASSISTANT</p>
-          <h1 className="tams-pagehead__title">Dashboard</h1>
+          <h1 className="tams-pagehead__title">Overview</h1>
         </div>
         <p className="text-sm text-muted-foreground text-right hidden sm:block">
           Welcome back, {profile?.full_name || "TA"}.
