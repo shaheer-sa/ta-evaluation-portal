@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import { Users, BookOpen, FileQuestion, ClipboardList } from "lucide-react";
+import { formatStatus } from "@/lib/format";
 
 export default async function TADashboardPage() {
   const supabase = await createClient();
@@ -232,9 +233,10 @@ export default async function TADashboardPage() {
           ) : (
             <div className="space-y-4">
               {recentQueries.map((q) => (
-                <div
+                <Link
                   key={q.id}
-                  className="tams-inset flex items-center gap-4 p-4"
+                  href={`/ta/queries?open=${q.id}`}
+                  className="tams-inset flex items-center gap-4 p-4 hover:bg-muted/50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer"
                 >
                   <div className="w-[140px] shrink-0">
                     <p className="font-medium text-sm">{q.profiles?.roll_number}</p>
@@ -251,12 +253,12 @@ export default async function TADashboardPage() {
                   </div>
 
                   <div
-                    className={`tams-pill shrink-0`}
+                    className="tams-pill shrink-0"
                     data-tone={q.status === "pending" ? "open" : q.status === "resolved" ? "done" : q.status === "rejected" ? "late" : "open"}
                   >
-                    {q.status}
+                    {formatStatus(q.status)}
                   </div>
-                </div>
+                </Link>
               ))}
             </div>
           )}
