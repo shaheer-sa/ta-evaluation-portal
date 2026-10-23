@@ -38,6 +38,7 @@ export interface SyncResponse {
   failed: SyncStudentResult[];
   rejectedScores?: { rollNo: string; assessment: string; value: string; reason: string }[];
   skippedAssessments?: string[];
+  notInRoster?: { tab: string; rollNumbers: string[] }[];
   gradesWritten: boolean;
   totalProcessed: number;
   missingFromSheet?: { enrollmentId: string; rollNumber: string; fullName: string }[];
@@ -94,6 +95,8 @@ function findMatchingTab(type: string, tabMap: Map<string, string>): string | nu
 
 function validateScore(raw: string, maxMarks: number):
   { ok: true; value: number } | { ok: false; reason: string } {
+  // absent counts as 0
+  if (/^(a|ab|abs|absent)$/i.test(raw)) return { ok: true, value: 0 };
   if (!/^-?\d+(\.\d+)?$/.test(raw)) return { ok: false, reason: "not a plain number" };
   const n = Number(raw);
   if (!Number.isFinite(n)) return { ok: false, reason: "not a number" };
@@ -473,6 +476,9 @@ export async function POST(request: NextRequest) {
     let gradesWritten = false;
     const rejectedScores: { rollNo: string; assessment: string; value: string; reason: string }[] = [];
     const skippedAssessments: string[] = [];
+    // roll numbers typed in a marks tab but missing from the first (roster) tab
+    const rosterRolls = new Set(parsedStudents.map((s) => s.roll_number.toLowerCase()));
+    const notInRosterByTab = new Map<string, Set<string>>();
 
     if (assessments && assessments.length > 0) {
       if (currentEnrollments) {
@@ -545,6 +551,11 @@ export async function POST(request: NextRequest) {
               const row = tabRows[i];
               const rollNo = row[tabRollNumIdx]?.trim();
               if (!rollNo) continue;
+
+              if (!rosterRolls.has(rollNo.toLowerCase())) {
+                if (!notInRosterByTab.has(tabName)) notInRosterByTab.set(tabName, new Set());
+                notInRosterByTab.get(tabName)!.add(rollNo);
+              }
 
               const email = generateEmail(rollNo);
               const enrollment = currentEnrollments.find(e => {
@@ -703,6 +714,10 @@ export async function POST(request: NextRequest) {
       failed: results.filter(r => r.outcome === "failed"),
       rejectedScores,
       skippedAssessments,
+      notInRoster: Array.from(notInRosterByTab.entries()).map(([tab, rolls]) => ({
+        tab,
+        rollNumbers: Array.from(rolls),
+      })),
       gradesWritten,
       totalProcessed: results.length,
       missingFromSheet,

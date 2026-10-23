@@ -45,6 +45,7 @@ interface SyncResult {
   withdrawnInSheet?: { enrollmentId: string; rollNumber: string; fullName: string }[];
   rejectedScores?: { rollNo: string; assessment: string; value: string; reason: string }[];
   skippedAssessments?: string[];
+  notInRoster?: { tab: string; rollNumbers: string[] }[];
   partial?: boolean;
   remaining?: number;
 }
@@ -293,6 +294,27 @@ export default function RosterClient({ sections, selectedSectionCourseId, roster
                   <AlertCircle className="h-5 w-5" />
                   Sync stopped early. {syncResult.remaining} students weren&apos;t processed yet. Click Sync Now again to finish.
                 </div>
+              </div>
+            )}
+            {syncResult.notInRoster && syncResult.notInRoster.length > 0 && (
+              <div
+                className="rounded-md border p-4 mb-4"
+                style={{ backgroundColor: 'var(--warning-soft, #fffbeb)', borderColor: 'var(--warning, #f59e0b)', color: 'var(--warning, #b45309)' }}
+              >
+                <h4 className="font-semibold flex items-center gap-2 mb-2">
+                  <AlertCircle className="h-5 w-5" />
+                  Some roll numbers are in a marks tab but not in the roster (first tab).
+                </h4>
+                <div className="space-y-1 mb-2 text-sm">
+                  {syncResult.notInRoster.map((t) => (
+                    <div key={t.tab}>
+                      <span className="font-medium">{t.tab}:</span> {t.rollNumbers.join(", ")}
+                    </div>
+                  ))}
+                </div>
+                <p className="text-sm font-medium opacity-90">
+                  Their marks were not imported. Add them to the first tab of the sheet and sync again to enroll them.
+                </p>
               </div>
             )}
             {((syncResult.rejectedScores && syncResult.rejectedScores.length > 0) || (syncResult.skippedAssessments && syncResult.skippedAssessments.length > 0)) && (
