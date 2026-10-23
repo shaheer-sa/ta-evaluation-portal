@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, Fragment } from "react";
+import { useState, Fragment, type ReactNode } from "react";
 import { ChevronDown, ChevronRight, Search } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -31,6 +31,7 @@ export type MarkEntry = {
   roll_number: string;
   assessment_id: string;
   score: number | null;
+  counted: boolean;
 };
 
 export function PerformanceTable({
@@ -146,21 +147,33 @@ export function PerformanceTable({
                                   );
 
                                   let weightedStr = "—";
-                                  let scoreStr = "—";
+                                  let scoreNode: ReactNode = "—";
 
                                   if (mark && mark.score !== null && mark.score !== undefined) {
-                                    const weighted =
-                                      (mark.score / a.total_marks) * a.weight;
-                                    totalCalculatedWeight += weighted;
-                                    weightedStr = weighted.toFixed(2);
-                                    scoreStr = `${mark.score} / ${a.total_marks}`;
+                                    if (mark.counted === false) {
+                                      scoreNode = (
+                                        <span>
+                                          {mark.score} / {a.total_marks}{" "}
+                                          <span className="text-muted-foreground font-normal">
+                                            (not counted)
+                                          </span>
+                                        </span>
+                                      );
+                                      weightedStr = "—";
+                                    } else {
+                                      const weighted =
+                                        (mark.score / a.total_marks) * a.weight;
+                                      totalCalculatedWeight += weighted;
+                                      weightedStr = weighted.toFixed(2);
+                                      scoreNode = `${mark.score} / ${a.total_marks}`;
+                                    }
                                   }
 
                                   return (
                                     <tr key={a.id}>
                                       <td>{a.title}</td>
                                       <td className="capitalize">{a.type}</td>
-                                      <td className="tams-numeral">{scoreStr}</td>
+                                      <td className="tams-numeral">{scoreNode}</td>
                                       <td className="tams-numeral">{weightedStr}</td>
                                     </tr>
                                   );
