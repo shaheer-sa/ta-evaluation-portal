@@ -10,7 +10,7 @@ export interface CourseGrade {
   id: string; // Used for linking
   code: string;
   title: string;
-  percentage: number;
+  percentage: number | null;
   term: string;
   section: string;
   gradedCount: number;
@@ -85,10 +85,11 @@ export function StatStrip({
 }
 
 // ---- Upgraded Grade Card ----
-function ProgressRing({ percentage }: { percentage: number }) {
+function ProgressRing({ percentage }: { percentage: number | null }) {
   const radius = 40;
   const circumference = 2 * Math.PI * radius;
-  const offset = circumference - (Math.min(percentage, 100) / 100) * circumference;
+  const validPct = percentage !== null && percentage !== undefined ? Math.min(Math.max(percentage, 0), 100) : 0;
+  const offset = circumference - (validPct / 100) * circumference;
 
   return (
     <svg width="100" height="100" className="-rotate-90 shrink-0">
@@ -174,7 +175,7 @@ export function GradeCard({ course }: { course: CourseGrade }) {
               )}
             </div>
             <p className="text-4xl font-bold text-foreground mb-2 tracking-tight">
-              {course.percentage}%
+              {course.percentage !== null ? `${course.percentage}%` : "—"}
             </p>
             <h3 className="text-lg font-semibold text-foreground truncate">
               {course.title}

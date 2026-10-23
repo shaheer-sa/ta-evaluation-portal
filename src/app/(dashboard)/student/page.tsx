@@ -58,6 +58,34 @@ export default async function StudentDashboardPage() {
 
   const enrollments = rawEnrollments as unknown as EnrollmentRow[] | null;
 
+  const sectionIds = [...new Set((enrollments || []).map((e) => e.section_id).filter(Boolean))];
+  const courseIds = [...new Set((enrollments || []).map((e) => e.course_id).filter(Boolean))];
+
+  let sectionCourses: {
+    section_id: string;
+    course_id: string;
+    assessments: { id: string }[];
+  }[] = [];
+
+  if (sectionIds.length > 0 && courseIds.length > 0) {
+    const { data: scData } = await supabase
+      .from("section_courses")
+      .select(`
+        section_id,
+        course_id,
+        assessments ( id )
+      `)
+      .in("section_id", sectionIds)
+      .in("course_id", courseIds);
+    sectionCourses = (scData as unknown as typeof sectionCourses) || [];
+  }
+
+  const scMap = new Map<string, number>();
+  for (const sc of sectionCourses) {
+    const key = `${sc.section_id}:${sc.course_id}`;
+    scMap.set(key, sc.assessments ? sc.assessments.length : 0);
+  }
+
   // Calculate weighted percentage per enrollment
   const courseCards: CourseGrade[] = (enrollments || []).map((e) => {
     let totalWeightedScore = 0;
@@ -99,6 +127,8 @@ export default async function StudentDashboardPage() {
       max: b.max,
     }));
 
+    const totalCount = scMap.get(`${e.section_id}:${e.course_id}`) ?? 0;
+
     return {
       id: e.id,
       code: e.courses?.code || "",
@@ -106,16 +136,17 @@ export default async function StudentDashboardPage() {
       section: e.sections?.name || "",
       term: e.sections?.terms?.name || "",
       gradedCount,
-      totalCount: e.marks.length,
-      percentage: Math.round(weightedPct * 10) / 10,
+      totalCount,
+      percentage: totalWeight > 0 ? Math.round(weightedPct * 10) / 10 : null,
       weightCovered: Math.round(totalWeight * 10) / 10,
       breakdown: topBreakdown,
     };
   });
 
-  const overall = courseCards.length > 0 
-    ? courseCards.reduce((sum, c) => sum + c.percentage, 0) / courseCards.length
-    : 0;
+  const gradedCourses = courseCards.filter((c) => c.percentage !== null);
+  const overall = gradedCourses.length > 0 
+    ? `${(gradedCourses.reduce((sum, c) => sum + (c.percentage ?? 0), 0) / gradedCourses.length).toFixed(1)}%`
+    : "—";
 
   return (
     <div className="max-w-[1200px] mx-auto pb-12">
@@ -131,7 +162,7 @@ export default async function StudentDashboardPage() {
 
       <GradesGrid>
         <StatStrip
-          overall={courseCards.length > 0 ? `${overall.toFixed(1)}%` : "—"}
+          overall={overall}
           courseCount={courseCards.length}
           pendingQueries={pendingQueries || 0}
         />
@@ -147,7 +178,7 @@ export default async function StudentDashboardPage() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {courseCards.map((c) => (
-              <GradeCard key={c.code} course={c} />
+              <GradeCard key={c.id} course={c} />
             ))}
           </div>
         )}
