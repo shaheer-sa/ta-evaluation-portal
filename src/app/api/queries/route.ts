@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { after } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import type { Database } from "@/types/database";
 import { sendQueryEmail } from "@/lib/email/gmail";
 import { formatStatus } from "@/lib/format";
@@ -326,6 +327,75 @@ export async function POST(request: Request) {
     console.error("Queries error:", err);
     return NextResponse.json(
       { error: "An unexpected error occurred" },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * DELETE /api/queries?id=<queryId>
+ * TA can delete a query.
+ */
+export async function DELETE(request: Request) {
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .single();
+
+    if (profile?.role !== "ta") {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    const url = new URL(request.url);
+    const id = url.searchParams.get("id");
+    const parsed = z.string().uuid("A valid query ID is required.").safeParse(id);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: "A valid query ID is required." },
+        { status: 400 }
+      );
+    }
+    const queryId = parsed.data;
+
+    // delete notifications where related_id = id
+    try {
+      const admin = createAdminClient();
+      await admin.from("notifications").delete().eq("related_id", queryId);
+    } catch (notifErr) {
+      console.error("Failed to delete notifications with admin client:", notifErr);
+      await supabase.from("notifications").delete().eq("related_id", queryId);
+    }
+
+    // then delete the query (replies are removed automatically)
+    const { error: queryDeleteError } = await supabase
+      .from("queries")
+      .delete()
+      .eq("id", queryId);
+
+    if (queryDeleteError) {
+      console.error("Query delete error:", queryDeleteError);
+      return NextResponse.json(
+        { error: "Couldn't delete the query. Please try again." },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (err: unknown) {
+    console.error("Query delete error:", err);
+    return NextResponse.json(
+      { error: "Couldn't delete the query. Please try again." },
       { status: 500 }
     );
   }

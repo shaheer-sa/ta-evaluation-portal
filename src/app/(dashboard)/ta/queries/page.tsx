@@ -14,6 +14,15 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import { formatStatus } from "@/lib/format";
 
@@ -59,6 +68,8 @@ function TAQueriesContent() {
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [highlightId, setHighlightId] = useState<string | null>(null);
+  const [deleteQueryId, setDeleteQueryId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const fetchQueries = useCallback(async () => {
     setIsLoading(true);
@@ -273,6 +284,14 @@ function TAQueriesContent() {
                         Reopen
                       </Button>
                     )}
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="text-destructive hover:text-destructive"
+                      onClick={() => setDeleteQueryId(q.id)}
+                    >
+                      Delete
+                    </Button>
                   </div>
                 </div>
                 <QueryThread queryId={q.id} isOpen={expandedId === q.id} />
@@ -281,6 +300,51 @@ function TAQueriesContent() {
           ))}
         </div>
       )}
+
+      <AlertDialog
+        open={!!deleteQueryId}
+        onOpenChange={(open) => {
+          if (!open && !isDeleting) setDeleteQueryId(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this query?</AlertDialogTitle>
+            <AlertDialogDescription>
+              The query and its whole reply thread will be removed for you and the student. This can&apos;t be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <Button
+              variant="destructive"
+              disabled={isDeleting}
+              onClick={async () => {
+                if (!deleteQueryId) return;
+                setIsDeleting(true);
+                try {
+                  const res = await fetch(`/api/queries?id=${deleteQueryId}`, {
+                    method: "DELETE",
+                  });
+                  const data = await res.json();
+                  if (!res.ok) {
+                    throw new Error(data.error || "Couldn't delete the query. Please try again.");
+                  }
+                  toast.success("Query deleted.");
+                  setDeleteQueryId(null);
+                  fetchQueries();
+                } catch (err: unknown) {
+                  toast.error(err instanceof Error ? err.message : "Couldn't delete the query. Please try again.");
+                } finally {
+                  setIsDeleting(false);
+                }
+              }}
+            >
+              {isDeleting ? "Deleting…" : "Delete query"}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
