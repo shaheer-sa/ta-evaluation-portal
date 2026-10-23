@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { fetchJson } from "@/lib/fetch-json";
 import { Loader2, Plus, MessageSquare } from "lucide-react";
 import { QueryThread } from "@/components/query-thread";
 import { Button } from "@/components/ui/button";
@@ -69,7 +70,7 @@ export default function StudentQueriesClient({
     e.preventDefault();
     setIsSubmitting(true);
     try {
-      const res = await fetch("/api/queries", {
+      await fetchJson("/api/queries", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -80,7 +81,6 @@ export default function StudentQueriesClient({
           priority: formPriority,
         }),
       });
-      if (!res.ok) throw new Error("Failed");
       toast.success("Query submitted!");
       setShowForm(false);
       setFormTitle("");
@@ -90,8 +90,8 @@ export default function StudentQueriesClient({
       // Update the URL to clear the selected enrollment, closing out the form data state.
       router.push("/student/queries");
       router.refresh();
-    } catch {
-      toast.error("Failed to submit query");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Couldn't submit your query. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
