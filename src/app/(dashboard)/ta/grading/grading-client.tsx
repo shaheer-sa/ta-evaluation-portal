@@ -58,6 +58,7 @@ const MarkRow = memo(function MarkRow({
   isDisabled,
   onChange,
   onToggleClear,
+  onScoreEnter,
 }: {
   enrollmentId: string;
   rollNumber: string;
@@ -70,6 +71,7 @@ const MarkRow = memo(function MarkRow({
   isDisabled: boolean;
   onChange: (id: string, val: string) => void;
   onToggleClear: (id: string) => void;
+  onScoreEnter: (input: HTMLInputElement) => void;
 }) {
   return (
     <tr>
@@ -93,11 +95,7 @@ const MarkRow = memo(function MarkRow({
             onKeyDown={(e) => {
               if (e.key === "Enter") {
                 e.preventDefault();
-                const inputs = Array.from(document.querySelectorAll<HTMLInputElement>("[data-score-input]"));
-                const currentIndex = inputs.indexOf(e.currentTarget);
-                if (currentIndex !== -1 && currentIndex + 1 < inputs.length) {
-                  inputs[currentIndex + 1].focus();
-                }
+                onScoreEnter(e.currentTarget);
               }
             }}
             disabled={isDisabled}
@@ -147,6 +145,7 @@ export default function GradingClient({
   const [searchQuery, setSearchQuery] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setStudentMarks(initialStudentMarks);
@@ -177,6 +176,21 @@ export default function GradingClient({
     setStudentMarks((prev) =>
       prev.map((s) => (s.enrollmentId === enrollmentId ? { ...s, score: value } : s))
     );
+  }, []);
+
+  const handleScoreEnter = useCallback((currentInput: HTMLInputElement) => {
+    if (searchInputRef.current && searchInputRef.current.value.trim().length > 0) {
+      setSearchQuery("");
+      searchInputRef.current.focus();
+    } else {
+      const inputs = Array.from(
+        document.querySelectorAll<HTMLInputElement>("[data-score-input]")
+      );
+      const currentIndex = inputs.indexOf(currentInput);
+      if (currentIndex !== -1 && currentIndex + 1 < inputs.length) {
+        inputs[currentIndex + 1].focus();
+      }
+    }
   }, []);
 
   const handleToggleClear = useCallback((enrollmentId: string) => {
@@ -427,8 +441,21 @@ export default function GradingClient({
             <div className="relative max-w-sm">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
+                ref={searchInputRef}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    if (filteredMarks.length > 0) {
+                      const firstInput = document.querySelector<HTMLInputElement>("[data-score-input]");
+                      if (firstInput) {
+                        firstInput.focus();
+                        firstInput.select();
+                      }
+                    }
+                  }
+                }}
                 placeholder="Search by name or roll number"
                 className="pl-9"
               />
@@ -491,6 +518,7 @@ export default function GradingClient({
                             isDisabled={isExplicitClear}
                             onChange={handleScoreChange}
                             onToggleClear={handleToggleClear}
+                            onScoreEnter={handleScoreEnter}
                           />
                         );
                       })}
@@ -498,7 +526,7 @@ export default function GradingClient({
                   </table>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Tip: press Enter to jump to the next student.
+                  Tip: type a roll number and press Enter to jump to that student. Press Enter after the mark to search the next one.
                 </p>
               </>
             )}
