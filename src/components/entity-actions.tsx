@@ -91,7 +91,7 @@ export function EntityActions({
       {editNode && editAction && (
         <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
           <DialogTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary">
+            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" data-tip="Edit" aria-label="Edit">
               <Pencil size={15} />
               <span className="sr-only">Edit</span>
             </Button>
@@ -113,7 +113,13 @@ export function EntityActions({
 
       <AlertDialog>
         <AlertDialogTrigger asChild>
-          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 text-muted-foreground hover:text-destructive"
+            data-tip={type === "unlink" ? "Unlink course" : "Delete"}
+            aria-label={type === "unlink" ? "Unlink course" : "Delete"}
+          >
             {type === "unlink" ? <X size={15} /> : <Trash2 size={15} />}
             <span className="sr-only">{type === "unlink" ? "Unlink" : "Delete"}</span>
           </Button>

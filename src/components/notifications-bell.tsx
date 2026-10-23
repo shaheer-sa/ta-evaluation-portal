@@ -156,6 +156,9 @@ export function NotificationsBell() {
         variant="ghost"
         size="sm"
         onClick={() => setIsOpen(!isOpen)}
+        data-tip="Notifications"
+        data-tip-pos="bottom-end"
+        aria-label={unreadCount > 0 ? `Notifications (${unreadCount} unread)` : "Notifications"}
         className="relative text-muted-foreground hover:text-foreground"
       >
         <Bell className="h-4 w-4" />
@@ -251,7 +254,8 @@ export function NotificationsBell() {
                         type="button"
                         onClick={(e) => dismissNotification(e, n)}
                         aria-label="Dismiss notification"
-                        title="Dismiss"
+                        data-tip="Dismiss"
+                        data-tip-pos="left"
                         className="p-3 text-muted-foreground hover:text-foreground text-sm font-medium leading-none shrink-0"
                       >
                         ×

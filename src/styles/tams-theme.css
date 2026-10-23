@@ -729,3 +729,84 @@ a.tams-stat {
 @media (prefers-reduced-motion: reduce) {
   .tams-progress { animation: none; background: var(--navy); }
 }
+/* ---- Tooltips for icon buttons ----
+   Add data-tip="..." to an element. Shows after resting the mouse ~0.7s,
+   hides straight away. Keyboard focus shows it too. Off on touch screens. */
+:where([data-tip]) {
+  position: relative;
+}
+
+[data-tip]::after {
+  content: attr(data-tip);
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translate(-50%, 2px);
+  white-space: nowrap;
+  pointer-events: none;
+  background: var(--ink);
+  color: var(--ink-invert);
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: normal;
+  text-transform: none;
+  padding: 0.3rem 0.5rem;
+  border-radius: 4px;
+  box-shadow: var(--shadow-sm);
+  opacity: 0;
+  transition: opacity 0.12s ease, transform 0.12s ease;
+  transition-delay: 0s;
+  z-index: 60;
+}
+
+[data-tip]:hover::after {
+  opacity: 1;
+  transform: translate(-50%, 0);
+  transition-delay: 0.7s;
+}
+
+[data-tip]:focus-visible::after {
+  opacity: 1;
+  transform: translate(-50%, 0);
+  transition-delay: 0.2s;
+}
+
+/* below the element, right aligned (for icons in the top right corner) */
+[data-tip][data-tip-pos="bottom-end"]::after {
+  bottom: auto;
+  top: calc(100% + 6px);
+  left: auto;
+  right: 0;
+  transform: translateY(-2px);
+}
+[data-tip][data-tip-pos="bottom-end"]:hover::after,
+[data-tip][data-tip-pos="bottom-end"]:focus-visible::after {
+  transform: translateY(0);
+}
+
+/* below the element, centred */
+[data-tip][data-tip-pos="bottom"]::after {
+  bottom: auto;
+  top: calc(100% + 6px);
+}
+
+/* to the left of the element (for icons at the right edge of tables/lists) */
+[data-tip][data-tip-pos="left"]::after {
+  bottom: auto;
+  left: auto;
+  right: calc(100% + 6px);
+  top: 50%;
+  transform: translate(2px, -50%);
+}
+[data-tip][data-tip-pos="left"]:hover::after,
+[data-tip][data-tip-pos="left"]:focus-visible::after {
+  transform: translate(0, -50%);
+}
+
+@media (hover: none) {
+  [data-tip]::after {
+    display: none;
+  }
+}

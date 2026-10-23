@@ -123,6 +123,9 @@ export default function FirstLoginPage() {
               type="button"
               tabIndex={-1}
               onClick={() => setShowPassword(!showPassword)}
+              aria-label={showPassword ? "Hide password" : "Show password"}
+              data-tip={showPassword ? "Hide password" : "Show password"}
+              data-tip-pos="left"
               style={{
                 position: "absolute",
                 right: "0.75rem",
@@ -167,6 +170,9 @@ export default function FirstLoginPage() {
               type="button"
               tabIndex={-1}
               onClick={() => setShowConfirm(!showConfirm)}
+              aria-label={showConfirm ? "Hide password" : "Show password"}
+              data-tip={showConfirm ? "Hide password" : "Show password"}
+              data-tip-pos="left"
               style={{
                 position: "absolute",
                 right: "0.75rem",

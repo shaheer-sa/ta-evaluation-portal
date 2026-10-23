@@ -79,6 +79,7 @@ export default function DashboardLayout({
               <button 
                 className="tams-iconbtn tams-mobile-only ml-auto"
                 onClick={() => setMobileMenuOpen(false)}
+                aria-label="Close menu"
               >
                 <X size={18} />
               </button>
@@ -109,6 +110,7 @@ export default function DashboardLayout({
               <button 
                 className="tams-iconbtn tams-mobile-only"
                 onClick={() => setMobileMenuOpen(true)}
+                aria-label="Open menu"
               >
                 <Menu size={18} />
               </button>

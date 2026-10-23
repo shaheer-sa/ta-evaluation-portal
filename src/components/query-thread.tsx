@@ -130,6 +130,9 @@ export function QueryThread({ queryId, isOpen }: QueryThreadProps) {
           size="sm"
           onClick={handleSend}
           disabled={isSending || !newReply.trim()}
+          data-tip="Send reply"
+          data-tip-pos="left"
+          aria-label="Send reply"
           className="self-end"
         >
           {isSending ? (

@@ -223,6 +223,8 @@ export default function ResetPasswordPage() {
                 padding: 0,
               }}
               aria-label={showPassword ? "Hide password" : "Show password"}
+              data-tip={showPassword ? "Hide password" : "Show password"}
+              data-tip-pos="left"
             >
               {showPassword ? (
                 <EyeOff style={{ width: 16, height: 16 }} />
@@ -270,6 +272,8 @@ export default function ResetPasswordPage() {
                 padding: 0,
               }}
               aria-label={showConfirm ? "Hide password" : "Show password"}
+              data-tip={showConfirm ? "Hide password" : "Show password"}
+              data-tip-pos="left"
             >
               {showConfirm ? (
                 <EyeOff style={{ width: 16, height: 16 }} />

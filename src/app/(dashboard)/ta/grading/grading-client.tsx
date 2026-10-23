@@ -116,7 +116,9 @@ const MarkRow = memo(function MarkRow({
               size="icon"
               onClick={() => onToggleClear(enrollmentId)}
               className={cn("h-8 w-8", pendingClear ? "text-muted-foreground" : "text-destructive hover:bg-destructive/10 hover:text-destructive")}
-              title={pendingClear ? "Restore mark" : "Clear this mark"}
+              data-tip={pendingClear ? "Restore mark" : "Clear this mark"}
+              data-tip-pos="left"
+              aria-label={pendingClear ? "Restore mark" : "Clear this mark"}
             >
               {pendingClear ? <Save className="h-4 w-4" /> : <Eraser className="h-4 w-4" />}
             </Button>
