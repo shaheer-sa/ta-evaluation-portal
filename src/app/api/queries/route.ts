@@ -2,10 +2,25 @@ export const runtime = "nodejs";
 
 import { NextResponse } from "next/server";
 import { after } from "next/server";
+import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import type { Database } from "@/types/database";
 import { sendQueryEmail } from "@/lib/email/gmail";
 import { formatStatus } from "@/lib/format";
+
+const createQuerySchema = z.object({
+  enrollmentId: z.string().uuid("Invalid enrollment ID."),
+  assessmentId: z.string().uuid("Invalid assessment ID.").nullable().optional(),
+  title: z.string().trim().min(1, "Title is required.").max(150, "Title must be 150 characters or fewer."),
+  description: z.string().trim().min(1, "Description is required.").max(3000, "Description must be 3000 characters or fewer."),
+  priority: z.enum(["low", "medium", "high"]).optional(),
+});
+
+const updateQueryStatusSchema = z.object({
+  action: z.literal("updateStatus"),
+  queryId: z.string().uuid("Invalid query ID."),
+  newStatus: z.enum(["pending", "in_review", "resolved", "rejected"]),
+});
 
 /**
  * GET /api/queries
@@ -135,17 +150,14 @@ export async function POST(request: Request) {
 
     // TA updating status
     if (body.action === "updateStatus" && profile?.role === "ta") {
-      const { queryId, newStatus } = body;
-
-      // Guard the enum: an arbitrary string here would be written straight
-      // into the status column and then rendered in both dashboards.
-      const VALID_STATUSES = ["pending", "in_review", "resolved", "rejected"];
-      if (!queryId || !VALID_STATUSES.includes(newStatus)) {
+      const parsed = updateQueryStatusSchema.safeParse(body);
+      if (!parsed.success) {
         return NextResponse.json(
-          { error: "Invalid query or status" },
+          { error: parsed.error.issues[0]?.message || "Invalid query or status." },
           { status: 400 }
         );
       }
+      const { queryId, newStatus } = parsed.data;
 
       const { error } = await supabase
         .from("queries")
@@ -207,18 +219,14 @@ export async function POST(request: Request) {
 
     // Student creating query
     if (profile?.role === "student") {
-      const { enrollmentId, assessmentId, title, description, priority } = body;
-
-      if (!enrollmentId || !title?.trim() || !description?.trim()) {
+      const parsed = createQuerySchema.safeParse(body);
+      if (!parsed.success) {
         return NextResponse.json(
-          { error: "Course, title and description are required" },
+          { error: parsed.error.issues[0]?.message || "Please provide valid query details." },
           { status: 400 }
         );
       }
-
-      if (priority && !["low", "medium", "high"].includes(priority)) {
-        return NextResponse.json({ error: "Invalid priority" }, { status: 400 });
-      }
+      const { enrollmentId, assessmentId, title, description, priority } = parsed.data;
 
       // Confirm the enrollment belongs to the student filing the query.
       // Without this the enrollment ID is simply whatever the browser sent,

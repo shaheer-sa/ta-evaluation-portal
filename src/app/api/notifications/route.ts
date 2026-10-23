@@ -1,5 +1,11 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+
+const postNotificationSchema = z.object({
+  markAllRead: z.boolean().optional(),
+  notificationIds: z.array(z.string().uuid("Invalid notification ID.")).max(100, "Cannot update more than 100 notifications at once.").optional(),
+});
 
 /**
  * GET /api/notifications
@@ -57,18 +63,26 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const body = await request.json();
+    const parsed = postNotificationSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: parsed.error.issues[0]?.message || "Invalid notification request." },
+        { status: 400 }
+      );
+    }
+    const { markAllRead, notificationIds } = parsed.data;
 
-    if (body.markAllRead) {
+    if (markAllRead) {
       await supabase
         .from("notifications")
         .update({ is_read: true })
         .eq("recipient_id", user.id)
         .eq("is_read", false);
-    } else if (body.notificationIds && Array.isArray(body.notificationIds)) {
+    } else if (notificationIds && notificationIds.length > 0) {
       await supabase
         .from("notifications")
         .update({ is_read: true })
-        .in("id", body.notificationIds)
+        .in("id", notificationIds)
         .eq("recipient_id", user.id);
     }
 

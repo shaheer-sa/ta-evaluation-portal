@@ -183,6 +183,7 @@ export default function StudentQueriesClient({
                   value={formTitle}
                   onChange={(e) => setFormTitle(e.target.value)}
                   required
+                  maxLength={150}
                   placeholder="e.g. Quiz 2 re-evaluation request"
                 />
               </div>
@@ -193,10 +194,14 @@ export default function StudentQueriesClient({
                   value={formDescription}
                   onChange={(e) => setFormDescription(e.target.value)}
                   required
+                  maxLength={3000}
                   rows={4}
                   placeholder="Explain your concern in detail..."
                   className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 />
+                <p className="text-xs text-muted-foreground text-right">
+                  {formDescription.length} / 3000
+                </p>
               </div>
 
               <div className="space-y-2">

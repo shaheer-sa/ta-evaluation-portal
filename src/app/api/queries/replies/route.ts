@@ -2,8 +2,14 @@ export const runtime = "nodejs";
 
 import { NextResponse } from "next/server";
 import { after } from "next/server";
+import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { sendQueryEmail } from "@/lib/email/gmail";
+
+const postReplySchema = z.object({
+  queryId: z.string().uuid("Invalid query ID."),
+  message: z.string().trim().min(1, "Message cannot be empty.").max(3000, "Message must be 3000 characters or fewer."),
+});
 
 /**
  * A query thread is readable and writable by exactly two parties: the
@@ -49,11 +55,13 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const url = new URL(request.url);
-    const queryId = url.searchParams.get("queryId");
+    const rawQueryId = url.searchParams.get("queryId");
+    const queryIdParsed = z.string().uuid("Invalid query ID.").safeParse(rawQueryId);
 
-    if (!queryId) {
-      return NextResponse.json({ error: "queryId is required" }, { status: 400 });
+    if (!queryIdParsed.success) {
+      return NextResponse.json({ error: "A valid query ID is required." }, { status: 400 });
     }
+    const queryId = queryIdParsed.data;
 
     // Confirm the caller is actually party to this thread before returning
     // its contents. Previously any authenticated user could enumerate query
@@ -132,14 +140,16 @@ export async function POST(request: Request) {
     if (!user)
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const { queryId, message } = await request.json();
-
-    if (!queryId || !message?.trim()) {
+    const body = await request.json();
+    const parsed = postReplySchema.safeParse(body);
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: "queryId and message are required" },
+        { error: parsed.error.issues[0]?.message || "Invalid reply payload." },
         { status: 400 }
       );
     }
+
+    const { queryId, message } = parsed.data;
 
     const { data: profile } = await supabase
       .from("profiles")

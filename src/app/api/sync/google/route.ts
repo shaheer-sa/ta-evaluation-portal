@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { google } from "googleapis";
 import { escapeLikePattern } from "@/lib/identifiers";
 import { createClient } from "@/lib/supabase/server";
@@ -7,6 +8,16 @@ import type { Database } from "@/types/database";
 import { createRateLimiter } from "@/lib/rate-limit";
 
 export const maxDuration = 60;
+
+const syncGoogleSchema = z.object({
+  sectionCourseId: z.string().uuid("Invalid section course ID."),
+  spreadsheetUrl: z
+    .string()
+    .max(500, "Spreadsheet URL must be 500 characters or fewer.")
+    .refine((url) => url.includes("docs.google.com/spreadsheets/d/"), {
+      message: "Please provide a valid Google Sheets URL containing docs.google.com/spreadsheets/d/.",
+    }),
+});
 
 const syncRateLimit = createRateLimiter({ tokens: 5, window: "10 m" });
 
@@ -123,11 +134,15 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const { sectionCourseId, spreadsheetUrl } = await request.json();
-
-    if (!sectionCourseId || !spreadsheetUrl) {
-      return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
+    const body = await request.json();
+    const parsed = syncGoogleSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: parsed.error.issues[0]?.message || "Invalid sync request." },
+        { status: 400 }
+      );
     }
+    const { sectionCourseId, spreadsheetUrl } = parsed.data;
 
     // Extract Spreadsheet ID from URL
     const spreadsheetIdMatch = spreadsheetUrl.match(/[-\w]{25,}/);

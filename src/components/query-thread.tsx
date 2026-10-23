@@ -117,6 +117,7 @@ export function QueryThread({ queryId, isOpen }: QueryThreadProps) {
           onChange={(e) => setNewReply(e.target.value)}
           placeholder="Write a reply..."
           rows={2}
+          maxLength={3000}
           className="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none"
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey) {

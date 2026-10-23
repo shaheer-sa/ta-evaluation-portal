@@ -1,5 +1,22 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+
+const gradingPostSchema = z.object({
+  assessmentId: z.string().uuid("Invalid assessment ID."),
+  marks: z
+    .array(
+      z.object({
+        enrollmentId: z.string().uuid("Invalid enrollment ID."),
+        score: z.union([z.string(), z.number(), z.null()]).optional(),
+      })
+    )
+    .max(1000, "Cannot submit more than 1000 marks at once."),
+  clearEnrollmentIds: z
+    .array(z.string().uuid("Invalid clear enrollment ID."))
+    .max(1000, "Cannot clear more than 1000 marks at once.")
+    .optional(),
+});
 
 interface IncomingMark {
   enrollmentId?: string;
@@ -31,17 +48,17 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const { assessmentId, marks, clearEnrollmentIds } = await request.json();
-
-    if (!assessmentId || !Array.isArray(marks)) {
-      return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
+    const body = await request.json();
+    const parsed = gradingPostSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: parsed.error.issues[0]?.message || "Invalid grading payload." },
+        { status: 400 }
+      );
     }
+    const { assessmentId, marks, clearEnrollmentIds } = parsed.data;
 
     if (clearEnrollmentIds !== undefined) {
-      if (!Array.isArray(clearEnrollmentIds) || clearEnrollmentIds.length > 1000) {
-        return NextResponse.json({ error: "Invalid clearEnrollmentIds payload" }, { status: 400 });
-      }
-      
       const clearSet = new Set(clearEnrollmentIds);
       for (const m of marks as IncomingMark[]) {
         if (m.enrollmentId && clearSet.has(m.enrollmentId)) {
