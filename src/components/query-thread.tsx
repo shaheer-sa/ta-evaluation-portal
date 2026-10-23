@@ -115,7 +115,7 @@ export function QueryThread({ queryId, isOpen }: QueryThreadProps) {
         <textarea
           value={newReply}
           onChange={(e) => setNewReply(e.target.value)}
-          placeholder="Write a reply..."
+          placeholder="Write a reply… (Enter to send, Shift+Enter for a new line)"
           rows={2}
           maxLength={3000}
           className="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none"
