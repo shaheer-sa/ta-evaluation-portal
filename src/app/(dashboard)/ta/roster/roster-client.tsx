@@ -502,8 +502,10 @@ function MissingStudentsPanel({
   missingStudents: { enrollmentId: string; rollNumber: string; fullName: string }[];
   onWithdrawComplete: () => void;
 }) {
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set(missingStudents.map(s => s.enrollmentId)));
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isWithdrawing, setIsWithdrawing] = useState(false);
+
+  const allSelected = missingStudents.length > 0 && selectedIds.size === missingStudents.length;
 
   const handleWithdraw = async () => {
     if (selectedIds.size === 0) return;
@@ -532,10 +534,25 @@ function MissingStudentsPanel({
       className="mt-6 rounded-md border p-4" 
       style={{ backgroundColor: 'var(--warning-soft, #fffbeb)', borderColor: 'var(--warning, #f59e0b)', color: 'var(--warning, #b45309)' }}
     >
-      <h4 className="font-semibold flex items-center gap-2 mb-3">
-        <AlertCircle className="h-5 w-5" />
-        {missingStudents.length} student{missingStudents.length === 1 ? ' is' : 's are'} enrolled in TAMS but not in the sheet.
-      </h4>
+      <div className="flex items-center justify-between mb-3">
+        <h4 className="font-semibold flex items-center gap-2">
+          <AlertCircle className="h-5 w-5" />
+          {missingStudents.length} student{missingStudents.length === 1 ? ' is' : 's are'} enrolled in TAMS but not in the sheet.
+        </h4>
+        <button
+          type="button"
+          onClick={() => {
+            if (allSelected) {
+              setSelectedIds(new Set());
+            } else {
+              setSelectedIds(new Set(missingStudents.map((s) => s.enrollmentId)));
+            }
+          }}
+          className="text-xs font-medium underline underline-offset-2 hover:opacity-80"
+        >
+          {allSelected ? "Clear" : "Select all"}
+        </button>
+      </div>
       
       <div className="space-y-2 mb-4 max-h-[300px] overflow-y-auto bg-white/50 p-2 rounded border border-white/20">
         {missingStudents.map(s => (
@@ -569,7 +586,7 @@ function MissingStudentsPanel({
           disabled={isWithdrawing || selectedIds.size === 0}
           className="bg-white hover:bg-red-50 text-red-600 hover:text-red-700 border-red-200"
         >
-          {isWithdrawing ? "Processing..." : "Mark selected as withdrawn"}
+          {isWithdrawing ? "Processing..." : `Withdraw selected (${selectedIds.size})`}
         </Button>
         <Button 
           variant="ghost"
