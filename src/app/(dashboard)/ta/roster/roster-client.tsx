@@ -45,6 +45,8 @@ interface SyncResult {
   withdrawnInSheet?: { enrollmentId: string; rollNumber: string; fullName: string }[];
   rejectedScores?: { rollNo: string; assessment: string; value: string; reason: string }[];
   skippedAssessments?: string[];
+  partial?: boolean;
+  remaining?: number;
 }
 
 export type SectionCourseRow = Pick<Database["public"]["Tables"]["section_courses"]["Row"], "id" | "section_id" | "course_id"> & {
@@ -253,6 +255,17 @@ export default function RosterClient({ sections, selectedSectionCourseId, roster
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            {syncResult.partial && (
+              <div 
+                className="rounded-md border p-4 mb-4" 
+                style={{ backgroundColor: 'var(--warning-soft, #fffbeb)', borderColor: 'var(--warning, #f59e0b)', color: 'var(--warning, #b45309)' }}
+              >
+                <div className="font-semibold flex items-center gap-2">
+                  <AlertCircle className="h-5 w-5" />
+                  Sync stopped early. {syncResult.remaining} students weren&apos;t processed yet. Click Sync Now again to finish.
+                </div>
+              </div>
+            )}
             {((syncResult.rejectedScores && syncResult.rejectedScores.length > 0) || (syncResult.skippedAssessments && syncResult.skippedAssessments.length > 0)) && (
               <div 
                 className="rounded-md border p-4 mb-4" 
