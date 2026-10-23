@@ -13,6 +13,30 @@ export function escapeHtmlMultiline(value: string): string {
   return escapeHtml(value).replace(/\r?\n/g, "<br/>");
 }
 
+// plain text copy of the html body. mail apps still show the html one,
+// but spam filters trust emails more when both versions are there
+export function htmlToText(html: string): string {
+  return html
+    .replace(/<a\s[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/gi, (_m, href: string, label: string) => {
+      const text = label.replace(/<[^>]+>/g, "").trim();
+      return text && text !== href ? `${text}: ${href}` : href;
+    })
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/(p|div|blockquote|h[1-6]|li|tr)>/gi, "\n\n")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&amp;/g, "&")
+    .split("\n")
+    .map((line) => line.trim())
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
 const transport = nodemailer.createTransport({
   host: "smtp.gmail.com",
   port: 465,
@@ -55,6 +79,7 @@ async function sendMail({
     replyTo: process.env.GMAIL_USER,
     subject: safeSubject,
     html,
+    text: htmlToText(html),
   });
   console.log("email sent", { to, subject: safeSubject, response: info.response });
 }
@@ -71,6 +96,7 @@ export async function sendTestEmail(to: string): Promise<{ ok: true; response: s
       to,
       subject: "[TAMS] Test email",
       html: "<p>If you can read this, TAMS can send emails.</p>",
+      text: "If you can read this, TAMS can send emails.",
     });
     return { ok: true, response: String(info.response) };
   } catch (err) {
