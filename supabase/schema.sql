@@ -1,587 +1,266 @@
 -- ============================================================================
--- TAMS — Teaching Assistant Management System
--- Complete database schema, Row Level Security policies, functions, triggers.
+-- TAMS database schema
 --
--- Run this once against a fresh Supabase project:
---   Supabase Dashboard -> SQL Editor -> paste -> Run
+-- Matches the live production database as of 2026-10-23
+-- (rebuilt from the live catalog + migrations 01-05 in supabase/migrations).
 --
--- WHY THIS FILE EXISTS
--- The application depended on all of this already being present in one
--- particular Supabase project, but none of it was in the repository. README
--- step 3 said "apply the database schema" with no schema to apply, so the
--- project could not be run by anyone else, and the access-control rules that
--- keep one student from reading another's grades were invisible and
--- unreviewable. Both problems are fixed by keeping the schema in source
--- control alongside the code that assumes it.
+-- Use this ONLY to set up a brand new, empty Supabase project.
+-- NEVER run it against the live database: it is not idempotent and will fail
+-- or create duplicates. Changes to the live database go in small files under
+-- supabase/migrations/ and are run one at a time in the SQL Editor.
+--
+-- After running it on a new project, create your TA account in the Supabase
+-- Auth dashboard and then run:
+--   update public.profiles set role = 'ta' where email = 'you@university.edu';
 -- ============================================================================
-
--- ── Enums ───────────────────────────────────────────────────────────────────
-
-do $$ begin
-  create type user_role as enum ('ta', 'student');
-exception when duplicate_object then null; end $$;
-
-do $$ begin
-  create type assessment_type as enum
-    ('assignment', 'quiz', 'mid', 'final', 'project', 'cp');
-exception when duplicate_object then null; end $$;
-
-do $$ begin
-  create type query_status as enum
-    ('pending', 'in_review', 'resolved', 'rejected');
-exception when duplicate_object then null; end $$;
-
-do $$ begin
-  create type query_priority as enum ('low', 'medium', 'high');
-exception when duplicate_object then null; end $$;
 
 -- ── Tables ──────────────────────────────────────────────────────────────────
 
-create table if not exists profiles (
-  id          uuid primary key references auth.users(id) on delete cascade,
-  email       text not null unique,
-  full_name   text not null default '',
-  role        user_role not null default 'student',
-  roll_number text unique,
+create table public.profiles (
+  id uuid not null,
+  email text not null,
+  full_name text not null,
   must_change_password boolean not null default true,
-  created_at  timestamptz not null default now(),
-  updated_at  timestamptz not null default now()
-);
-
--- The forced first-login gate reads this and a null would silently skip it.
--- The live database was missing the NOT NULL constraint.
-alter table profiles alter column must_change_password set not null;
-
-create table if not exists terms (
-  id         uuid primary key default gen_random_uuid(),
-  name       text not null unique,
-  is_active  boolean not null default false,
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
-);
-
--- At most one active term at a time. activate_term() below flips this
--- atomically; a plain UPDATE that would create a second active term fails.
-create unique index if not exists terms_single_active_idx
-  on terms (is_active) where is_active;
-
-create table if not exists courses (
-  id                 uuid primary key default gen_random_uuid(),
-  code               text not null unique,
-  name               text not null,
-  enable_cp          boolean not null default true,
-  enable_assignments boolean not null default true,
-  enable_quizzes     boolean not null default true,
-  enable_reeval      boolean not null default true,
-  created_at         timestamptz not null default now(),
-  updated_at         timestamptz not null default now()
-);
-
-create table if not exists sections (
-  id         uuid primary key default gen_random_uuid(),
-  term_id    uuid not null references terms(id) on delete cascade,
-  name       text not null,
+  role text not null,
+  roll_number text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
-  unique (term_id, name)
+  constraint profiles_pkey PRIMARY KEY (id),
+  constraint profiles_email_key UNIQUE (email),
+  constraint profiles_roll_number_key UNIQUE (roll_number),
+  constraint profiles_role_check CHECK ((role = ANY (ARRAY['ta'::text, 'student'::text]))),
+  constraint student_must_have_roll_number CHECK (((role = 'ta'::text) OR (roll_number IS NOT NULL))),
+  constraint profiles_id_fkey FOREIGN KEY (id) REFERENCES auth.users(id) ON DELETE CASCADE
 );
 
-create table if not exists section_courses (
-  id         uuid primary key default gen_random_uuid(),
-  section_id uuid not null references sections(id) on delete cascade,
-  course_id  uuid not null references courses(id) on delete cascade,
+create table public.terms (
+  id uuid not null default gen_random_uuid(),
+  is_active boolean not null default false,
+  name text not null,
   created_at timestamptz not null default now(),
-  unique (section_id, course_id)
+  updated_at timestamptz not null default now(),
+  constraint terms_pkey PRIMARY KEY (id),
+  constraint terms_name_key UNIQUE (name)
 );
 
-create table if not exists enrollments (
-  id         uuid primary key default gen_random_uuid(),
-  student_id uuid not null references profiles(id) on delete cascade,
-  section_id uuid not null references sections(id) on delete cascade,
-  course_id  uuid not null references courses(id) on delete cascade,
+create table public.courses (
+  id uuid not null default gen_random_uuid(),
+  code text not null,
+  enable_assignments boolean not null default true,
+  enable_cp boolean not null default true,
+  enable_quizzes boolean not null default true,
+  enable_reeval boolean not null default true,
+  name text not null,
   created_at timestamptz not null default now(),
-  -- The sync and CSV import both rely on this to detect "already enrolled"
-  -- via error code 23505 rather than duplicating rows on every run.
-  unique (student_id, section_id, course_id)
+  updated_at timestamptz not null default now(),
+  constraint courses_pkey PRIMARY KEY (id),
+  constraint courses_code_key UNIQUE (code)
 );
 
-alter table enrollments
-  add column if not exists status text not null default 'active'
-    check (status in ('active', 'withdrawn')),
-  add column if not exists withdrawn_at timestamptz;
-
-create index if not exists enrollments_status_idx
-  on enrollments (section_id, course_id, status);
-
-create table if not exists assessments (
-  id                uuid primary key default gen_random_uuid(),
-  section_course_id uuid not null references section_courses(id) on delete cascade,
-  type              assessment_type not null,
-  title             text not null,
-  max_marks         numeric not null check (max_marks > 0),
-  weight            numeric not null default 0 check (weight >= 0),
-  created_at        timestamptz not null default now(),
-  updated_at        timestamptz not null default now()
+create table public.sections (
+  id uuid not null default gen_random_uuid(),
+  name text not null,
+  term_id uuid not null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint sections_pkey PRIMARY KEY (id),
+  constraint sections_term_id_name_key UNIQUE (term_id, name),
+  constraint sections_term_id_fkey FOREIGN KEY (term_id) REFERENCES terms(id) ON DELETE CASCADE
 );
 
-create table if not exists marks (
-  id                 uuid primary key default gen_random_uuid(),
-  enrollment_id      uuid not null references enrollments(id) on delete cascade,
-  assessment_id      uuid not null references assessments(id) on delete cascade,
-  score              numeric check (score >= 0),
-  -- Last value written to (or read from) the Google Sheet. The sync engine
-  -- compares score against this to work out which side changed.
+create table public.section_courses (
+  id uuid not null default gen_random_uuid(),
+  course_id uuid not null,
+  section_id uuid not null,
+  created_at timestamptz not null default now(),
+  constraint section_courses_pkey PRIMARY KEY (id),
+  constraint section_courses_section_id_course_id_key UNIQUE (section_id, course_id),
+  constraint section_courses_course_id_fkey FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE RESTRICT,
+  constraint section_courses_section_id_fkey FOREIGN KEY (section_id) REFERENCES sections(id) ON DELETE CASCADE
+);
+
+create table public.enrollments (
+  id uuid not null default gen_random_uuid(),
+  course_id uuid not null,
+  section_id uuid not null,
+  status text not null default 'active'::text,
+  student_id uuid not null,
+  withdrawn_at timestamptz,
+  created_at timestamptz not null default now(),
+  constraint enrollments_pkey PRIMARY KEY (id),
+  constraint enrollments_student_id_section_id_course_id_key UNIQUE (student_id, section_id, course_id),
+  constraint enrollments_status_check CHECK ((status = ANY (ARRAY['active'::text, 'withdrawn'::text]))),
+  constraint enrollments_course_id_fkey FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE,
+  constraint enrollments_section_id_fkey FOREIGN KEY (section_id) REFERENCES sections(id) ON DELETE CASCADE,
+  constraint enrollments_student_id_fkey FOREIGN KEY (student_id) REFERENCES profiles(id) ON DELETE CASCADE
+);
+
+create table public.assessments (
+  id uuid not null default gen_random_uuid(),
+  max_marks numeric not null,
+  section_course_id uuid not null,
+  title text not null,
+  type text not null,
+  weight numeric not null default 0,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint assessments_pkey PRIMARY KEY (id),
+  constraint assessments_max_marks_check CHECK ((max_marks > (0)::numeric)),
+  constraint assessments_type_check CHECK ((type = ANY (ARRAY['assignment'::text, 'quiz'::text, 'mid'::text, 'final'::text, 'project'::text, 'cp'::text]))),
+  constraint assessments_weight_check CHECK (((weight >= (0)::numeric) AND (weight <= (100)::numeric))),
+  constraint assessments_section_course_id_fkey FOREIGN KEY (section_course_id) REFERENCES section_courses(id) ON DELETE CASCADE
+);
+
+create table public.marks (
+  id uuid not null default gen_random_uuid(),
+  assessment_id uuid not null,
+  enrollment_id uuid not null,
+  score numeric default 0,
   sheet_synced_score numeric,
-  updated_by         uuid references profiles(id) on delete set null,
-  created_at         timestamptz not null default now(),
-  updated_at         timestamptz not null default now(),
-  -- Required by the batched upsert in /api/grading and by the sync engine.
-  unique (enrollment_id, assessment_id)
+  updated_by uuid,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint marks_pkey PRIMARY KEY (id),
+  constraint marks_enrollment_id_assessment_id_key UNIQUE (enrollment_id, assessment_id),
+  constraint marks_assessment_id_fkey FOREIGN KEY (assessment_id) REFERENCES assessments(id) ON DELETE CASCADE,
+  constraint marks_enrollment_id_fkey FOREIGN KEY (enrollment_id) REFERENCES enrollments(id) ON DELETE CASCADE,
+  constraint marks_updated_by_fkey FOREIGN KEY (updated_by) REFERENCES profiles(id)
 );
 
--- score must stay NULLABLE. Two states use null:
---   1. a mark row created before the assessment is graded
---   2. a mark a TA deliberately cleared (score and sheet_synced_score both
---      null is the signal the sync engine reads to push a blank to the sheet)
--- The live database had a NOT NULL constraint here that this file never
--- declared; dropped 2026-09.
-alter table marks alter column score drop not null;
-
-create table if not exists queries (
-  id            uuid primary key default gen_random_uuid(),
-  student_id    uuid not null references profiles(id) on delete cascade,
-  enrollment_id uuid not null references enrollments(id) on delete cascade,
-  assessment_id uuid references assessments(id) on delete set null,
-  title         text not null,
-  description   text not null,
-  priority      query_priority not null default 'medium',
-  status        query_status not null default 'pending',
-  created_at    timestamptz not null default now(),
-  updated_at    timestamptz not null default now()
+create table public.queries (
+  id uuid not null default gen_random_uuid(),
+  assessment_id uuid,
+  description text not null,
+  enrollment_id uuid not null,
+  priority text not null default 'medium'::text,
+  status text not null default 'pending'::text,
+  student_id uuid not null,
+  title text not null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint queries_pkey PRIMARY KEY (id),
+  constraint queries_priority_check CHECK ((priority = ANY (ARRAY['low'::text, 'medium'::text, 'high'::text]))),
+  constraint queries_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'in_review'::text, 'resolved'::text, 'rejected'::text]))),
+  constraint queries_assessment_id_fkey FOREIGN KEY (assessment_id) REFERENCES assessments(id) ON DELETE SET NULL,
+  constraint queries_enrollment_id_fkey FOREIGN KEY (enrollment_id) REFERENCES enrollments(id) ON DELETE CASCADE,
+  constraint queries_student_id_fkey FOREIGN KEY (student_id) REFERENCES profiles(id) ON DELETE CASCADE
 );
 
-create table if not exists replies (
-  id         uuid primary key default gen_random_uuid(),
-  query_id   uuid not null references queries(id) on delete cascade,
-  sender_id  uuid not null references profiles(id) on delete cascade,
-  message    text not null,
-  created_at timestamptz not null default now()
+create table public.replies (
+  id uuid not null default gen_random_uuid(),
+  message text not null,
+  query_id uuid not null,
+  sender_id uuid not null,
+  created_at timestamptz not null default now(),
+  constraint replies_pkey PRIMARY KEY (id),
+  constraint replies_query_id_fkey FOREIGN KEY (query_id) REFERENCES queries(id) ON DELETE CASCADE,
+  constraint replies_sender_id_fkey FOREIGN KEY (sender_id) REFERENCES profiles(id)
 );
 
-create table if not exists notifications (
-  id           uuid primary key default gen_random_uuid(),
-  recipient_id uuid not null references profiles(id) on delete cascade,
-  type         text not null,
-  title        text not null,
-  body         text,
-  related_id   uuid,
-  is_read      boolean not null default false,
-  created_at   timestamptz not null default now()
+create table public.notifications (
+  id uuid not null default gen_random_uuid(),
+  body text,
+  is_read boolean not null default false,
+  recipient_id uuid not null,
+  related_id uuid,
+  title text not null,
+  type text not null,
+  created_at timestamptz not null default now(),
+  constraint notifications_pkey PRIMARY KEY (id),
+  constraint notifications_recipient_id_fkey FOREIGN KEY (recipient_id) REFERENCES profiles(id) ON DELETE CASCADE
 );
 
-create table if not exists activity_logs (
-  id          uuid primary key default gen_random_uuid(),
-  actor_id    uuid references profiles(id) on delete set null,
-  action      text not null,
-  entity_type text,
-  entity_id   uuid,
-  metadata    jsonb,
-  created_at  timestamptz not null default now()
+create table public.activity_logs (
+  id uuid not null default gen_random_uuid(),
+  action text not null,
+  actor_id uuid,
+  entity_id uuid,
+  entity_type text not null,
+  metadata jsonb,
+  created_at timestamptz not null default now(),
+  constraint activity_logs_pkey PRIMARY KEY (id),
+  constraint activity_logs_actor_id_fkey FOREIGN KEY (actor_id) REFERENCES profiles(id)
 );
 
--- Note: The database also contains `announcements` and `query_attachments` tables
--- with RLS enabled and policies. However, they are empty and completely unused 
--- by the application code, so they are intentionally omitted from this schema file.
+create table public.announcements (
+  id uuid not null default gen_random_uuid(),
+  body text not null,
+  created_by uuid not null,
+  section_course_id uuid not null,
+  title text not null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint announcements_pkey PRIMARY KEY (id),
+  constraint announcements_created_by_fkey FOREIGN KEY (created_by) REFERENCES profiles(id),
+  constraint announcements_section_course_id_fkey FOREIGN KEY (section_course_id) REFERENCES section_courses(id) ON DELETE CASCADE
+);
 
--- ── Indexes for the app's hot paths ─────────────────────────────────────────
+create table public.query_attachments (
+  id uuid not null default gen_random_uuid(),
+  file_name text,
+  file_url text not null,
+  query_id uuid not null,
+  created_at timestamptz not null default now(),
+  constraint query_attachments_pkey PRIMARY KEY (id),
+  constraint query_attachments_query_id_fkey FOREIGN KEY (query_id) REFERENCES queries(id) ON DELETE CASCADE
+);
 
-create index if not exists enrollments_student_idx  on enrollments (student_id);
-create index if not exists enrollments_section_idx  on enrollments (section_id, course_id);
-create index if not exists marks_enrollment_idx     on marks (enrollment_id);
-create index if not exists marks_assessment_idx     on marks (assessment_id);
-create index if not exists queries_student_idx      on queries (student_id);
-create index if not exists queries_status_idx       on queries (status);
-create index if not exists replies_query_idx        on replies (query_id);
-create index if not exists notifications_recipient_idx
-  on notifications (recipient_id, is_read);
-create index if not exists assessments_sc_idx       on assessments (section_course_id);
+-- ── Indexes ─────────────────────────────────────────────────────────────────
 
--- ── Helper: is the current user a TA? ───────────────────────────────────────
--- SECURITY DEFINER so it can read profiles without tripping the profiles
--- policies, which would otherwise recurse infinitely when a policy on
--- another table calls this to check the caller's role.
+CREATE INDEX idx_activity_logs_actor ON public.activity_logs USING btree (actor_id);
+CREATE INDEX idx_activity_logs_entity ON public.activity_logs USING btree (entity_type, entity_id);
+CREATE INDEX idx_announcements_section_course ON public.announcements USING btree (section_course_id);
+CREATE UNIQUE INDEX assessments_unique_title_per_sc ON public.assessments USING btree (section_course_id, lower(TRIM(BOTH FROM title)));
+CREATE INDEX idx_assessments_section_course ON public.assessments USING btree (section_course_id);
+CREATE INDEX enrollments_status_idx ON public.enrollments USING btree (section_id, course_id, status);
+CREATE INDEX idx_enrollments_course ON public.enrollments USING btree (course_id);
+CREATE INDEX idx_enrollments_section ON public.enrollments USING btree (section_id);
+CREATE INDEX idx_enrollments_student ON public.enrollments USING btree (student_id);
+CREATE INDEX idx_marks_assessment ON public.marks USING btree (assessment_id);
+CREATE INDEX idx_marks_enrollment ON public.marks USING btree (enrollment_id);
+CREATE INDEX idx_notifications_recipient_unread ON public.notifications USING btree (recipient_id, is_read);
+CREATE INDEX idx_profiles_role ON public.profiles USING btree (role);
+CREATE INDEX idx_queries_enrollment ON public.queries USING btree (enrollment_id);
+CREATE INDEX idx_queries_status ON public.queries USING btree (status);
+CREATE INDEX idx_queries_student ON public.queries USING btree (student_id);
+CREATE INDEX idx_replies_query ON public.replies USING btree (query_id);
+CREATE INDEX idx_section_courses_course ON public.section_courses USING btree (course_id);
+CREATE INDEX idx_section_courses_section ON public.section_courses USING btree (section_id);
+CREATE INDEX idx_sections_term ON public.sections USING btree (term_id);
+CREATE UNIQUE INDEX one_active_term_only ON public.terms USING btree (is_active) WHERE is_active;
 
-create or replace function is_ta()
-returns boolean
-language sql
-security definer
-set search_path = public
-stable
-as $$
-  select exists (
-    select 1 from profiles where id = auth.uid() and role = 'ta'
-  );
-$$;
+-- ── Functions ───────────────────────────────────────────────────────────────
 
-revoke all on function is_ta() from public, anon;
-grant execute on function is_ta() to authenticated;
-
-create or replace function current_user_role() returns text
-  language sql stable security definer set search_path = public as
-  $$ select role::text from profiles where id = auth.uid() $$;
-
-revoke execute on function current_user_role() from public;
-grant execute on function current_user_role() to authenticated;
-
--- ── Function: get TAs for students to read ──────────────────────────────────
--- Problem 2: Expose TA names to students without widening profiles_select
-create or replace function get_tas()
-returns table(id uuid, full_name text, role text)
-language sql security definer set search_path = public stable as
-$$
-  select id, full_name, role::text from profiles where role = 'ta';
-$$;
-
-revoke execute on function get_tas() from public;
-grant execute on function get_tas() to authenticated;
-
-
-
--- TA contact details including email. Separate from get_tas() because that
--- function's return type is depended on by the notifications_insert policy
--- and cannot be altered in place.
-create or replace function get_ta_contacts()
-returns table (id uuid, full_name text, email text)
-language sql
-stable
-security definer
-set search_path to 'public'
-as $$
-  select id, full_name, email from profiles where role = 'ta';
-$$;
-
-revoke all on function get_ta_contacts() from public, anon;
-grant execute on function get_ta_contacts() to authenticated;
-
--- ── Trigger: create a profile row for every new auth user ───────────────────
-
-create or replace function handle_new_user()
-returns trigger
-language plpgsql
-security definer
-set search_path = public
-as $$
+CREATE OR REPLACE FUNCTION public.activate_term(p_term_id uuid)
+ RETURNS void
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
 begin
-  insert into profiles (id, email, full_name, role, roll_number)
-  values (
-    new.id,
-    new.email,
-    coalesce(new.raw_user_meta_data->>'full_name', ''),
-    coalesce((new.raw_user_meta_data->>'role')::user_role, 'student'),
-    nullif(new.raw_user_meta_data->>'roll_number', '')
-  )
-  on conflict (id) do nothing;
-  return new;
-end;
-$$;
-
-drop trigger if exists on_auth_user_created on auth.users;
-create trigger on_auth_user_created
-  after insert on auth.users
-  for each row execute function handle_new_user();
-
--- ── Function: class average for one assessment ──────────────────────────────
--- Called per-assessment from the student course page. SECURITY DEFINER so a
--- student can see the class average without being able to read classmates'
--- individual marks.
-
-create or replace function get_class_average(p_assessment_id uuid)
-returns numeric
-language sql
-security definer
-set search_path = public
-stable
-as $$
-  select round(avg(score)::numeric, 2)
-  from marks
-  where assessment_id = p_assessment_id
-    and score is not null;
-$$;
-
-revoke all on function get_class_average(uuid) from public, anon;
-grant execute on function get_class_average(uuid) to authenticated;
-
--- ── Function: activate a term atomically ────────────────────────────────────
--- Deactivating the old term and activating the new one must happen in one
--- statement pair, or the unique partial index above rejects the intermediate
--- state where two terms are briefly active.
-
-create or replace function activate_term(p_term_id uuid)
-returns void
-language plpgsql
-security definer
-set search_path = public
-as $$
-begin
-  if not is_ta() then
-    raise exception 'Only teaching assistants can activate a term';
+  if not public.is_ta() then
+    raise exception 'Only a TA can activate a term';
   end if;
 
-  update terms set is_active = false, updated_at = now() where is_active;
-  update terms set is_active = true,  updated_at = now() where id = p_term_id;
+  update public.terms set is_active = false where is_active = true;
+  update public.terms set is_active = true where id = p_term_id;
 
-  insert into activity_logs (actor_id, action, entity_type, entity_id)
+  insert into public.activity_logs (actor_id, action, entity_type, entity_id)
   values (auth.uid(), 'term.activate', 'terms', p_term_id);
 end;
-$$;
+$function$;
 
-revoke all on function activate_term(uuid) from public, anon;
-grant execute on function activate_term(uuid) to authenticated;
+CREATE OR REPLACE FUNCTION public.active_student_count(p_section_ids uuid[])
+ RETURNS bigint
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+  select count(distinct student_id) from enrollments
+  where section_id = any(p_section_ids) and status = 'active';
+$function$;
 
--- ── Trigger: keep updated_at honest ─────────────────────────────────────────
-
-create or replace function touch_updated_at()
-returns trigger language plpgsql as $$
-begin
-  new.updated_at = now();
-  return new;
-end;
-$$;
-
-do $$
-declare t text;
-begin
-  foreach t in array array[
-    'profiles','terms','courses','sections','assessments','marks','queries'
-  ] loop
-    execute format('drop trigger if exists touch_%1$s on %1$s', t);
-    execute format(
-      'create trigger touch_%1$s before update on %1$s
-       for each row execute function touch_updated_at()', t);
-  end loop;
-end $$;
-
--- ============================================================================
--- ROW LEVEL SECURITY
---
--- This is the layer that actually stops a student reading another student's
--- marks. The API routes now carry their own role and ownership checks too,
--- but those only protect the paths the app itself calls; anyone holding an
--- anon key can query PostgREST directly, and only RLS stands in the way.
--- ============================================================================
-
-alter table profiles        enable row level security;
-alter table terms           enable row level security;
-alter table courses         enable row level security;
-alter table sections        enable row level security;
-alter table section_courses enable row level security;
-alter table enrollments     enable row level security;
-alter table assessments     enable row level security;
-alter table marks           enable row level security;
-alter table queries         enable row level security;
-alter table replies         enable row level security;
-alter table notifications   enable row level security;
-alter table activity_logs   enable row level security;
-
--- profiles ------------------------------------------------------------------
-drop policy if exists profiles_select on profiles;
-create policy profiles_select on profiles for select
-  using (id = auth.uid() or is_ta());
-
-drop policy if exists profiles_update_own on profiles;
-create policy profiles_update_own on profiles for update
-  using (id = auth.uid())
-  with check (
-    id = auth.uid()
-    and role::text = current_user_role()
-    and email = (select email from profiles where id = auth.uid())
-    and roll_number is not distinct from
-        (select roll_number from profiles where id = auth.uid())
-    and must_change_password =
-        (select must_change_password from profiles where id = auth.uid())
-  );
-
-drop policy if exists profiles_ta_all on profiles;
-create policy profiles_ta_all on profiles for all
-  using (is_ta()) with check (is_ta());
-
--- Reference data: readable by any signed-in user, writable by TAs only.
--- Students need to read these to see their own course and section names.
-do $$
-declare t text;
-begin
-  foreach t in array array['terms','courses','sections','section_courses','assessments']
-  loop
-    execute format('drop policy if exists %1$s_read on %1$s', t);
-    execute format(
-      'create policy %1$s_read on %1$s for select to authenticated using (true)', t);
-    execute format('drop policy if exists %1$s_ta_write on %1$s', t);
-    execute format(
-      'create policy %1$s_ta_write on %1$s for all using (is_ta()) with check (is_ta())', t);
-  end loop;
-end $$;
-
--- enrollments ---------------------------------------------------------------
-drop policy if exists enrollments_select on enrollments;
-create policy enrollments_select on enrollments for select
-  using (student_id = auth.uid() or is_ta());
-
-drop policy if exists enrollments_ta_write on enrollments;
-create policy enrollments_ta_write on enrollments for all
-  using (is_ta()) with check (is_ta());
-
--- marks ---------------------------------------------------------------------
--- The core confidentiality rule: a student sees only marks attached to their
--- own enrollments. TAs see everything.
-drop policy if exists marks_select on marks;
-create policy marks_select on marks for select
-  using (
-    is_ta()
-    or exists (
-      select 1 from enrollments e
-      where e.id = marks.enrollment_id and e.student_id = auth.uid()
-    )
-  );
-
-drop policy if exists marks_ta_write on marks;
-create policy marks_ta_write on marks for all
-  using (is_ta()) with check (is_ta());
-
--- queries -------------------------------------------------------------------
-drop policy if exists queries_select on queries;
-create policy queries_select on queries for select
-  using (student_id = auth.uid() or is_ta());
-
-drop policy if exists queries_student_insert on queries;
-create policy queries_student_insert on queries for insert
-  with check (
-    student_id = auth.uid()
-    and exists (
-      select 1 from enrollments e
-      where e.id = enrollment_id and e.student_id = auth.uid()
-    )
-  );
-
-drop policy if exists queries_ta_update on queries;
-create policy queries_ta_update on queries for update
-  using (is_ta()) with check (is_ta());
-
-drop policy if exists queries_ta_delete on queries;
-create policy queries_ta_delete on queries for delete using (is_ta());
-
--- replies -------------------------------------------------------------------
-drop policy if exists replies_select on replies;
-create policy replies_select on replies for select
-  using (
-    is_ta()
-    or exists (
-      select 1 from queries q
-      where q.id = replies.query_id and q.student_id = auth.uid()
-    )
-  );
-
-drop policy if exists replies_insert on replies;
-create policy replies_insert on replies for insert
-  with check (
-    sender_id = auth.uid()
-    and (
-      is_ta()
-      or exists (
-        select 1 from queries q
-        where q.id = query_id and q.student_id = auth.uid()
-      )
-    )
-  );
-
--- notifications -------------------------------------------------------------
-drop policy if exists notifications_student_select_own on notifications;
-create policy notifications_student_select_own on notifications
-  for select using (recipient_id = auth.uid());
-
-drop policy if exists notifications_student_update_own on notifications;
-create policy notifications_student_update_own on notifications
-  for update using (recipient_id = auth.uid())
-  with check (recipient_id = auth.uid());
-
-drop policy if exists notifications_insert on notifications;
-create policy notifications_insert on notifications
-  for insert with check (
-    is_ta() or recipient_id in (select id from get_tas())
-  );
-
-drop policy if exists notifications_ta_all on notifications;
-create policy notifications_ta_all on notifications
-  for all using (is_ta()) with check (is_ta());
-
--- activity_logs -------------------------------------------------------------
-drop policy if exists activity_logs_ta_read on activity_logs;
-create policy activity_logs_ta_read on activity_logs for select using (is_ta());
-
--- ============================================================================
--- SEEDING YOUR FIRST TA
---
--- Everything above defaults new accounts to 'student', so the first TA has to
--- be promoted by hand. Create the account through the Supabase Auth dashboard
--- (or the app's sign-up flow), then run:
---
---   update profiles set role = 'ta' where email = 'you@university.edu';
---
--- ============================================================================
-
--- TA accounts are created manually, not imported, so they must not be
--- caught by the first-login flow.
-update profiles set must_change_password = false where role = 'ta';
-
--- ── Function: count affected students/marks before deletion ─────────────
--- SECURITY DEFINER bypasses RLS, so we gate it with is_ta() explicitly.
--- set search_path = public prevents search-path manipulation attacks.
-
-create or replace function get_deletion_impact(p_type text, p_id uuid)
-returns json
-language plpgsql
-security definer
-set search_path = public
-as $$
-declare
-  v_students bigint := 0;
-  v_marks bigint := 0;
-begin
-  -- SECURITY DEFINER bypasses RLS, so gate it explicitly.
-  if not is_ta() then
-    raise exception 'forbidden';
-  end if;
-
-  if p_type = 'section' then
-    select count(*) into v_students from enrollments where section_id = p_id;
-    select count(*) into v_marks from marks
-      where enrollment_id in (select id from enrollments where section_id = p_id);
-  elsif p_type = 'course' then
-    select count(*) into v_students from enrollments where course_id = p_id;
-    select count(*) into v_marks from marks
-      where enrollment_id in (select id from enrollments where course_id = p_id);
-  elsif p_type = 'section_course' then
-    select count(*) into v_students from enrollments
-      where (section_id, course_id) =
-        (select section_id, course_id from section_courses where id = p_id limit 1);
-    select count(*) into v_marks from marks
-      where enrollment_id in (
-        select id from enrollments where (section_id, course_id) =
-          (select section_id, course_id from section_courses where id = p_id limit 1)
-      );
-  else
-    raise exception 'invalid type';
-  end if;
-
-  return json_build_object('students', v_students, 'marks', v_marks);
-end;
-$$;
-
-revoke all on function get_deletion_impact(text, uuid) from public, anon;
-grant execute on function get_deletion_impact(text, uuid) to authenticated;
-
--- ── Function: Analytics for Section Course ───────────────────────────────────
-
-create or replace function analytics_for_section_course(p_sc_id uuid)
+create or replace function public.analytics_for_section_course(p_sc_id uuid)
 returns json
 language plpgsql
 stable
@@ -622,7 +301,7 @@ begin
       enr.roll_number,
       count(m.score) as graded,
       coalesce(sum((m.score / nullif(asmt.max_marks, 0)) * asmt.weight), 0) as obtained,
-      coalesce(sum(asmt.weight), 0) as total_weight
+      coalesce(sum(asmt.weight) filter (where m.score is not null), 0) as total_weight
     from enr
     left join marks m on m.enrollment_id = enr.id
     left join asmt on asmt.id = m.assessment_id
@@ -689,31 +368,12 @@ begin
 end;
 $function$;
 
-revoke all on function analytics_for_section_course(uuid) from public, anon;
-grant execute on function analytics_for_section_course(uuid) to authenticated;
-
-
--- FIX 2: Ceiling on marks
-create or replace function marks_within_max() returns trigger
-language plpgsql as $def$
-declare v_max numeric;
-begin
-  if new.score is null then return new; end if;
-  select max_marks into v_max from assessments where id = new.assessment_id;
-  if v_max is not null and new.score > v_max then
-    raise exception 'score % exceeds max_marks % for assessment %',
-      new.score, v_max, new.assessment_id;
-  end if;
-  return new;
-end $def$;
-
-drop trigger if exists marks_max_check on marks;
-create trigger marks_max_check before insert or update on marks
-  for each row execute function marks_within_max();
-
--- FIX 4: Class Averages Function for Student Dashboard
-create or replace function class_averages_for_section_course(p_sc_id uuid)
-returns json language sql stable security definer set search_path = public as $fn$
+CREATE OR REPLACE FUNCTION public.class_averages_for_section_course(p_sc_id uuid)
+ RETURNS json
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
   select coalesce(json_object_agg(a.id, json_build_object(
            'avg',  a.avg_score,
            'high', a.high_score,
@@ -731,34 +391,462 @@ returns json language sql stable security definer set search_path = public as $f
       and (m.id is null or e.id is not null)
     group by a.id
   ) a;
-$fn$;
+$function$;
 
-revoke all on function class_averages_for_section_course(uuid) from public, anon;
-grant execute on function class_averages_for_section_course(uuid) to authenticated;
+CREATE OR REPLACE FUNCTION public.current_user_role()
+ RETURNS text
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$ select role::text from profiles where id = auth.uid() $function$;
 
--- FIX: Prevent duplicate assessment titles
-create unique index if not exists assessments_unique_title_per_sc
-  on assessments (section_course_id, lower(trim(title)));
+CREATE OR REPLACE FUNCTION public.enforce_assessment_type_enabled()
+ RETURNS trigger
+ LANGUAGE plpgsql
+AS $function$
+declare
+  v_course public.courses%rowtype;
+begin
+  select c.* into v_course
+  from public.section_courses sc
+  join public.courses c on c.id = sc.course_id
+  where sc.id = new.section_course_id;
 
--- FIX: TA Dashboard Students count
-create or replace function active_student_count(p_section_ids uuid[])
-returns bigint language sql stable security definer set search_path = public as $$
-  select count(distinct student_id) from enrollments
-  where section_id = any(p_section_ids) and status = 'active';
-$$;
-revoke all on function active_student_count(uuid[]) from public, anon;
-grant execute on function active_student_count(uuid[]) to authenticated;
+  if new.type = 'cp' and not v_course.enable_cp then
+    raise exception 'Class participation is disabled for %', v_course.name;
+  elsif new.type = 'assignment' and not v_course.enable_assignments then
+    raise exception 'Assignments are disabled for %', v_course.name;
+  elsif new.type = 'quiz' and not v_course.enable_quizzes then
+    raise exception 'Quizzes are disabled for %', v_course.name;
+  end if;
 
+  return new;
+end;
+$function$;
 
-create or replace function public.get_ta_contacts()
-returns table (id uuid, full_name text, email text)
-language sql
-stable
-security definer
-set search_path to 'public'
+CREATE OR REPLACE FUNCTION public.enforce_marks_validity()
+ RETURNS trigger
+ LANGUAGE plpgsql
+AS $function$
+declare
+  v_max numeric;
+  v_match boolean;
+begin
+  select max_marks into v_max from public.assessments where id = new.assessment_id;
+
+  if new.score < 0 or new.score > v_max then
+    raise exception 'Score % is out of bounds for this assessment (0 - %)', new.score, v_max;
+  end if;
+
+  select exists (
+    select 1
+    from public.enrollments e
+    join public.section_courses sc
+      on sc.section_id = e.section_id and sc.course_id = e.course_id
+    join public.assessments a on a.section_course_id = sc.id
+    where e.id = new.enrollment_id and a.id = new.assessment_id
+  ) into v_match;
+
+  if not v_match then
+    raise exception 'Enrollment % does not belong to the course/section of assessment %', new.enrollment_id, new.assessment_id;
+  end if;
+
+  return new;
+end;
+$function$;
+
+create or replace function public.enrollments_before_insert_check()
+returns trigger
+language plpgsql
 as $function$
+declare
+  v_new_term_id uuid;
+  v_conflicting_section text;
+begin
+  if not exists (
+    select 1 from public.profiles where id = new.student_id and role = 'student'
+  ) then
+    raise exception 'Only student accounts can be enrolled';
+  end if;
+
+  if not exists (
+    select 1 from public.section_courses
+    where section_id = new.section_id and course_id = new.course_id
+  ) then
+    raise exception 'This course is not linked to that section';
+  end if;
+
+  select term_id into v_new_term_id from public.sections where id = new.section_id;
+
+  select s.name into v_conflicting_section
+  from public.enrollments e
+  join public.sections s on s.id = e.section_id
+  where e.student_id = new.student_id
+    and s.term_id = v_new_term_id
+    and e.section_id <> new.section_id
+    and e.status = 'active'
+  limit 1;
+
+  if v_conflicting_section is not null then
+    raise exception 'Already enrolled in section % this term. Withdraw them there first.', v_conflicting_section;
+  end if;
+
+  return new;
+end;
+$function$;
+
+CREATE OR REPLACE FUNCTION public.get_class_average(p_assessment_id uuid)
+ RETURNS numeric
+ LANGUAGE plpgsql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+declare
+  v_authorized boolean;
+  v_avg numeric;
+begin
+  select exists (
+    select 1
+    from public.assessments a
+    join public.section_courses sc on sc.id = a.section_course_id
+    join public.enrollments e on e.section_id = sc.section_id and e.course_id = sc.course_id
+    where a.id = p_assessment_id and e.student_id = auth.uid()
+  ) into v_authorized;
+
+  if not (v_authorized or public.is_ta()) then
+    raise exception 'Not authorized to view this assessment';
+  end if;
+
+  select round(avg(score), 2) into v_avg
+  from public.marks
+  where assessment_id = p_assessment_id;
+
+  return v_avg;
+end;
+$function$;
+
+CREATE OR REPLACE FUNCTION public.get_deletion_impact(p_type text, p_id uuid)
+ RETURNS json
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+declare
+  v_students bigint := 0;
+  v_marks bigint := 0;
+begin
+  -- SECURITY DEFINER bypasses RLS, so gate it explicitly.
+  if not is_ta() then
+    raise exception 'forbidden';
+  end if;
+
+  if p_type = 'section' then
+    select count(*) into v_students from enrollments where section_id = p_id;
+    select count(*) into v_marks from marks
+      where enrollment_id in (select id from enrollments where section_id = p_id);
+  elsif p_type = 'course' then
+    select count(*) into v_students from enrollments where course_id = p_id;
+    select count(*) into v_marks from marks
+      where enrollment_id in (select id from enrollments where course_id = p_id);
+  elsif p_type = 'section_course' then
+    select count(*) into v_students from enrollments
+      where (section_id, course_id) =
+        (select section_id, course_id from section_courses where id = p_id limit 1);
+    select count(*) into v_marks from marks
+      where enrollment_id in (
+        select id from enrollments where (section_id, course_id) =
+          (select section_id, course_id from section_courses where id = p_id limit 1)
+      );
+  else
+    raise exception 'invalid type';
+  end if;
+
+  return json_build_object('students', v_students, 'marks', v_marks);
+end;
+$function$;
+
+CREATE OR REPLACE FUNCTION public.get_ta_contacts()
+ RETURNS TABLE(id uuid, full_name text, email text)
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
   select id, full_name, email from profiles where role = 'ta';
 $function$;
 
-revoke all on function public.get_ta_contacts() from public, anon;
-grant execute on function public.get_ta_contacts() to authenticated;
+CREATE OR REPLACE FUNCTION public.get_tas()
+ RETURNS TABLE(id uuid, full_name text, role text)
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+  select id, full_name, role::text from profiles where role = 'ta';
+$function$;
+
+create or replace function public.handle_new_user()
+returns trigger
+language plpgsql
+security definer
+set search_path to 'public'
+as $function$
+begin
+  insert into public.profiles (id, role, roll_number, full_name, email)
+  values (
+    new.id,
+    'student',
+    new.raw_user_meta_data->>'roll_number',
+    coalesce(new.raw_user_meta_data->>'full_name', ''),
+    new.email
+  );
+  return new;
+end;
+$function$;
+
+CREATE OR REPLACE FUNCTION public.is_active_student()
+ RETURNS boolean
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+  select exists (
+    select 1
+    from public.enrollments e
+    join public.sections s on s.id = e.section_id
+    join public.terms t on t.id = s.term_id
+    where e.student_id = auth.uid() and t.is_active = true
+  );
+$function$;
+
+CREATE OR REPLACE FUNCTION public.is_ta()
+ RETURNS boolean
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+  select exists (
+    select 1 from public.profiles where id = auth.uid() and role = 'ta'
+  );
+$function$;
+
+CREATE OR REPLACE FUNCTION public.marks_within_max()
+ RETURNS trigger
+ LANGUAGE plpgsql
+AS $function$
+declare v_max numeric;
+begin
+  if new.score is null then return new; end if;
+  select max_marks into v_max from assessments where id = new.assessment_id;
+  if v_max is not null and new.score > v_max then
+    raise exception 'score % exceeds max_marks % for assessment %',
+      new.score, v_max, new.assessment_id;
+  end if;
+  return new;
+end $function$;
+
+CREATE OR REPLACE FUNCTION public.set_updated_at()
+ RETURNS trigger
+ LANGUAGE plpgsql
+AS $function$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$function$;
+
+-- ── Function access: only logged in users (migration 03) ────────────────────
+
+revoke execute on all functions in schema public from public, anon;
+
+grant execute on function
+  public.is_ta(),
+  public.is_active_student(),
+  public.current_user_role(),
+  public.get_tas(),
+  public.get_ta_contacts(),
+  public.active_student_count(uuid[]),
+  public.activate_term(uuid),
+  public.analytics_for_section_course(uuid),
+  public.class_averages_for_section_course(uuid),
+  public.get_deletion_impact(text, uuid),
+  public.get_class_average(uuid)
+to authenticated, service_role;
+
+alter default privileges in schema public revoke execute on functions from public, anon;
+
+-- ── Triggers ────────────────────────────────────────────────────────────────
+-- (marks has two max-score checks: marks_max_check and trg_marks_validity. Both exist in production.)
+
+CREATE TRIGGER trg_announcements_updated_at BEFORE UPDATE ON public.announcements FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+CREATE TRIGGER trg_assessments_type_check BEFORE INSERT OR UPDATE ON public.assessments FOR EACH ROW EXECUTE FUNCTION enforce_assessment_type_enabled();
+CREATE TRIGGER trg_assessments_updated_at BEFORE UPDATE ON public.assessments FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+CREATE TRIGGER trg_courses_updated_at BEFORE UPDATE ON public.courses FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+CREATE TRIGGER trg_enrollments_before_insert BEFORE INSERT ON public.enrollments FOR EACH ROW EXECUTE FUNCTION enrollments_before_insert_check();
+CREATE TRIGGER marks_max_check BEFORE INSERT OR UPDATE ON public.marks FOR EACH ROW EXECUTE FUNCTION marks_within_max();
+CREATE TRIGGER trg_marks_updated_at BEFORE UPDATE ON public.marks FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+CREATE TRIGGER trg_marks_validity BEFORE INSERT OR UPDATE ON public.marks FOR EACH ROW EXECUTE FUNCTION enforce_marks_validity();
+CREATE TRIGGER trg_profiles_updated_at BEFORE UPDATE ON public.profiles FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+CREATE TRIGGER trg_queries_updated_at BEFORE UPDATE ON public.queries FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+CREATE TRIGGER trg_sections_updated_at BEFORE UPDATE ON public.sections FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+CREATE TRIGGER trg_terms_updated_at BEFORE UPDATE ON public.terms FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+CREATE TRIGGER trg_handle_new_user AFTER INSERT ON auth.users FOR EACH ROW EXECUTE FUNCTION handle_new_user();
+
+-- ── Row Level Security ──────────────────────────────────────────────────────
+
+alter table public.profiles enable row level security;
+alter table public.terms enable row level security;
+alter table public.courses enable row level security;
+alter table public.sections enable row level security;
+alter table public.section_courses enable row level security;
+alter table public.enrollments enable row level security;
+alter table public.assessments enable row level security;
+alter table public.marks enable row level security;
+alter table public.queries enable row level security;
+alter table public.replies enable row level security;
+alter table public.notifications enable row level security;
+alter table public.activity_logs enable row level security;
+alter table public.announcements enable row level security;
+alter table public.query_attachments enable row level security;
+
+-- activity_logs
+create policy activity_logs_ta_all on public.activity_logs as permissive for all to public
+  using (is_ta())
+  with check (is_ta());
+
+-- announcements
+create policy announcements_student_select_own on public.announcements as permissive for select to public
+  using ((is_active_student() AND (section_course_id IN ( SELECT sc.id
+   FROM (section_courses sc
+     JOIN enrollments e ON (((e.section_id = sc.section_id) AND (e.course_id = sc.course_id))))
+  WHERE (e.student_id = auth.uid())))));
+create policy announcements_ta_all on public.announcements as permissive for all to public
+  using (is_ta())
+  with check (is_ta());
+
+-- assessments
+create policy assessments_student_select_own on public.assessments as permissive for select to public
+  using ((is_active_student() AND (section_course_id IN ( SELECT sc.id
+   FROM (section_courses sc
+     JOIN enrollments e ON (((e.section_id = sc.section_id) AND (e.course_id = sc.course_id))))
+  WHERE (e.student_id = auth.uid())))));
+create policy assessments_ta_all on public.assessments as permissive for all to public
+  using (is_ta())
+  with check (is_ta());
+
+-- courses
+create policy courses_student_select_own on public.courses as permissive for select to public
+  using ((is_active_student() AND (id IN ( SELECT enrollments.course_id
+   FROM enrollments
+  WHERE (enrollments.student_id = auth.uid())))));
+create policy courses_ta_all on public.courses as permissive for all to public
+  using (is_ta())
+  with check (is_ta());
+
+-- enrollments
+create policy enrollments_student_select_own on public.enrollments as permissive for select to public
+  using (((student_id = auth.uid()) AND is_active_student()));
+create policy enrollments_ta_all on public.enrollments as permissive for all to public
+  using (is_ta())
+  with check (is_ta());
+
+-- marks
+create policy marks_student_select_own on public.marks as permissive for select to public
+  using ((is_active_student() AND (enrollment_id IN ( SELECT enrollments.id
+   FROM enrollments
+  WHERE (enrollments.student_id = auth.uid())))));
+create policy marks_ta_all on public.marks as permissive for all to public
+  using (is_ta())
+  with check (is_ta());
+
+-- notifications
+create policy notifications_insert on public.notifications as permissive for insert to authenticated
+  with check ((is_ta() OR (recipient_id IN ( SELECT get_tas.id
+   FROM get_tas() get_tas(id, full_name, role)))));
+create policy notifications_student_select_own on public.notifications as permissive for select to public
+  using ((recipient_id = auth.uid()));
+create policy notifications_student_update_own on public.notifications as permissive for update to public
+  using ((recipient_id = auth.uid()))
+  with check ((recipient_id = auth.uid()));
+create policy notifications_ta_all on public.notifications as permissive for all to public
+  using (is_ta())
+  with check (is_ta());
+
+-- profiles
+create policy profiles_student_select_self on public.profiles as permissive for select to public
+  using ((id = auth.uid()));
+create policy profiles_ta_all on public.profiles as permissive for all to public
+  using (is_ta())
+  with check (is_ta());
+create policy profiles_update_own on public.profiles as permissive for update to public
+  using ((id = auth.uid()))
+  with check (((id = auth.uid()) AND (role = current_user_role()) AND (email = ( SELECT profiles_1.email
+   FROM profiles profiles_1
+  WHERE (profiles_1.id = auth.uid()))) AND (NOT (roll_number IS DISTINCT FROM ( SELECT profiles_1.roll_number
+   FROM profiles profiles_1
+  WHERE (profiles_1.id = auth.uid())))) AND (must_change_password = ( SELECT profiles_1.must_change_password
+   FROM profiles profiles_1
+  WHERE (profiles_1.id = auth.uid())))));
+
+-- queries
+create policy queries_student_insert_own on public.queries as permissive for insert to public
+  with check (((student_id = auth.uid()) AND is_active_student() AND (enrollment_id IN ( SELECT enrollments.id
+   FROM enrollments
+  WHERE (enrollments.student_id = auth.uid())))));
+create policy queries_student_select_own on public.queries as permissive for select to public
+  using (((student_id = auth.uid()) AND is_active_student()));
+create policy queries_ta_all on public.queries as permissive for all to public
+  using (is_ta())
+  with check (is_ta());
+
+-- query_attachments
+create policy query_attachments_student_insert_own on public.query_attachments as permissive for insert to public
+  with check ((query_id IN ( SELECT queries.id
+   FROM queries
+  WHERE ((queries.student_id = auth.uid()) AND is_active_student()))));
+create policy query_attachments_student_select_own on public.query_attachments as permissive for select to public
+  using ((query_id IN ( SELECT queries.id
+   FROM queries
+  WHERE (queries.student_id = auth.uid()))));
+create policy query_attachments_ta_all on public.query_attachments as permissive for all to public
+  using (is_ta())
+  with check (is_ta());
+
+-- replies
+create policy replies_student_insert_own on public.replies as permissive for insert to public
+  with check (((sender_id = auth.uid()) AND is_active_student() AND (query_id IN ( SELECT queries.id
+   FROM queries
+  WHERE (queries.student_id = auth.uid())))));
+create policy replies_student_select_own on public.replies as permissive for select to public
+  using ((query_id IN ( SELECT queries.id
+   FROM queries
+  WHERE (queries.student_id = auth.uid()))));
+create policy replies_ta_all on public.replies as permissive for all to public
+  using (is_ta())
+  with check (is_ta());
+
+-- section_courses
+create policy section_courses_student_select_own on public.section_courses as permissive for select to public
+  using ((is_active_student() AND (section_id IN ( SELECT enrollments.section_id
+   FROM enrollments
+  WHERE (enrollments.student_id = auth.uid())))));
+create policy section_courses_ta_all on public.section_courses as permissive for all to public
+  using (is_ta())
+  with check (is_ta());
+
+-- sections
+create policy sections_student_select_own on public.sections as permissive for select to public
+  using ((is_active_student() AND (id IN ( SELECT enrollments.section_id
+   FROM enrollments
+  WHERE (enrollments.student_id = auth.uid())))));
+create policy sections_ta_all on public.sections as permissive for all to public
+  using (is_ta())
+  with check (is_ta());
+
+-- terms
+create policy terms_student_select_own on public.terms as permissive for select to public
+  using ((is_active_student() AND (id IN ( SELECT s.term_id
+   FROM (sections s
+     JOIN enrollments e ON ((e.section_id = s.id)))
+  WHERE (e.student_id = auth.uid())))));
+create policy terms_ta_all on public.terms as permissive for all to public
+  using (is_ta())
+  with check (is_ta());
