@@ -63,7 +63,7 @@ export function ResetPasswordButton({
           type="button"
           variant="ghost"
           size="sm"
-          className="text-destructive hover:text-destructive"
+          className="text-muted-foreground hover:text-foreground"
         >
           Reset password
         </Button>
@@ -78,7 +78,11 @@ export function ResetPasswordButton({
         <AlertDialogFooter>
           <AlertDialogCancel disabled={isLoading}>Cancel</AlertDialogCancel>
           <form onSubmit={handleReset}>
-            <AlertDialogAction type="submit" disabled={isLoading}>
+            <AlertDialogAction
+              type="submit"
+              disabled={isLoading}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
               {isLoading ? "Resetting..." : "Yes, reset password"}
             </AlertDialogAction>
           </form>

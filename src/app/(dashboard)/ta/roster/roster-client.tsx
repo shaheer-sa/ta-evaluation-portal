@@ -508,7 +508,9 @@ export default function RosterClient({
                             </td>
                             <td className="whitespace-nowrap">
                               {r.profiles?.must_change_password === true ? (
-                                <span className="tams-pill" data-tone="open">Not logged in yet</span>
+                                <span className="tams-pill" data-tone="open" title="Must set a new password at next login">
+                                  Needs new password
+                                </span>
                               ) : (
                                 <span className="tams-pill" data-tone="done">Active</span>
                               )}
