@@ -46,7 +46,13 @@ npm install
 
 ### 2. Create a Supabase project and apply the schema
 
-supabase/schema.sql is out of date and does not match production. Never run it against the live database. Database changes go in small files under supabase/migrations/ and are run one at a time in the Supabase SQL Editor.
+For a brand new, empty Supabase project: open **SQL Editor**, paste the whole of
+[`supabase/schema.sql`](supabase/schema.sql) and click **Run**. It matches the
+live database (tables, functions, triggers, row level security).
+
+**Never run `schema.sql` against the live database.** Changes to the live
+database go in small files under `supabase/migrations/` and are run one at a
+time in the SQL Editor. When you add one, update `schema.sql` to match.
 
 ### 3. Configure environment variables
 

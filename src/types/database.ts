@@ -1,4 +1,4 @@
-// GENERATED SHAPE — do not hand-edit.
+// Matches the live database (see supabase/schema.sql).
 // Regenerate: npx supabase gen types typescript --project-id <ID> --schema public
 export type Json =
   | string
@@ -16,22 +16,28 @@ export interface Database {
           action: string
           actor_id: string | null
           created_at: string
-          detail: Json | null
+          entity_id: string | null
+          entity_type: string
           id: string
+          metadata: Json | null
         }
         Insert: {
           action: string
           actor_id?: string | null
           created_at?: string
-          detail?: Json | null
+          entity_id?: string | null
+          entity_type: string
           id?: string
+          metadata?: Json | null
         }
         Update: {
           action?: string
           actor_id?: string | null
           created_at?: string
-          detail?: Json | null
+          entity_id?: string | null
+          entity_type?: string
           id?: string
+          metadata?: Json | null
         }
         Relationships: [
           {
@@ -545,6 +551,22 @@ export interface Database {
       is_ta: {
         Args: Record<string, never>
         Returns: boolean
+      }
+      is_active_student: {
+        Args: Record<string, never>
+        Returns: boolean
+      }
+      current_user_role: {
+        Args: Record<string, never>
+        Returns: string
+      }
+      get_tas: {
+        Args: Record<string, never>
+        Returns: { id: string; full_name: string; role: string }[]
+      }
+      get_ta_contacts: {
+        Args: Record<string, never>
+        Returns: { id: string; full_name: string; email: string }[]
       }
       activate_term: {
         Args: {
