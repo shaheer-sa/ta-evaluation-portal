@@ -27,7 +27,7 @@ export interface StudentMark {
 
 export type SectionCourseRow = Pick<Database["public"]["Tables"]["section_courses"]["Row"], "id" | "section_id" | "course_id"> & {
   sections: (Pick<Database["public"]["Tables"]["sections"]["Row"], "name"> & {
-    terms: Pick<Database["public"]["Tables"]["terms"]["Row"], "name"> | null;
+    terms: Pick<Database["public"]["Tables"]["terms"]["Row"], "name" | "is_active"> | null;
   }) | null;
   courses: Pick<Database["public"]["Tables"]["courses"]["Row"], "code" | "name"> | null;
 };
@@ -314,15 +314,36 @@ export default function GradingClient({
                 className={SELECT_CLASS}
               >
                 <option value="">Select a class…</option>
-                {sectionCourses.map((sc) => {
-                  const cName = sc.courses?.name || "";
-                  const shortName = cName.length > 40 ? cName.slice(0, 39) + "…" : cName;
+                {(() => {
+                  const hasActiveTerm = sectionCourses.some((sc) => sc.sections?.terms?.is_active);
+                  const renderOption = (sc: SectionCourseRow) => {
+                    const cName = sc.courses?.name || "";
+                    const shortName = cName.length > 40 ? cName.slice(0, 39) + "…" : cName;
+                    return (
+                      <option key={sc.id} value={sc.id}>
+                        {sc.sections?.terms?.name} — Section {sc.sections?.name} · {shortName} ({sc.courses?.code})
+                      </option>
+                    );
+                  };
+
+                  if (!hasActiveTerm) {
+                    return sectionCourses.map(renderOption);
+                  }
+
+                  const active = sectionCourses.filter((sc) => sc.sections?.terms?.is_active);
+                  const past = sectionCourses.filter((sc) => !sc.sections?.terms?.is_active);
+
                   return (
-                    <option key={sc.id} value={sc.id}>
-                      {sc.sections?.terms?.name} — Section {sc.sections?.name} · {shortName} ({sc.courses?.code})
-                    </option>
+                    <>
+                      {active.map(renderOption)}
+                      {past.length > 0 && (
+                        <optgroup label="Past terms">
+                          {past.map(renderOption)}
+                        </optgroup>
+                      )}
+                    </>
                   );
-                })}
+                })()}
               </select>
             </div>
 

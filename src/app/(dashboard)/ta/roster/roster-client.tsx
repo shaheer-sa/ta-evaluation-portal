@@ -51,7 +51,7 @@ interface SyncResult {
 
 export type SectionCourseRow = Pick<Database["public"]["Tables"]["section_courses"]["Row"], "id" | "section_id" | "course_id"> & {
   sections: (Pick<Database["public"]["Tables"]["sections"]["Row"], "name"> & {
-    terms: Pick<Database["public"]["Tables"]["terms"]["Row"], "name"> | null;
+    terms: Pick<Database["public"]["Tables"]["terms"]["Row"], "name" | "is_active"> | null;
   }) | null;
   courses: Pick<Database["public"]["Tables"]["courses"]["Row"], "code" | "name"> | null;
 };
@@ -197,15 +197,36 @@ export default function RosterClient({ sections, selectedSectionCourseId, roster
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
               >
                 <option value="">Select...</option>
-                {sections.map((s) => {
-                  const cName = s.courses?.name || "";
-                  const shortName = cName.length > 40 ? cName.slice(0, 39) + "…" : cName;
+                {(() => {
+                  const hasActiveTerm = sections.some((s) => s.sections?.terms?.is_active);
+                  const renderOption = (s: SectionCourseRow) => {
+                    const cName = s.courses?.name || "";
+                    const shortName = cName.length > 40 ? cName.slice(0, 39) + "…" : cName;
+                    return (
+                      <option key={s.id} value={s.id}>
+                        {s.sections?.terms?.name || "Term"} — Section {s.sections?.name || "Sec"} · {shortName || "Course"} ({s.courses?.code || "Code"})
+                      </option>
+                    );
+                  };
+
+                  if (!hasActiveTerm) {
+                    return sections.map(renderOption);
+                  }
+
+                  const active = sections.filter((s) => s.sections?.terms?.is_active);
+                  const past = sections.filter((s) => !s.sections?.terms?.is_active);
+
                   return (
-                    <option key={s.id} value={s.id}>
-                      {s.sections?.terms?.name || "Term"} — Section {s.sections?.name || "Sec"} · {shortName || "Course"} ({s.courses?.code || "Code"})
-                    </option>
+                    <>
+                      {active.map(renderOption)}
+                      {past.length > 0 && (
+                        <optgroup label="Past terms">
+                          {past.map(renderOption)}
+                        </optgroup>
+                      )}
+                    </>
                   );
-                })}
+                })()}
               </select>
               {isPending && <span className="tams-select__pending">Loading…</span>}
             </div>

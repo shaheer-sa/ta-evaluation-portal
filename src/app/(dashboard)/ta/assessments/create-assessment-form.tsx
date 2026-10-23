@@ -63,18 +63,40 @@ export function CreateAssessmentForm({ sectionCourses }: { sectionCourses: any[]
           className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <option value="">Select a class...</option>
-          {sectionCourses?.map((sc) => {
-            const termName = sc.sections?.terms?.name || "Term";
-            const sectionName = sc.sections?.name || "Sec";
-            const courseCode = sc.courses?.code || "Code";
-            const cName = sc.courses?.name || "";
-            const shortName = cName.length > 40 ? cName.slice(0, 39) + "…" : cName;
+          {(() => {
+            const hasActiveTerm = sectionCourses?.some((sc) => sc.sections?.terms?.is_active);
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const renderOption = (sc: any) => {
+              const termName = sc.sections?.terms?.name || "Term";
+              const sectionName = sc.sections?.name || "Sec";
+              const courseCode = sc.courses?.code || "Code";
+              const cName = sc.courses?.name || "";
+              const shortName = cName.length > 40 ? cName.slice(0, 39) + "…" : cName;
+              return (
+                <option key={sc.id} value={sc.id}>
+                  {termName} — Section {sectionName} · {shortName || "Course"} ({courseCode})
+                </option>
+              );
+            };
+
+            if (!hasActiveTerm) {
+              return sectionCourses?.map(renderOption);
+            }
+
+            const active = (sectionCourses || []).filter((sc) => sc.sections?.terms?.is_active);
+            const past = (sectionCourses || []).filter((sc) => !sc.sections?.terms?.is_active);
+
             return (
-              <option key={sc.id} value={sc.id}>
-                {termName} — Section {sectionName} · {shortName || "Course"} ({courseCode})
-              </option>
+              <>
+                {active.map(renderOption)}
+                {past.length > 0 && (
+                  <optgroup label="Past terms">
+                    {past.map(renderOption)}
+                  </optgroup>
+                )}
+              </>
             );
-          })}
+          })()}
         </select>
       </div>
 

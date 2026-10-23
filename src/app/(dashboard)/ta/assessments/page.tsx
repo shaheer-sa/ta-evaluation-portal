@@ -21,7 +21,7 @@ export default async function AssessmentsPage() {
     .from("section_courses")
     .select(`
       id,
-      sections ( name, terms ( name ) ),
+      sections ( name, terms ( name, is_active ) ),
       courses ( code, name, enable_cp, enable_assignments, enable_quizzes )
     `);
   const sectionCourses = data || [];

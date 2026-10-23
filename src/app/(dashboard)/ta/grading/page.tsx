@@ -22,7 +22,7 @@ export default async function GradingPage({ searchParams }: PageProps) {
   // 1. Fetch sectionCourses
   const { data: rawSections } = await supabase
     .from("section_courses")
-    .select(`id, section_id, course_id, sections ( name, terms ( name ) ), courses ( code, name )`);
+    .select(`id, section_id, course_id, sections ( name, terms ( name, is_active ) ), courses ( code, name )`);
   const sectionCourses = (rawSections as unknown as SectionCourseRow[]) || [];
 
   let assessments: AssessmentRow[] = [];

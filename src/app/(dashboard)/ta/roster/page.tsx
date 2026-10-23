@@ -19,7 +19,7 @@ export default async function RosterPage({ searchParams }: PageProps) {
       id,
       section_id,
       course_id,
-      sections ( name, terms ( name ) ),
+      sections ( name, terms ( name, is_active ) ),
       courses ( code, name )
     `);
   
