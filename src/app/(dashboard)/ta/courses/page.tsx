@@ -109,6 +109,7 @@ export default async function CoursesPage() {
                           id={term.id}
                           itemName={term.name}
                           deleteAction={deleteTerm}
+                          deleteDescription="This deletes the term and all its sections, enrollments, assessments and marks. It can't be undone."
                           editAction={updateTerm}
                           editTitle="Edit Term"
                           editNode={
@@ -117,17 +118,22 @@ export default async function CoursesPage() {
                                 <Label htmlFor={`edit-term-${term.id}`}>Term Name</Label>
                                 <Input id={`edit-term-${term.id}`} name="name" defaultValue={term.name} required />
                               </div>
-                              <div className="flex items-center space-x-2">
-                                <input
-                                  type="checkbox"
-                                  id={`edit-term-active-${term.id}`}
-                                  name="isActive"
-                                  defaultChecked={term.is_active}
-                                  className="h-4 w-4 rounded border-gray-300 bg-background text-primary"
-                                />
-                                <Label htmlFor={`edit-term-active-${term.id}`} className="font-normal">
-                                  Active Term
-                                </Label>
+                              <div className="space-y-1">
+                                <div className="flex items-center space-x-2">
+                                  <input
+                                    type="checkbox"
+                                    id={`edit-term-active-${term.id}`}
+                                    name="isActive"
+                                    defaultChecked={term.is_active}
+                                    className="h-4 w-4 rounded border-gray-300 bg-background text-primary"
+                                  />
+                                  <Label htmlFor={`edit-term-active-${term.id}`} className="font-normal">
+                                    Active Term
+                                  </Label>
+                                </div>
+                                <p className="text-xs text-muted-foreground">
+                                  Activating switches students to this term. Only activate after its sections are synced.
+                                </p>
                               </div>
                               <Button type="submit" className="w-full">Save Changes</Button>
                             </>
@@ -215,6 +221,7 @@ export default async function CoursesPage() {
                           id={course.id}
                           itemName={`${course.code} - ${course.name}`}
                           deleteAction={deleteCourse}
+                          deleteDescription="A course can only be deleted when it isn't linked to any section. Unlink it first."
                           affectedStudentsCount={impactMap.get(course.id)?.students || 0}
                           affectedMarksCount={impactMap.get(course.id)?.marks || 0}
                           editAction={updateCourse}

@@ -28,6 +28,7 @@ export function EntityActions({
   id,
   itemName,
   deleteAction,
+  deleteDescription,
   editAction,
   editNode,
   editTitle,
@@ -39,6 +40,7 @@ export function EntityActions({
   id: string;
   itemName: string;
   deleteAction: (formData: FormData) => void | Promise<void> | Promise<ActionResult>;
+  deleteDescription?: string;
   editAction?: (formData: FormData) => void | Promise<void> | Promise<ActionResult>;
   editNode?: ReactNode;
   editTitle?: string;
@@ -122,19 +124,20 @@ export function EntityActions({
               {type === "unlink" ? "Unlink" : "Delete"} &quot;{itemName}&quot;?
             </AlertDialogTitle>
             <AlertDialogDescription>
-              {type === "unlink" 
-                ? "This will remove the course from this section."
-                : (
-                  <span className="space-y-2 block">
-                    <span>This action cannot be undone. This will permanently delete this item and ALL associated data (including related sections, assessments, and marks).</span>
-                    {(affectedStudentsCount !== undefined || affectedMarksCount !== undefined) && (
-                      <span className="block mt-2 font-medium text-destructive">
-                        Warning: This will destroy records for {affectedStudentsCount ?? 0} student(s) and {affectedMarksCount ?? 0} mark(s).
-                      </span>
-                    )}
+              <span className="space-y-2 block">
+                <span>
+                  {deleteDescription
+                    ? deleteDescription
+                    : type === "unlink"
+                      ? "This will remove the course from this section."
+                      : "This action cannot be undone. This will permanently delete this item and ALL associated data (including related sections, assessments, and marks)."}
+                </span>
+                {(affectedStudentsCount !== undefined || affectedMarksCount !== undefined) && (
+                  <span className="block mt-2 font-medium text-destructive">
+                    Warning: This will destroy records for {affectedStudentsCount ?? 0} student(s) and {affectedMarksCount ?? 0} mark(s).
                   </span>
-                )
-              }
+                )}
+              </span>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

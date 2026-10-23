@@ -187,6 +187,7 @@ export default async function SectionsPage() {
                           id={section.id}
                           itemName={`Section ${section.name}`}
                           deleteAction={deleteSection}
+                          deleteDescription="This deletes the section and its enrollments, assessments and marks. It can't be undone."
                           affectedStudentsCount={impactMap.get(`section-${section.id}`)?.students || 0}
                           affectedMarksCount={impactMap.get(`section-${section.id}`)?.marks || 0}
                           editAction={updateSection}
@@ -234,6 +235,7 @@ export default async function SectionsPage() {
                                       id={sc.id}
                                       itemName={`${sc.courses?.code} in ${section.name}`}
                                       deleteAction={unlinkCourseFromSection}
+                                      deleteDescription="This removes the course from the section, including its assessments and marks. It can't be undone."
                                       affectedStudentsCount={impactMap.get(`sc-${sc.id}`)?.students || 0}
                                       affectedMarksCount={impactMap.get(`sc-${sc.id}`)?.marks || 0}
                                       type="unlink"
