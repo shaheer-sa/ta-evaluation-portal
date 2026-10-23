@@ -11,7 +11,7 @@ export const TA_NAV: NavItem[] = [
   { href: "/ta/courses", label: "Courses & Terms", exact: true, short: "CO" },
   { href: "/ta/sections", label: "Sections", exact: true, short: "SE" },
   { href: "/ta/roster", label: "Students", exact: false, short: "ST" },
-  { href: "/ta/assessments", label: "Assessments", exact: true, short: "AS" },
+  { href: "/ta/assessments", label: "Assessments", exact: false, short: "AS" },
   { href: "/ta/grading", label: "Grading", exact: true, short: "GR" },
   { href: "/ta/queries", label: "Queries", exact: true, short: "QU" },
   { href: "/ta/analytics", label: "Analytics", exact: true, short: "AN" },

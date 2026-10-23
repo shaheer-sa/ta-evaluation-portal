@@ -1,4 +1,3 @@
-import { createClient } from "@/lib/supabase/server";
 import {
   Card,
   CardContent,
@@ -7,43 +6,11 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { CreateAssessmentForm } from "./create-assessment-form";
-import { AssessmentsList } from "./assessments-list";
+import { AssessmentsSummary } from "./assessments-summary";
+import { loadAssessmentsData } from "./load-assessments";
 
 export default async function AssessmentsPage() {
-  const supabase = await createClient();
-
-  // Fetch section-courses for dropdown
-  const { data } = await supabase
-    .from("section_courses")
-    .select(`
-      id,
-      best_of_quizzes,
-      best_of_assignments,
-      sections ( name, terms ( name, is_active ) ),
-      courses ( code, name, enable_cp, enable_assignments, enable_quizzes )
-    `);
-  const sectionCourses = data || [];
-
-  // Fetch all assessments
-  const { data: assessmentsData } = await supabase
-    .from("assessments")
-    .select(`
-      id,
-      section_course_id,
-      type,
-      title,
-      max_marks,
-      weight,
-      created_at,
-      section_courses (
-        id,
-        best_of_quizzes,
-        best_of_assignments,
-        sections ( name, terms ( name, is_active ) ),
-        courses ( code, name, enable_cp, enable_assignments, enable_quizzes )
-      )
-    `)
-    .order("created_at", { ascending: true });
+  const { sectionCourses, assessments } = await loadAssessmentsData();
 
   return (
     <div className="space-y-8">
@@ -54,9 +21,8 @@ export default async function AssessmentsPage() {
         </div>
       </div>
 
-      <div className="grid gap-8 md:grid-cols-2 md:items-stretch">
-        {/* ── Create Assessment ──────────────────────────────── */}
-        <Card data-edge id="create-assessment-card">
+      <div className="grid gap-8 md:grid-cols-2 md:items-start">
+        <Card data-edge>
           <CardHeader>
             <CardTitle>Create Assessment</CardTitle>
             <CardDescription>
@@ -68,11 +34,7 @@ export default async function AssessmentsPage() {
           </CardContent>
         </Card>
 
-        {/* ── Existing Assessments ──────────────────────────── */}
-        <AssessmentsList
-          assessments={assessmentsData || []}
-          sectionCourses={sectionCourses}
-        />
+        <AssessmentsSummary assessments={assessments} sectionCourses={sectionCourses} />
       </div>
     </div>
   );

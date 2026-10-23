@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useTransition } from "react";
+import { useTransition } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,39 +12,8 @@ import {
 import { DeleteAssessmentButton } from "@/components/delete-assessment-button";
 import { EditAssessmentDialog } from "@/components/edit-assessment-dialog";
 import { deleteAssessment, updateBestOf } from "./actions";
-import { sortAssessments } from "@/lib/assessment-order";
-import { cn } from "@/lib/utils";
-
-type SectionCourseInfo = {
-  id: string;
-  best_of_quizzes?: number | null;
-  best_of_assignments?: number | null;
-  sections?: {
-    name?: string | null;
-    terms?: {
-      name?: string | null;
-      is_active?: boolean | null;
-    } | null;
-  } | null;
-  courses?: {
-    code?: string | null;
-    name?: string | null;
-    enable_cp?: boolean | null;
-    enable_assignments?: boolean | null;
-    enable_quizzes?: boolean | null;
-  } | null;
-};
-
-type AssessmentItem = {
-  id: string;
-  section_course_id: string;
-  type: "assignment" | "quiz" | "mid" | "final" | "project" | "cp";
-  title: string;
-  max_marks: number;
-  weight: number;
-  created_at?: string | null;
-  section_courses?: SectionCourseInfo | null;
-};
+import { groupAssessments, sectionCourseLabel } from "./group-assessments";
+import type { AssessmentItem, SectionCourseInfo } from "./group-assessments";
 
 interface AssessmentsListProps {
   assessments: AssessmentItem[];
@@ -144,259 +113,102 @@ function BestOfSectionForm({
 }
 
 export function AssessmentsList({ assessments, sectionCourses }: AssessmentsListProps) {
-  const [expanded, setExpanded] = useState(false);
-  const [hasOverflow, setHasOverflow] = useState(false);
-  const [desktopHeight, setDesktopHeight] = useState<number | null>(null);
-  const listRef = useRef<HTMLDivElement>(null);
+  const groups = groupAssessments(assessments, sectionCourses);
 
-  // Group assessments by section_course_id
-  const groupsMap = new Map<
-    string,
-    {
-      sectionCourseId: string;
-      sectionCourse: SectionCourseInfo | null;
-      assessments: AssessmentItem[];
-    }
-  >();
-
-  for (const a of assessments) {
-    let group = groupsMap.get(a.section_course_id);
-    if (!group) {
-      const sc =
-        a.section_courses ||
-        sectionCourses.find((s) => s.id === a.section_course_id) ||
-        null;
-      group = {
-        sectionCourseId: a.section_course_id,
-        sectionCourse: sc,
-        assessments: [],
-      };
-      groupsMap.set(a.section_course_id, group);
-    }
-    group.assessments.push(a);
+  if (!groups.length) {
+    return (
+      <Card data-edge>
+        <CardContent className="py-12 text-center text-sm text-muted-foreground">
+          No assessments created yet.
+        </CardContent>
+      </Card>
+    );
   }
-
-  const groups = Array.from(groupsMap.values());
-
-  // Group order: active term first, then by section name (natural order, "3B" before "3C"), then course code.
-  groups.sort((a, b) => {
-    const termA = a.sectionCourse?.sections?.terms;
-    const termB = b.sectionCourse?.sections?.terms;
-    const activeA = termA?.is_active ? 1 : 0;
-    const activeB = termB?.is_active ? 1 : 0;
-    if (activeA !== activeB) return activeB - activeA;
-
-    const secA = a.sectionCourse?.sections?.name || "";
-    const secB = b.sectionCourse?.sections?.name || "";
-    const secCompare = secA.localeCompare(secB, undefined, {
-      numeric: true,
-      sensitivity: "base",
-    });
-    if (secCompare !== 0) return secCompare;
-
-    const codeA = a.sectionCourse?.courses?.code || "";
-    const codeB = b.sectionCourse?.courses?.code || "";
-    return codeA.localeCompare(codeB, undefined, {
-      numeric: true,
-      sensitivity: "base",
-    });
-  });
-
-  // Inside each group use sortAssessments
-  for (const group of groups) {
-    group.assessments = sortAssessments(group.assessments);
-  }
-
-  const totalCount = assessments.length;
-
-  useEffect(() => {
-    const updateHeight = () => {
-      if (window.innerWidth >= 768) {
-        const createCard = document.getElementById("create-assessment-card");
-        if (createCard) {
-          setDesktopHeight(createCard.offsetHeight);
-        }
-      } else {
-        setDesktopHeight(null);
-      }
-    };
-
-    updateHeight();
-    window.addEventListener("resize", updateHeight);
-    const createCard = document.getElementById("create-assessment-card");
-    let observer: ResizeObserver | null = null;
-    if (createCard && typeof ResizeObserver !== "undefined") {
-      observer = new ResizeObserver(() => updateHeight());
-      observer.observe(createCard);
-    }
-
-    return () => {
-      window.removeEventListener("resize", updateHeight);
-      observer?.disconnect();
-    };
-  }, []);
-
-  useEffect(() => {
-    if (expanded) return;
-    const checkOverflow = () => {
-      const el = listRef.current;
-      if (!el) return;
-      setHasOverflow(el.scrollHeight > el.clientHeight + 4);
-    };
-
-    checkOverflow();
-    window.addEventListener("resize", checkOverflow);
-    return () => window.removeEventListener("resize", checkOverflow);
-  }, [desktopHeight, expanded, groups.length]);
 
   return (
-    <Card
-      data-edge
-      className={cn(
-        "flex flex-col relative",
-        !expanded && "max-h-[28rem] md:max-h-none"
-      )}
-      style={
-        !expanded && desktopHeight ? { maxHeight: `${desktopHeight}px` } : undefined
-      }
-    >
-      <CardHeader>
-        <CardTitle>Existing Assessments</CardTitle>
-      </CardHeader>
-      <CardContent className="flex flex-1 flex-col min-h-0 relative">
-        {!groups.length ? (
-          <p className="text-sm text-muted-foreground">
-            No assessments created yet.
-          </p>
-        ) : (
-          <>
-            <div
-              ref={listRef}
-              className={cn(
-                "space-y-6",
-                !expanded ? "flex-1 min-h-0 overflow-hidden" : ""
-              )}
-            >
-              {groups.map((group) => {
-                const termName =
-                  group.sectionCourse?.sections?.terms?.name || "Term";
-                const sectionName =
-                  group.sectionCourse?.sections?.name || "Sec";
-                const courseCode =
-                  group.sectionCourse?.courses?.code || "Course";
-                const count = group.assessments.length;
+    <div className="space-y-6">
+      {groups.map((group) => {
+        const { sectionName, courseCode } = sectionCourseLabel(group.sectionCourse);
+        const bestOfQuizzes = group.sectionCourse?.best_of_quizzes;
+        const bestOfAssignments = group.sectionCourse?.best_of_assignments;
 
-                const quizCount = group.assessments.filter(
-                  (a) => a.type === "quiz"
-                ).length;
-                const assignmentCount = group.assessments.filter(
-                  (a) => a.type === "assignment"
-                ).length;
-                const bestOfQuizzes = group.sectionCourse?.best_of_quizzes;
-                const bestOfAssignments =
-                  group.sectionCourse?.best_of_assignments;
-
+        return (
+          <Card
+            data-edge
+            key={group.sectionCourseId}
+            id={`sc-${group.sectionCourseId}`}
+            style={{ scrollMarginTop: "5rem" }}
+          >
+            <CardHeader className="space-y-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <CardTitle className="text-base">{group.label}</CardTitle>
+                {bestOfQuizzes && (
+                  <span className="inline-flex items-center rounded-full bg-secondary px-2 py-0.5 text-xs font-normal text-secondary-foreground">
+                    Best {bestOfQuizzes} of {group.quizCount}{" "}
+                    {group.quizCount === 1 ? "quiz" : "quizzes"}
+                  </span>
+                )}
+                {bestOfAssignments && (
+                  <span className="inline-flex items-center rounded-full bg-secondary px-2 py-0.5 text-xs font-normal text-secondary-foreground">
+                    Best {bestOfAssignments} of {group.assignmentCount}{" "}
+                    {group.assignmentCount === 1 ? "assignment" : "assignments"}
+                  </span>
+                )}
+                <span className="text-xs text-muted-foreground ml-auto">
+                  {group.assessments.length}{" "}
+                  {group.assessments.length === 1 ? "assessment" : "assessments"}
+                </span>
+              </div>
+              <BestOfSectionForm
+                sectionCourseId={group.sectionCourseId}
+                bestOfQuizzes={bestOfQuizzes}
+                bestOfAssignments={bestOfAssignments}
+                quizCount={group.quizCount}
+                assignmentCount={group.assignmentCount}
+              />
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {group.assessments.map((a) => {
+                const courseFlags = sectionCourses.find(
+                  (sc) => sc.id === a.section_course_id
+                )?.courses;
                 return (
-                  <div key={group.sectionCourseId} className="space-y-3">
-                    <div className="flex flex-wrap items-center gap-2 border-b pb-1.5">
-                      <h3 className="font-semibold text-sm">
-                        {termName} — Section {sectionName} · {courseCode}
-                      </h3>
-                      {bestOfQuizzes && (
-                        <span className="inline-flex items-center rounded-full bg-secondary px-2 py-0.5 text-xs font-normal text-secondary-foreground">
-                          Best {bestOfQuizzes} of {quizCount}{" "}
-                          {quizCount === 1 ? "quiz" : "quizzes"}
-                        </span>
-                      )}
-                      {bestOfAssignments && (
-                        <span className="inline-flex items-center rounded-full bg-secondary px-2 py-0.5 text-xs font-normal text-secondary-foreground">
-                          Best {bestOfAssignments} of {assignmentCount}{" "}
-                          {assignmentCount === 1 ? "assignment" : "assignments"}
-                        </span>
-                      )}
-                      <span className="text-xs text-muted-foreground ml-auto">
-                        {count} {count === 1 ? "assessment" : "assessments"}
-                      </span>
+                  <div
+                    key={a.id}
+                    className="tams-inset flex items-center justify-between p-3"
+                  >
+                    <div>
+                      <div className="font-medium">{a.title}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {a.type} · {a.max_marks} marks · weight {a.weight}
+                      </div>
                     </div>
-
-                    <BestOfSectionForm
-                      sectionCourseId={group.sectionCourseId}
-                      bestOfQuizzes={bestOfQuizzes}
-                      bestOfAssignments={bestOfAssignments}
-                      quizCount={quizCount}
-                      assignmentCount={assignmentCount}
-                    />
-
-                    <div className="space-y-2">
-                      {group.assessments.map((a) => {
-                        const courseFlags = sectionCourses.find(
-                          (sc) => sc.id === a.section_course_id
-                        )?.courses;
-
-                        return (
-                          <div
-                            key={a.id}
-                            className="tams-inset flex items-center justify-between p-3"
-                          >
-                            <div>
-                              <div className="font-medium">{a.title}</div>
-                              <div className="text-xs text-muted-foreground">
-                                {a.type} · {a.max_marks} marks · {a.weight}
-                              </div>
-                            </div>
-                            <div className="flex gap-2">
-                              <EditAssessmentDialog
-                                assessment={a}
-                                courseFlags={
-                                  courseFlags
-                                    ? {
-                                        enable_cp:
-                                          courseFlags.enable_cp ?? undefined,
-                                        enable_assignments:
-                                          courseFlags.enable_assignments ??
-                                          undefined,
-                                        enable_quizzes:
-                                          courseFlags.enable_quizzes ??
-                                          undefined,
-                                      }
-                                    : undefined
-                                }
-                              />
-                              <DeleteAssessmentButton
-                                assessmentId={a.id}
-                                assessmentLabel={`${a.title} — Sec ${sectionName} (${courseCode})`}
-                                deleteAction={deleteAssessment}
-                              />
-                            </div>
-                          </div>
-                        );
-                      })}
+                    <div className="flex gap-2">
+                      <EditAssessmentDialog
+                        assessment={a}
+                        courseFlags={
+                          courseFlags
+                            ? {
+                                enable_cp: courseFlags.enable_cp ?? undefined,
+                                enable_assignments: courseFlags.enable_assignments ?? undefined,
+                                enable_quizzes: courseFlags.enable_quizzes ?? undefined,
+                              }
+                            : undefined
+                        }
+                      />
+                      <DeleteAssessmentButton
+                        assessmentId={a.id}
+                        assessmentLabel={`${a.title} — Sec ${sectionName} (${courseCode})`}
+                        deleteAction={deleteAssessment}
+                      />
                     </div>
                   </div>
                 );
               })}
-            </div>
-
-            {!expanded && hasOverflow && (
-              <div className="pointer-events-none absolute inset-x-6 bottom-14 h-16 bg-gradient-to-t from-card to-transparent" />
-            )}
-
-            {hasOverflow && (
-              <div className="pt-3 mt-auto">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="w-full text-xs"
-                  onClick={() => setExpanded(!expanded)}
-                >
-                  {expanded ? "Show less" : `Show all (${totalCount})`}
-                </Button>
-              </div>
-            )}
-          </>
-        )}
-      </CardContent>
-    </Card>
+            </CardContent>
+          </Card>
+        );
+      })}
+    </div>
   );
 }
