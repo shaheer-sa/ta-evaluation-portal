@@ -27,14 +27,14 @@ the whole class in one batched upsert.
 
 **Queries (ticketing).** Students raise disputes against a specific
 assessment. TAs triage through `pending → in_review → resolved / rejected`
-with a threaded reply conversation and email notifications via Resend.
+with a threaded reply conversation and email notifications via Gmail SMTP (nodemailer).
 
 **Analytics.** Grade distributions and per-section class averages.
 
 ## Tech stack
 
 Next.js 15 (App Router) · TypeScript · Tailwind CSS · shadcn/ui ·
-Supabase (Postgres + Auth) · Google Sheets API · Resend
+Supabase (Postgres + Auth) · Google Sheets API · Gmail SMTP (nodemailer)
 
 ## Getting started
 
@@ -46,11 +46,7 @@ npm install
 
 ### 2. Create a Supabase project and apply the schema
 
-Open the Supabase dashboard → **SQL Editor** → paste the entire contents of
-[`supabase/schema.sql`](supabase/schema.sql) → **Run**.
-
-This creates every table, index, enum, function, trigger and Row Level
-Security policy the application expects. It is idempotent — safe to re-run.
+supabase/schema.sql is out of date and does not match production. Never run it against the live database. Database changes go in small files under supabase/migrations/ and are run one at a time in the Supabase SQL Editor.
 
 ### 3. Configure environment variables
 
@@ -67,8 +63,7 @@ Sheets sync and email notifications degrade gracefully without their keys.
 
 ### 4. Create your first TA
 
-Every new account defaults to `student`. Sign up through the app or the
-Supabase Auth dashboard, then promote yourself in the SQL Editor:
+Create an account in the Supabase Auth dashboard, then promote yourself in the SQL Editor:
 
 ```sql
 update profiles set role = 'ta' where email = 'you@university.edu';
@@ -104,11 +99,7 @@ data starts at row 5. Row 4 must contain `RollNo` and `Name` columns.
 
 ## Email delivery
 
-Resend's shared `onboarding@resend.dev` sender only delivers to the address
-that owns your Resend account — every message to a student is accepted by the
-API and then silently dropped. Verify a domain at
-[resend.com/domains](https://resend.com/domains) and set `RESEND_FROM_EMAIL`
-before relying on notifications.
+Email delivery uses Gmail SMTP (nodemailer). Set `GMAIL_USER` and `GMAIL_APP_PASSWORD` in `.env.local` before relying on notifications.
 
 ## Project structure
 
@@ -122,7 +113,7 @@ src/
   lib/
     supabase/        browser, server, middleware and admin clients
     auth-guard.ts    requireTA() guard for Server Actions
-    email.ts         Resend wrapper with HTML escaping
+    email/           Gmail SMTP (nodemailer)
   types/database.ts  Postgres schema types
 supabase/schema.sql  tables, RLS policies, functions, triggers
 ```
