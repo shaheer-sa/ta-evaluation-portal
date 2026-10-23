@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, Fragment } from "react";
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { ChevronDown, ChevronRight, Search } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 
 export type StudentPerformance = {
   full_name: string;
@@ -42,29 +43,54 @@ export function PerformanceTable({
   marks: MarkEntry[];
 }) {
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const toggleRow = (roll_number: string) => {
     setExpandedRow((prev) => (prev === roll_number ? null : roll_number));
   };
 
+  const query = searchQuery.trim().toLowerCase();
+  const filteredStudents = students.filter((s) => {
+    if (!query) return true;
+    return (
+      s.roll_number.toLowerCase().includes(query) ||
+      s.full_name.toLowerCase().includes(query)
+    );
+  });
+
   return (
     <Card data-edge>
       <CardContent>
-        <div className="tams-table-wrap">
-          <table className="tams-table">
-            <thead>
-              <tr>
-                <th className="w-8"></th>
-                <th>Roll Number</th>
-                <th>Student</th>
-                <th className="tams-numeral">Graded</th>
-                <th className="tams-numeral">Weight Obtained</th>
-                <th className="tams-numeral">Total Weight</th>
-                <th className="tams-numeral">Percentage</th>
-              </tr>
-            </thead>
-            <tbody>
-              {students.map((p) => {
+        <div className="relative max-w-sm mb-4">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search by name or roll number"
+            className="pl-9"
+          />
+        </div>
+
+        {filteredStudents.length === 0 ? (
+          <p className="text-sm text-muted-foreground py-2">
+            {`No students match "${searchQuery}".`}
+          </p>
+        ) : (
+          <div className="tams-table-wrap">
+            <table className="tams-table">
+              <thead>
+                <tr>
+                  <th className="w-8"></th>
+                  <th>Roll Number</th>
+                  <th>Student</th>
+                  <th className="tams-numeral">Graded</th>
+                  <th className="tams-numeral">Weight Obtained</th>
+                  <th className="tams-numeral">Total Weight</th>
+                  <th className="tams-numeral">Percentage</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredStudents.map((p) => {
                 const isExpanded = expandedRow === p.roll_number;
 
                 // Pre-calculate assessment marks for the expanded view
@@ -159,6 +185,7 @@ export function PerformanceTable({
             </tbody>
           </table>
         </div>
+        )}
       </CardContent>
     </Card>
   );
