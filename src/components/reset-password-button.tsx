@@ -44,7 +44,7 @@ export function ResetPasswordButton({
         throw new Error("Reset failed");
       }
 
-      toast.success(`Password reset to Tams@${rollNumber}`);
+      toast.success(`Password reset. ${studentName} has been emailed their temporary password.`);
       if (onSuccess) {
         onSuccess();
       }
@@ -72,7 +72,7 @@ export function ResetPasswordButton({
         <AlertDialogHeader>
           <AlertDialogTitle>Reset password for {studentName}?</AlertDialogTitle>
           <AlertDialogDescription>
-            Their password becomes Tams@{rollNumber} and they must change it at next login.
+            Their password becomes Tams@{rollNumber} and they must change it at next login. They&apos;ll get an email with this temporary password.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

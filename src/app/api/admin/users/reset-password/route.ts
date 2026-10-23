@@ -1,8 +1,12 @@
+export const runtime = "nodejs";
+
 import { NextRequest, NextResponse } from "next/server";
+import { after } from "next/server";
 import { z } from "zod";
 import { requireTA } from "@/lib/auth-guard";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createRateLimiter } from "@/lib/rate-limit";
+import { sendPasswordResetDoneEmail } from "@/lib/email/gmail";
 
 const resetPasswordRateLimit = createRateLimiter({ tokens: 10, window: "1 h" });
 
@@ -44,7 +48,7 @@ export async function POST(request: NextRequest) {
 
   const { data: student } = await admin
     .from("profiles")
-    .select("id, roll_number, role")
+    .select("id, roll_number, role, email, full_name")
     .eq("id", parsed.data.studentId)
     .single();
 
@@ -64,6 +68,24 @@ export async function POST(request: NextRequest) {
     .from("profiles")
     .update({ must_change_password: true })
     .eq("id", student.id);
+
+  await admin
+    .from("notifications")
+    .update({ is_read: true })
+    .eq("type", "password_reset_request")
+    .eq("related_id", student.id);
+
+  if (student.email) {
+    after(async () => {
+      await Promise.allSettled([
+        sendPasswordResetDoneEmail({
+          to: student.email!,
+          studentName: student.full_name || "Student",
+          rollNumber: student.roll_number!,
+        }).catch((err) => console.error("Failed to send password reset email:", err)),
+      ]);
+    });
+  }
 
   return NextResponse.json({ success: true, rollNumber: student.roll_number });
 }
