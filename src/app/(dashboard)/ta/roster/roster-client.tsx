@@ -3,7 +3,7 @@
 import { useState, useEffect, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Loader2, RefreshCw, CheckCircle2, AlertCircle } from "lucide-react";
+import { Loader2, RefreshCw, CheckCircle2, AlertCircle, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -69,16 +69,30 @@ interface Props {
   selectedSectionCourseId: string;
   roster: EnrollmentRow[];
   assessments: AssessmentRow[];
+  studentNotFound?: boolean;
+  initialSearch?: string;
 }
 
-export default function RosterClient({ sections, selectedSectionCourseId, roster, assessments }: Props) {
+export default function RosterClient({
+  sections,
+  selectedSectionCourseId,
+  roster,
+  assessments,
+  studentNotFound = false,
+  initialSearch = "",
+}: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [sheetUrl, setSheetUrl] = useState("");
+  const [searchQuery, setSearchQuery] = useState(initialSearch);
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState<SyncResult | null>(null);
   const [mismatchMessage, setMismatchMessage] = useState("");
   const [isMismatchOpen, setIsMismatchOpen] = useState(false);
+
+  useEffect(() => {
+    setSearchQuery(initialSearch);
+  }, [initialSearch]);
 
   useEffect(() => {
     if (!selectedSectionCourseId) {
@@ -158,6 +172,20 @@ export default function RosterClient({ sections, selectedSectionCourseId, roster
     }
   }
 
+  const query = searchQuery.trim().toLowerCase();
+  const filterStudent = (r: EnrollmentRow) => {
+    if (!query) return true;
+    const roll = r.profiles?.roll_number?.toLowerCase() || "";
+    const name = r.profiles?.full_name?.toLowerCase() || "";
+    return roll.includes(query) || name.includes(query);
+  };
+
+  const activeStudents = roster.filter((r) => r.status === "active");
+  const filteredActiveStudents = activeStudents.filter(filterStudent);
+
+  const withdrawnStudents = roster.filter((r) => r.status === "withdrawn");
+  const filteredWithdrawnStudents = withdrawnStudents.filter(filterStudent);
+
   return (
     <div className="space-y-8">
       <div className="tams-pagehead">
@@ -169,6 +197,12 @@ export default function RosterClient({ sections, selectedSectionCourseId, roster
           View enrolled students and perform a live two-way sync with Google Sheets.
         </p>
       </div>
+
+      {studentNotFound && (
+        <div className="rounded-md border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-800 dark:text-amber-300">
+          Couldn&apos;t find a class for that student. Search for them below.
+        </div>
+      )}
 
       <Card data-edge>
         <CardHeader>
@@ -432,55 +466,137 @@ export default function RosterClient({ sections, selectedSectionCourseId, roster
                 No students enrolled in this section yet. Click Sync above to pull them from Google Sheets!
               </p>
             ) : (
-              <div className="tams-table-wrap">
+              <>
+                <div className="relative max-w-sm mb-4">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search by name or roll number"
+                    className="pl-9"
+                  />
+                </div>
+
+                {filteredActiveStudents.length === 0 ? (
+                  <p className="text-sm text-muted-foreground py-2">
+                    {query ? `No students match "${searchQuery}".` : "No active students."}
+                  </p>
+                ) : (
+                  <div className="tams-table-wrap">
+                    <table className="tams-table">
+                      <thead>
+                        <tr>
+                          <th className="whitespace-nowrap">Roll Number</th>
+                          <th className="whitespace-nowrap">Name</th>
+                          <th className="whitespace-nowrap">Email</th>
+                          <th className="whitespace-nowrap">Status</th>
+                          {assessments.map(a => (
+                            <th key={a.id} className="whitespace-nowrap tams-numeral">
+                              {a.title} ({a.max_marks})
+                            </th>
+                          ))}
+                          <th className="whitespace-nowrap"></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredActiveStudents.map((r) => (
+                          <tr key={r.id}>
+                            <td className="whitespace-nowrap">{r.profiles?.roll_number}</td>
+                            <td className="whitespace-nowrap">{r.profiles?.full_name}</td>
+                            <td className="whitespace-nowrap">
+                              {r.profiles?.email}
+                            </td>
+                            <td className="whitespace-nowrap">
+                              {r.profiles?.must_change_password === true ? (
+                                <span className="tams-pill" data-tone="open">Not logged in yet</span>
+                              ) : (
+                                <span className="tams-pill" data-tone="done">Active</span>
+                              )}
+                            </td>
+                            {assessments.map(a => {
+                              const mark = r.marks.find((m) => m.assessment_id === a.id);
+                              const score = mark?.score;
+                              return (
+                                <td key={a.id} className="tams-numeral">
+                                  {score !== null && score !== undefined ? score : "—"}
+                                </td>
+                              )
+                            })}
+                            <td className="whitespace-nowrap text-right">
+                              {r.profiles?.id && r.profiles?.roll_number && r.profiles?.full_name && (
+                                <ResetPasswordButton
+                                  studentId={r.profiles.id}
+                                  studentName={r.profiles.full_name}
+                                  rollNumber={r.profiles.roll_number}
+                                  onSuccess={() => router.refresh()}
+                                />
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {selectedSectionCourseId && withdrawnStudents.length > 0 && (
+        <Card data-edge>
+          <CardHeader>
+            <CardTitle className="text-muted-foreground">Withdrawn ({withdrawnStudents.length})</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {filteredWithdrawnStudents.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-2">
+                {`No students match "${searchQuery}".`}
+              </p>
+            ) : (
+              <div className="tams-table-wrap opacity-75">
                 <table className="tams-table">
                   <thead>
                     <tr>
                       <th className="whitespace-nowrap">Roll Number</th>
                       <th className="whitespace-nowrap">Name</th>
-                      <th className="whitespace-nowrap">Email</th>
                       <th className="whitespace-nowrap">Status</th>
-                      {assessments.map(a => (
-                        <th key={a.id} className="whitespace-nowrap tams-numeral">
-                          {a.title} ({a.max_marks})
-                        </th>
-                      ))}
                       <th className="whitespace-nowrap"></th>
                     </tr>
                   </thead>
                   <tbody>
-                    {roster.filter(r => r.status === "active").map((r) => (
+                    {filteredWithdrawnStudents.map((r) => (
                       <tr key={r.id}>
                         <td className="whitespace-nowrap">{r.profiles?.roll_number}</td>
                         <td className="whitespace-nowrap">{r.profiles?.full_name}</td>
                         <td className="whitespace-nowrap">
-                          {r.profiles?.email}
+                          <span className="tams-pill" data-tone="late">Withdrawn</span>
                         </td>
-                        <td className="whitespace-nowrap">
-                          {r.profiles?.must_change_password === true ? (
-                            <span className="tams-pill" data-tone="open">Not logged in yet</span>
-                          ) : (
-                            <span className="tams-pill" data-tone="done">Active</span>
-                          )}
-                        </td>
-                        {assessments.map(a => {
-                          const mark = r.marks.find((m) => m.assessment_id === a.id);
-                          const score = mark?.score;
-                          return (
-                            <td key={a.id} className="tams-numeral">
-                              {score !== null && score !== undefined ? score : "—"}
-                            </td>
-                          )
-                        })}
                         <td className="whitespace-nowrap text-right">
-                          {r.profiles?.id && r.profiles?.roll_number && r.profiles?.full_name && (
-                            <ResetPasswordButton
-                              studentId={r.profiles.id}
-                              studentName={r.profiles.full_name}
-                              rollNumber={r.profiles.roll_number}
-                              onSuccess={() => router.refresh()}
-                            />
-                          )}
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={async () => {
+                              try {
+                                const res = await fetch("/api/admin/enrollments/withdraw", {
+                                  method: "POST",
+                                  headers: { "Content-Type": "application/json" },
+                                  body: JSON.stringify({
+                                    enrollmentIds: [r.id],
+                                    status: "active"
+                                  })
+                                });
+                                if (!res.ok) throw new Error("Failed to reactivate");
+                                toast.success("Student reactivated");
+                                router.refresh();
+                              } catch (err) {
+                                toast.error(err instanceof Error ? err.message : "Error");
+                              }
+                            }}
+                          >
+                            Reactivate
+                          </Button>
                         </td>
                       </tr>
                     ))}
@@ -488,64 +604,6 @@ export default function RosterClient({ sections, selectedSectionCourseId, roster
                 </table>
               </div>
             )}
-          </CardContent>
-        </Card>
-      )}
-
-      {selectedSectionCourseId && roster.filter(r => r.status === "withdrawn").length > 0 && (
-        <Card data-edge>
-          <CardHeader>
-            <CardTitle className="text-muted-foreground">Withdrawn ({roster.filter(r => r.status === "withdrawn").length})</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="tams-table-wrap opacity-75">
-              <table className="tams-table">
-                <thead>
-                  <tr>
-                    <th className="whitespace-nowrap">Roll Number</th>
-                    <th className="whitespace-nowrap">Name</th>
-                    <th className="whitespace-nowrap">Status</th>
-                    <th className="whitespace-nowrap"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {roster.filter(r => r.status === "withdrawn").map((r) => (
-                    <tr key={r.id}>
-                      <td className="whitespace-nowrap">{r.profiles?.roll_number}</td>
-                      <td className="whitespace-nowrap">{r.profiles?.full_name}</td>
-                      <td className="whitespace-nowrap">
-                        <span className="tams-pill" data-tone="late">Withdrawn</span>
-                      </td>
-                      <td className="whitespace-nowrap text-right">
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={async () => {
-                            try {
-                              const res = await fetch("/api/admin/enrollments/withdraw", {
-                                method: "POST",
-                                headers: { "Content-Type": "application/json" },
-                                body: JSON.stringify({
-                                  enrollmentIds: [r.id],
-                                  status: "active"
-                                })
-                              });
-                              if (!res.ok) throw new Error("Failed to reactivate");
-                              toast.success("Student reactivated");
-                              router.refresh();
-                            } catch (err) {
-                              toast.error(err instanceof Error ? err.message : "Error");
-                            }
-                          }}
-                        >
-                          Reactivate
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
           </CardContent>
         </Card>
       )}
