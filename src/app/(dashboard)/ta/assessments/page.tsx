@@ -17,6 +17,8 @@ export default async function AssessmentsPage() {
     .from("section_courses")
     .select(`
       id,
+      best_of_quizzes,
+      best_of_assignments,
       sections ( name, terms ( name, is_active ) ),
       courses ( code, name, enable_cp, enable_assignments, enable_quizzes )
     `);
@@ -35,6 +37,8 @@ export default async function AssessmentsPage() {
       created_at,
       section_courses (
         id,
+        best_of_quizzes,
+        best_of_assignments,
         sections ( name, terms ( name, is_active ) ),
         courses ( code, name, enable_cp, enable_assignments, enable_quizzes )
       )

@@ -103,3 +103,46 @@ export async function updateAssessment(formData: FormData): Promise<ActionResult
   revalidatePath("/ta/assessments");
   return { ok: true };
 }
+
+export async function updateBestOf(formData: FormData): Promise<ActionResult> {
+  const { supabase } = await requireTA();
+
+  const sectionCourseId = formData.get("sectionCourseId") as string;
+  if (!sectionCourseId) return { ok: false, message: "Class is required." };
+
+  const rawQuiz = formData.get("bestOfQuizzes");
+  const rawAssignment = formData.get("bestOfAssignments");
+
+  const parseBestOf = (raw: FormDataEntryValue | null): { value: number | null; error?: string } => {
+    if (raw === null || raw === undefined) return { value: null };
+    const str = String(raw).trim();
+    if (str === "") return { value: null };
+    const n = Number(str);
+    if (!Number.isInteger(n) || n < 1) {
+      return { value: null, error: "Use a whole number of 1 or more, or leave it empty." };
+    }
+    return { value: n };
+  };
+
+  const quizResult = parseBestOf(rawQuiz);
+  if (quizResult.error) return { ok: false, message: quizResult.error };
+
+  const assignmentResult = parseBestOf(rawAssignment);
+  if (assignmentResult.error) return { ok: false, message: assignmentResult.error };
+
+  const { error } = await supabase
+    .from("section_courses")
+    .update({
+      best_of_quizzes: quizResult.value,
+      best_of_assignments: assignmentResult.value,
+    })
+    .eq("id", sectionCourseId);
+
+  if (error) return { ok: false, message: friendlyDbError(error, "section_course") };
+
+  revalidatePath("/ta/assessments");
+  revalidatePath("/ta/analytics");
+  revalidatePath("/student");
+  return { ok: true };
+}
+
