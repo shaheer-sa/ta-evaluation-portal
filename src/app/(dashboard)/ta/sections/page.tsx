@@ -230,7 +230,7 @@ export default async function SectionsPage() {
                               return (
                                 <li key={sc.id} className="flex items-center justify-between group">
                                   <span>{course?.code} — {course?.name}</span>
-                                  <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <div>
                                     <EntityActions
                                       id={sc.id}
                                       itemName={`${sc.courses?.code} in ${section.name}`}
