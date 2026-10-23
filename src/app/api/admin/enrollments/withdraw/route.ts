@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     console.error("Error withdrawing/reactivating students:", error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Unknown error" },
+      { error: "Couldn't update those students. Please try again." },
       { status: 500 }
     );
   }

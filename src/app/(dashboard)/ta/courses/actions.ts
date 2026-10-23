@@ -31,7 +31,10 @@ export async function createTerm(formData: FormData): Promise<ActionResult> {
     const { error: activateError } = await supabase.rpc("activate_term", {
       p_term_id: newTerm.id,
     });
-    if (activateError) return { ok: false, message: activateError.message };
+    if (activateError) {
+      console.error("Failed to activate term:", activateError);
+      return { ok: false, message: "Couldn't activate the term. Please try again." };
+    }
   }
 
   revalidatePath("/ta/courses");
@@ -51,7 +54,10 @@ export async function updateTerm(formData: FormData): Promise<ActionResult> {
   // Only ever activate from here. Deactivation happens by activating another term.
   if (formData.get("isActive") === "on") {
     const { error: activateError } = await supabase.rpc("activate_term", { p_term_id: id });
-    if (activateError) return { ok: false, message: activateError.message };
+    if (activateError) {
+      console.error("Failed to activate term:", activateError);
+      return { ok: false, message: "Couldn't activate the term. Please try again." };
+    }
   }
 
   revalidatePath("/ta/courses");

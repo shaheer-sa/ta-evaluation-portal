@@ -647,8 +647,16 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(response);
   } catch (err: unknown) {
     console.error("Google Sync error:", err);
-    let errorMessage = "An unexpected error occurred";
-    if (err instanceof Error) errorMessage = err.message;
-    return NextResponse.json({ error: errorMessage }, { status: 500 });
+    const errObj = err as { code?: unknown; status?: unknown; message?: unknown };
+    const errString = `${errObj?.code ?? ""} ${errObj?.status ?? ""} ${errObj?.message ?? ""} ${String(err)}`.toLowerCase();
+
+    let friendlyMessage = "Sync failed. Please try again in a minute.";
+    if (errString.includes("403") || errString.includes("permission")) {
+      friendlyMessage = "The sheet isn't shared with the sync account. Share it as Editor and try again.";
+    } else if (errString.includes("404") || errString.includes("not found")) {
+      friendlyMessage = "Spreadsheet not found. Check the link and try again.";
+    }
+
+    return NextResponse.json({ error: friendlyMessage }, { status: 500 });
   }
 }

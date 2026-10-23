@@ -179,7 +179,7 @@ export async function POST(request: Request) {
       if (upsertError) {
         console.error("Grading upsert failed:", upsertError);
         return NextResponse.json(
-          { error: `Couldn't save marks: ${upsertError.message}` },
+          { error: "Couldn't save marks. Please try again." },
           { status: 500 }
         );
       }
