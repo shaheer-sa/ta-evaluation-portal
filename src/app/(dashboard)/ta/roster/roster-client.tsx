@@ -3,7 +3,6 @@
 import { useState, useEffect, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { fetchJson } from "@/lib/fetch-json";
 import { Loader2, RefreshCw, CheckCircle2, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,6 +14,16 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { ResetPasswordButton } from "@/components/reset-password-button";
 import type { Database } from "@/types/database";
 
@@ -64,16 +73,23 @@ export default function RosterClient({ sections, selectedSectionCourseId, roster
   const [sheetUrl, setSheetUrl] = useState("");
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState<SyncResult | null>(null);
+  const [mismatchMessage, setMismatchMessage] = useState("");
+  const [isMismatchOpen, setIsMismatchOpen] = useState(false);
 
   useEffect(() => {
-    const saved = localStorage.getItem("tams_google_sheet_url");
-    if (saved) setSheetUrl(saved);
-  }, []);
+    if (!selectedSectionCourseId) {
+      setSheetUrl("");
+      return;
+    }
+    try {
+      const saved = localStorage.getItem(`tams_sheet_url:${selectedSectionCourseId}`);
+      setSheetUrl(saved || "");
+    } catch {
+      setSheetUrl("");
+    }
+  }, [selectedSectionCourseId]);
 
-  // When selected section changes via props, we might want to clear syncResult if it was for a different section.
-  // Actually, we do that onChange.
-
-  async function handleSync() {
+  async function handleSync(confirmMismatch = false) {
     if (!sheetUrl || !selectedSectionCourseId) return;
     
     if (!sheetUrl.includes("docs.google.com/spreadsheets/d/")) {
@@ -83,17 +99,35 @@ export default function RosterClient({ sections, selectedSectionCourseId, roster
 
     setIsSyncing(true);
     setSyncResult(null);
-    localStorage.setItem("tams_google_sheet_url", sheetUrl);
 
     try {
-      const data = await fetchJson("/api/sync/google", {
+      localStorage.setItem(`tams_sheet_url:${selectedSectionCourseId}`, sheetUrl);
+    } catch {
+      // Ignore localStorage write error
+    }
+
+    try {
+      const res = await fetch("/api/sync/google", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           sectionCourseId: selectedSectionCourseId,
           spreadsheetUrl: sheetUrl,
+          confirmMismatch,
         }),
       });
+
+      const data = await res.json();
+
+      if (res.status === 409 && data.mismatch) {
+        setMismatchMessage(data.error || "This sheet doesn't look like it belongs to this class.");
+        setIsMismatchOpen(true);
+        return;
+      }
+
+      if (!res.ok) {
+        throw new Error(data.error || "Sync failed");
+      }
 
       setSyncResult(data as SyncResult);
 
@@ -104,7 +138,6 @@ export default function RosterClient({ sections, selectedSectionCourseId, roster
       if (data.gradesWritten) parts.push("grades pushed to sheet");
       toast.success(parts.length ? parts.join(", ") : "Sync complete — nothing to do");
 
-      // Replace refreshKey with router.refresh()
       router.refresh();
     } catch (err: unknown) {
       if (err instanceof Error) toast.error(err.message);
@@ -193,7 +226,7 @@ export default function RosterClient({ sections, selectedSectionCourseId, roster
                   className="flex-1"
                 />
                 <Button
-                  onClick={handleSync}
+                  onClick={() => handleSync()}
                   disabled={!sheetUrl || isSyncing}
                 >
                   {isSyncing ? (
@@ -441,6 +474,23 @@ export default function RosterClient({ sections, selectedSectionCourseId, roster
           </CardContent>
         </Card>
       )}
+
+      <AlertDialog open={isMismatchOpen} onOpenChange={setIsMismatchOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Check spreadsheet</AlertDialogTitle>
+            <AlertDialogDescription>
+              {mismatchMessage}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => handleSync(true)}>
+              Sync anyway
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

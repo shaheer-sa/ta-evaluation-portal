@@ -17,6 +17,7 @@ const syncGoogleSchema = z.object({
     .refine((url) => url.includes("docs.google.com/spreadsheets/d/"), {
       message: "Please provide a valid Google Sheets URL containing docs.google.com/spreadsheets/d/.",
     }),
+  confirmMismatch: z.boolean().optional(),
 });
 
 const syncRateLimit = createRateLimiter({ tokens: 5, window: "10 m" });
@@ -142,7 +143,7 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-    const { sectionCourseId, spreadsheetUrl } = parsed.data;
+    const { sectionCourseId, spreadsheetUrl, confirmMismatch } = parsed.data;
 
     // Extract Spreadsheet ID from URL
     const spreadsheetIdMatch = spreadsheetUrl.match(/[-\w]{25,}/);
@@ -242,6 +243,42 @@ export async function POST(request: NextRequest) {
         full_name: row[nameIdx]?.trim() || "",
       };
     });
+
+    // Check if the sheet matches the class before creating any accounts
+    const { data: activeEnrollmentRows } = await admin
+      .from("enrollments")
+      .select("id, profiles:student_id ( roll_number )")
+      .eq("section_id", mapped.section_id)
+      .eq("course_id", mapped.course_id)
+      .eq("status", "active");
+
+    type ActiveEnrollment = {
+      id: string;
+      profiles: { roll_number: string | null } | null;
+    };
+
+    const activeRolls = new Set(
+      ((activeEnrollmentRows as unknown as ActiveEnrollment[]) || [])
+        .map((e) => e.profiles?.roll_number?.toLowerCase().trim())
+        .filter((r): r is string => Boolean(r))
+    );
+
+    const activeCount = (activeEnrollmentRows || []).length;
+    if (activeCount >= 5 && !confirmMismatch) {
+      const matchCount = parsedStudents.filter((s) =>
+        activeRolls.has(s.roll_number.toLowerCase().trim())
+      ).length;
+
+      if (matchCount < parsedStudents.length / 2) {
+        return NextResponse.json(
+          {
+            error: `This sheet doesn't look like it belongs to this class. Only ${matchCount} of ${parsedStudents.length} students in it are enrolled here. Check the link.`,
+            mismatch: true,
+          },
+          { status: 409 }
+        );
+      }
+    }
 
     // 4. Invite/enroll students in batches of 5
     const BATCH_SIZE = 5;
