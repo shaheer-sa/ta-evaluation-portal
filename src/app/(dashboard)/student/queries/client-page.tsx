@@ -17,6 +17,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { formatStatus } from "@/lib/format";
 import type { Database } from "@/types/database";
 
 const STATUS_COLORS: Record<string, string> = {
@@ -279,7 +280,7 @@ export default function StudentQueriesClient({
                       STATUS_COLORS[q.status] || ""
                     )}
                   >
-                    {q.status.replace("_", " ")}
+                    {formatStatus(q.status)}
                   </span>
                 </div>
               </CardHeader>

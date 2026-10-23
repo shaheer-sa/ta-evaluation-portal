@@ -15,6 +15,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { formatStatus } from "@/lib/format";
 
 const STATUS_OPTIONS = [
   { value: "all", label: "All" },
@@ -96,7 +97,7 @@ function TAQueriesContent() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "updateStatus", queryId, newStatus }),
       });
-      toast.success(`Query marked as ${newStatus}`);
+      toast.success(`Query marked as ${formatStatus(newStatus)}`);
       fetchQueries();
     } catch {
       toast.error("Failed to update query");
@@ -170,7 +171,7 @@ function TAQueriesContent() {
                       STATUS_COLORS[q.status] || ""
                     )}
                   >
-                    {q.status.replace("_", " ")}
+                    {formatStatus(q.status)}
                   </span>
                 </div>
               </CardHeader>
