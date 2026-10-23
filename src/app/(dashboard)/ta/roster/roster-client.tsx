@@ -120,6 +120,14 @@ export default function RosterClient({ sections, selectedSectionCourseId, roster
         }),
       });
 
+      // a timeout returns an html error page, not json
+      if (!(res.headers.get("content-type") || "").includes("application/json")) {
+        throw new Error(
+          res.status === 504 || res.status === 408
+            ? "The sync took too long. Click Sync Now again to finish the rest."
+            : `Server error (${res.status}). Please try again.`
+        );
+      }
       const data = await res.json();
 
       if (res.status === 409 && data.mismatch) {
