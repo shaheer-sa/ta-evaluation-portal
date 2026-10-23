@@ -87,7 +87,12 @@ function TAQueriesContent() {
   }, [fetchQueries]);
 
   useEffect(() => {
-    if (!openId || isLoading) return;
+    // param gone (we clear it after handling): forget it so the same query can be opened again
+    if (!openId) {
+      handledOpenRef.current = null;
+      return;
+    }
+    if (isLoading) return;
     if (handledOpenRef.current === openId) return;
 
     const found = queries.some((q) => q.id === openId);

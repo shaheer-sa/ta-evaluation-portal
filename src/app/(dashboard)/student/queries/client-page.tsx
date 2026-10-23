@@ -67,7 +67,11 @@ export default function StudentQueriesClient({
   const [highlightId, setHighlightId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!openId) return;
+    // param gone (we clear it after handling): forget it so the same query can be opened again
+    if (!openId) {
+      handledOpenRef.current = null;
+      return;
+    }
     if (handledOpenRef.current === openId) return;
 
     const found = initialQueries.some((q) => q.id === openId);
