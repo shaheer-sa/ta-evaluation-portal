@@ -233,6 +233,16 @@ function TAQueriesContent() {
                         </Button>
                       </>
                     )}
+                    {(q.status === "resolved" || q.status === "rejected") && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={updatingId === q.id}
+                        onClick={() => updateStatus(q.id, "in_review")}
+                      >
+                        Reopen
+                      </Button>
+                    )}
                   </div>
                 </div>
                 <QueryThread queryId={q.id} isOpen={expandedId === q.id} />
