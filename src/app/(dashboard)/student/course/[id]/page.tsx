@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/card";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
 import { sortAssessments } from "@/lib/assessment-order";
+import { bestOfFromSectionCourse, countedAssessmentIds } from "@/lib/best-of";
 import type { Database } from "@/types/database";
 
 type EnrollmentRow = Pick<Database["public"]["Tables"]["enrollments"]["Row"], "id" | "course_id" | "section_id"> & {
@@ -71,7 +72,7 @@ export default async function CourseDetailPage({ params }: PageProps) {
   ] = await Promise.all([
     supabase
       .from("section_courses")
-      .select("id")
+      .select("id, best_of_quizzes, best_of_assignments")
       .eq("section_id", enrollment.section_id)
       .eq("course_id", enrollment.course_id)
       .single(),
@@ -109,6 +110,10 @@ export default async function CourseDetailPage({ params }: PageProps) {
     }
   }
 
+  const bestOf = bestOfFromSectionCourse(sectionCourse);
+  const totalQuizzes = (assessments || []).filter((a) => a.type === "quiz").length;
+  const totalAssignments = (assessments || []).filter((a) => a.type === "assignment").length;
+
   // Build the table data
   const marksMap = new Map<string, number>();
   for (const m of marks || []) {
@@ -116,6 +121,8 @@ export default async function CourseDetailPage({ params }: PageProps) {
     if (m.score === null || m.score === undefined) continue;
     marksMap.set(m.assessment_id, Number(m.score));
   }
+
+  const countedIds = countedAssessmentIds(assessments || [], marksMap, bestOf);
 
   let totalWeightedScore = 0;
   let totalWeight = 0;
@@ -125,7 +132,23 @@ export default async function CourseDetailPage({ params }: PageProps) {
   const rows = sortedAssessments.map((a) => {
     const score = marksMap.get(a.id);
     const hasScore = score !== undefined;
-    const abs = hasScore && a.max_marks > 0 ? (score / a.max_marks) * a.weight : null;
+    const isCounted = hasScore ? countedIds.has(a.id) : false;
+
+    let notCountedReason: string | null = null;
+    if (hasScore && !isCounted) {
+      if (a.type === "quiz" && bestOf.quiz) {
+        notCountedReason = `Not counted (best ${bestOf.quiz} of ${totalQuizzes})`;
+      } else if (a.type === "assignment" && bestOf.assignment) {
+        notCountedReason = `Not counted (best ${bestOf.assignment} of ${totalAssignments})`;
+      } else {
+        notCountedReason = "Not counted";
+      }
+    }
+
+    const abs = hasScore && isCounted && a.max_marks > 0
+      ? (score / a.max_marks) * a.weight
+      : null;
+
     const classStats = classAverages.get(a.id);
     const classAvg = classStats?.avg ?? null;
     const classHigh = classStats?.high ?? null;
@@ -134,7 +157,7 @@ export default async function CourseDetailPage({ params }: PageProps) {
       ? (classAvg / a.max_marks) * a.weight
       : null;
 
-    if (hasScore && a.max_marks > 0) {
+    if (hasScore && isCounted && a.max_marks > 0) {
       totalWeightedScore += (score / a.max_marks) * a.weight;
       totalWeight += a.weight;
     }
@@ -147,6 +170,7 @@ export default async function CourseDetailPage({ params }: PageProps) {
       weight: a.weight,
       score: hasScore ? score : null,
       abs,
+      notCountedReason,
       classAvg,
       classHigh,
       classLow,
@@ -165,6 +189,14 @@ export default async function CourseDetailPage({ params }: PageProps) {
     acc[typeLabel].push(r);
     return acc;
   }, {} as Record<string, typeof rows>);
+
+  const bestOfNotes: string[] = [];
+  if (bestOf.quiz) {
+    bestOfNotes.push(`Your best ${bestOf.quiz} of ${totalQuizzes} quizzes count.`);
+  }
+  if (bestOf.assignment) {
+    bestOfNotes.push(`Your best ${bestOf.assignment} of ${totalAssignments} assignments count.`);
+  }
 
   return (
     <div className="space-y-8">
@@ -221,6 +253,11 @@ export default async function CourseDetailPage({ params }: PageProps) {
           <CardTitle>Assessment Breakdown</CardTitle>
         </CardHeader>
         <CardContent>
+          {bestOfNotes.length > 0 && (
+            <p className="text-xs text-muted-foreground mb-4">
+              {bestOfNotes.join(" ")}
+            </p>
+          )}
           {rows.length === 0 ? (
             <p className="text-sm text-muted-foreground">
               No assessments have been created for this course yet.
@@ -253,7 +290,14 @@ export default async function CourseDetailPage({ params }: PageProps) {
                               key={r.id}
                               className="transition-colors"
                             >
-                              <td>{r.title}</td>
+                              <td>
+                                <div>{r.title}</div>
+                                {r.notCountedReason && (
+                                  <div className="text-xs text-muted-foreground">
+                                    {r.notCountedReason}
+                                  </div>
+                                )}
+                              </td>
                               <td className="tams-numeral">
                                 {r.score !== null ? r.score : "—"}
                               </td>

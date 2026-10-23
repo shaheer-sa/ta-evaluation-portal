@@ -5,6 +5,7 @@ import {
   CardContent,
 } from "@/components/ui/card";
 import type { Database } from "@/types/database";
+import { bestOfFromSectionCourse, countedAssessmentIds } from "@/lib/best-of";
 
 type EnrollmentRow = {
   id: string;
@@ -14,7 +15,7 @@ type EnrollmentRow = {
   sections: (Pick<Database["public"]["Tables"]["sections"]["Row"], "name"> & {
     terms: Pick<Database["public"]["Tables"]["terms"]["Row"], "name"> | null;
   }) | null;
-  marks: (Pick<Database["public"]["Tables"]["marks"]["Row"], "score"> & {
+  marks: (Pick<Database["public"]["Tables"]["marks"]["Row"], "assessment_id" | "score"> & {
     assessments: Pick<Database["public"]["Tables"]["assessments"]["Row"], "title" | "max_marks" | "weight"> | null;
   })[];
 };
@@ -51,7 +52,7 @@ export default async function StudentDashboardPage() {
         section_id,
         courses:course_id ( id, code, name ),
         sections:section_id ( name, terms:term_id ( name ) ),
-        marks ( score, assessments:assessment_id ( title, max_marks, weight ) )
+        marks ( assessment_id, score, assessments:assessment_id ( title, max_marks, weight ) )
       `)
       .eq("student_id", user.id)
   ]);
@@ -64,7 +65,9 @@ export default async function StudentDashboardPage() {
   let sectionCourses: {
     section_id: string;
     course_id: string;
-    assessments: { id: string }[];
+    best_of_quizzes: number | null;
+    best_of_assignments: number | null;
+    assessments: { id: string; type: string; max_marks: number; created_at: string | null }[];
   }[] = [];
 
   if (sectionIds.length > 0 && courseIds.length > 0) {
@@ -73,17 +76,19 @@ export default async function StudentDashboardPage() {
       .select(`
         section_id,
         course_id,
-        assessments ( id )
+        best_of_quizzes,
+        best_of_assignments,
+        assessments ( id, type, max_marks, created_at )
       `)
       .in("section_id", sectionIds)
       .in("course_id", courseIds);
     sectionCourses = (scData as unknown as typeof sectionCourses) || [];
   }
 
-  const scMap = new Map<string, number>();
+  const scMap = new Map<string, (typeof sectionCourses)[0]>();
   for (const sc of sectionCourses) {
     const key = `${sc.section_id}:${sc.course_id}`;
-    scMap.set(key, sc.assessments ? sc.assessments.length : 0);
+    scMap.set(key, sc);
   }
 
   // Calculate weighted percentage per enrollment
@@ -92,6 +97,18 @@ export default async function StudentDashboardPage() {
     let totalWeight = 0;
     const breakdown: { label: string; score: number; max: number; weight: number }[] = [];
     let gradedCount = 0;
+
+    const sc = scMap.get(`${e.section_id}:${e.course_id}`);
+    const bestOf = bestOfFromSectionCourse(sc);
+    const scoresMap = new Map<string, number>();
+
+    for (const m of e.marks) {
+      if (m.score !== null && m.score !== undefined && m.assessment_id) {
+        scoresMap.set(m.assessment_id, Number(m.score));
+      }
+    }
+
+    const countedIds = countedAssessmentIds(sc?.assessments || [], scoresMap, bestOf);
 
     for (const m of e.marks) {
       const assessment = m.assessments;
@@ -102,32 +119,35 @@ export default async function StudentDashboardPage() {
         m.score !== undefined
       ) {
         gradedCount++;
-        const pct = Number(m.score) / assessment.max_marks;
-        if (Number.isFinite(pct)) {
-          totalWeightedScore += pct * assessment.weight;
-          totalWeight += assessment.weight;
+        const isCounted = m.assessment_id ? countedIds.has(m.assessment_id) : true;
+        if (isCounted) {
+          const pct = Number(m.score) / assessment.max_marks;
+          if (Number.isFinite(pct)) {
+            totalWeightedScore += pct * assessment.weight;
+            totalWeight += assessment.weight;
+          }
+
+          breakdown.push({
+            label: assessment.title || "Assessment",
+            score: Number(m.score),
+            max: assessment.max_marks,
+            weight: assessment.weight,
+          });
         }
-        
-        breakdown.push({
-          label: assessment.title || "Assessment",
-          score: Number(m.score),
-          max: assessment.max_marks,
-          weight: assessment.weight,
-        });
       }
     }
 
     const weightedPct = totalWeight > 0 ? (totalWeightedScore / totalWeight) * 100 : 0;
-    
+
     // Sort breakdown by weight (highest first) and take top 3
     breakdown.sort((a, b) => b.weight - a.weight);
-    const topBreakdown = breakdown.slice(0, 3).map(b => ({
+    const topBreakdown = breakdown.slice(0, 3).map((b) => ({
       label: b.label,
       score: b.score,
       max: b.max,
     }));
 
-    const totalCount = scMap.get(`${e.section_id}:${e.course_id}`) ?? 0;
+    const totalCount = sc?.assessments ? sc.assessments.length : 0;
 
     return {
       id: e.id,
