@@ -82,11 +82,6 @@
   transition: border-color 0.18s ease, background 0.18s ease;
 }
 
-.tams-card:hover {
-  border-color: var(--line-strong);
-  background: var(--surface-2);
-}
-
 .tams-card__title {
   font-family: var(--font-display);
   font-size: 1.02rem;
@@ -483,9 +478,6 @@
   transition: border-color 0.18s ease, background 0.18s ease;
 }
 
-.tams-stat:hover {
-  background: var(--surface-2);
-}
 
 /* The scale gap between label and value IS the design. */
 .tams-stat__label {
@@ -579,36 +571,29 @@
   margin: 0;
 }
 
-/* ---- Cursor highlight ---- */
-.tams-card,
-.tams-stat {
-  --mx: 50%;
-  --my: 50%;
-  overflow: hidden;
+/* ---- Hover: only on things you can click ----
+   Plain cards and tables stay still, so a hover always means "clickable". */
+a.tams-stat,
+a.tams-inset,
+a > .tams-card {
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
 }
 
-.tams-card::after,
-.tams-stat::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.25s ease-out;
-  background: radial-gradient(120px circle at var(--mx) var(--my),
-      hsl(0 0% 100% / 0.55),
-      hsl(0 0% 100% / 0.2) 40%,
-      transparent 70%);
+a.tams-stat:hover,
+a > .tams-card:hover {
+  border-color: var(--ink-faint);
+  box-shadow: var(--shadow);
 }
 
-.tams-card:hover::after,
-.tams-stat:hover::after {
-  opacity: 1;
+a.tams-inset:hover {
+  border-color: var(--line-strong);
+  background: var(--surface-0);
 }
 
-.tams-card:hover,
-.tams-stat:hover {
-  border-color: var(--tan);
+a.tams-stat:focus-visible,
+a.tams-inset:focus-visible {
+  outline: 2px solid var(--line-focus);
+  outline-offset: 2px;
 }
 
 .rb-line__item {
@@ -657,11 +642,6 @@ a.tams-stat {
   transition: background 0.18s ease, border-color 0.18s ease;
 }
 
-.tams-card:hover .tams-inset,
-.tams-stat:hover .tams-inset {
-  background: var(--surface-0);
-  border-color: var(--line-strong);
-}
 
 .tams-bubble {
   background: var(--surface-2);
@@ -669,11 +649,6 @@ a.tams-stat {
   transition: background 0.18s ease, border-color 0.18s ease;
 }
 
-.tams-card:hover .tams-bubble,
-.tams-stat:hover .tams-bubble {
-  background: var(--surface-0);
-  border-color: var(--line-strong);
-}
 
 .tams-table tbody tr {
   background: var(--surface-1);

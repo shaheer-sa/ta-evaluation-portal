@@ -10,7 +10,6 @@ import { NotificationsBell } from "@/components/notifications-bell";
 import LineSidebar from "@/components/react-bits/LineSidebar";
 import ClickSpark from "@/components/react-bits/ClickSpark";
 import AmbientField from "@/components/shell/AmbientField";
-import CardEdgeTracker from "@/components/shell/CardEdgeTracker";
 import RouteProgress from "@/components/shell/RouteProgress";
 
 import { TA_NAV, STUDENT_NAV } from "@/components/shell/nav-config";
@@ -53,7 +52,6 @@ export default function DashboardLayout({
         <div className="tams-shell">
           <AmbientField />
           <RouteProgress />
-          <CardEdgeTracker />
           
           {mobileMenuOpen && (
             <div 
