@@ -5,6 +5,9 @@ import { after } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { sendQueryEmail } from "@/lib/email/gmail";
+import { createRateLimiter } from "@/lib/rate-limit";
+
+const replyRateLimit = createRateLimiter({ tokens: 20, window: "10 m" });
 
 const postReplySchema = z.object({
   queryId: z.string().uuid("Invalid query ID."),
@@ -139,6 +142,20 @@ export async function POST(request: Request) {
 
     if (!user)
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    if (replyRateLimit) {
+      const { success, reset } = await replyRateLimit.limit(`reply:${user.id}`);
+      if (!success) {
+        const retryAfter = Math.ceil((reset - Date.now()) / 1000);
+        return NextResponse.json(
+          { error: "You're doing that too often. Please wait a few minutes and try again." },
+          {
+            status: 429,
+            headers: { "Retry-After": retryAfter.toString() },
+          }
+        );
+      }
+    }
 
     const body = await request.json();
     const parsed = postReplySchema.safeParse(body);

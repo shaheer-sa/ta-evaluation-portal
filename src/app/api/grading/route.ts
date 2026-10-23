@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { createRateLimiter } from "@/lib/rate-limit";
+
+const gradingRateLimit = createRateLimiter({ tokens: 60, window: "10 m" });
 
 const gradingPostSchema = z.object({
   assessmentId: z.string().uuid("Invalid assessment ID."),
@@ -46,6 +49,20 @@ export async function POST(request: Request) {
 
     if (profile?.role !== "ta") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    if (gradingRateLimit) {
+      const { success, reset } = await gradingRateLimit.limit(`grading:${user.id}`);
+      if (!success) {
+        const retryAfter = Math.ceil((reset - Date.now()) / 1000);
+        return NextResponse.json(
+          { error: "You're doing that too often. Please wait a few minutes and try again." },
+          {
+            status: 429,
+            headers: { "Retry-After": retryAfter.toString() },
+          }
+        );
+      }
     }
 
     const body = await request.json();

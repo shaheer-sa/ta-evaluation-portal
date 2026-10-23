@@ -8,6 +8,10 @@ import type { Database } from "@/types/database";
 import { sendQueryEmail } from "@/lib/email/gmail";
 import { formatStatus } from "@/lib/format";
 
+import { createRateLimiter } from "@/lib/rate-limit";
+
+const studentQueryRateLimit = createRateLimiter({ tokens: 5, window: "10 m" });
+
 const createQuerySchema = z.object({
   enrollmentId: z.string().uuid("Invalid enrollment ID."),
   assessmentId: z.string().uuid("Invalid assessment ID.").nullable().optional(),
@@ -219,6 +223,20 @@ export async function POST(request: Request) {
 
     // Student creating query
     if (profile?.role === "student") {
+      if (studentQueryRateLimit) {
+        const { success, reset } = await studentQueryRateLimit.limit(`query-create:${user.id}`);
+        if (!success) {
+          const retryAfter = Math.ceil((reset - Date.now()) / 1000);
+          return NextResponse.json(
+            { error: "You're doing that too often. Please wait a few minutes and try again." },
+            {
+              status: 429,
+              headers: { "Retry-After": retryAfter.toString() },
+            }
+          );
+        }
+      }
+
       const parsed = createQuerySchema.safeParse(body);
       if (!parsed.success) {
         return NextResponse.json(
