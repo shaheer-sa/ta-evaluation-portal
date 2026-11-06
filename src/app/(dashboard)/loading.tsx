@@ -1,11 +1,33 @@
-import { Loader2 } from "lucide-react";
+// shown while a dashboard page loads its data. it has the same rough shape as
+// the pages (title, stat tiles, a list) so nothing jumps when the real page shows
+function Bar({ className = "" }: { className?: string }) {
+  return <div className={`rounded-md bg-muted motion-safe:animate-pulse ${className}`} />;
+}
 
 export default function DashboardLoading() {
   return (
-    <div className="flex h-full w-full items-center justify-center min-h-[400px]">
-      <div className="flex flex-col items-center gap-4 text-muted-foreground animate-in fade-in duration-500">
-        <Loader2 className="h-10 w-10 animate-spin text-primary opacity-80" />
-        <p className="text-sm font-medium tracking-wide">Loading...</p>
+    <div className="space-y-8" role="status" aria-live="polite">
+      <span className="sr-only">Loading…</span>
+
+      <div className="space-y-2">
+        <Bar className="h-3 w-32" />
+        <Bar className="h-8 w-56" />
+      </div>
+
+      <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
+        {[0, 1, 2, 3].map((i) => (
+          <div key={i} className="tams-card space-y-3 p-6">
+            <Bar className="h-3 w-20" />
+            <Bar className="h-7 w-12" />
+          </div>
+        ))}
+      </div>
+
+      <div className="tams-card space-y-3 p-6">
+        <Bar className="h-5 w-40" />
+        {[0, 1, 2, 3, 4].map((i) => (
+          <Bar key={i} className="h-12 w-full" />
+        ))}
       </div>
     </div>
   );

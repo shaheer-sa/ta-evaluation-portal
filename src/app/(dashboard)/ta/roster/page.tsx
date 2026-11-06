@@ -15,17 +15,26 @@ export default async function RosterPage({ searchParams }: PageProps) {
   const studentParam = params.student || "";
   const queryParam = params.q || "";
 
-  // 1. Fetch all mapped sections
-  const { data: rawSections } = await supabase
-    .from("section_courses")
-    .select(`
+  // 1. Fetch all mapped sections, and this class's assessments at the same time
+  const [{ data: rawSections }, assessResult] = await Promise.all([
+    supabase
+      .from("section_courses")
+      .select(`
       id,
       section_id,
       course_id,
       sections ( name, terms ( name, is_active ) ),
       courses ( code, name )
-    `);
-  
+    `),
+    selectedSectionCourseId
+      ? supabase
+          .from("assessments")
+          .select("id, title, max_marks, type, created_at")
+          .eq("section_course_id", selectedSectionCourseId)
+          .order("created_at", { ascending: true })
+      : null,
+  ]);
+
   const sections = (rawSections as unknown as SectionCourseRow[]) || [];
 
   let studentNotFound = false;
@@ -87,14 +96,8 @@ export default async function RosterPage({ searchParams }: PageProps) {
     const mapped = sections.find((s) => s.id === selectedSectionCourseId);
     
     if (mapped) {
-      // 2. Fetch assessments for this section_course
-      const { data: assessData } = await supabase
-        .from("assessments")
-        .select("id, title, max_marks, type, created_at")
-        .eq("section_course_id", selectedSectionCourseId)
-        .order("created_at", { ascending: true });
-      
-      assessments = sortAssessments((assessData as unknown as AssessmentRow[]) || []);
+      // 2. Assessments for this section_course (loaded above)
+      assessments = sortAssessments((assessResult?.data as unknown as AssessmentRow[]) || []);
 
       // 3. Fetch enrollments with marks
       const { data: rosterData } = await supabase

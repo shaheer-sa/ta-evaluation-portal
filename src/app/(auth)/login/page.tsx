@@ -12,7 +12,6 @@ import Link from "next/link";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { fetchJson } from "@/lib/fetch-json";
-import { createClient } from "@/lib/supabase/client";
 import SpecularButton from "@/components/react-bits/SpecularButton";
 import { GlobalSpotlight, ParticleCard } from "@/components/react-bits/MagicBento";
 // ── Schema ──────────────────────────────────────────────────────
@@ -71,8 +70,9 @@ function LoginFormContent() {
   useEffect(() => {
     if (typeof window !== "undefined" && window.location.hash.includes("access_token=")) {
       setIsLoading(true);
-      const supabase = createClient();
-      supabase.auth.getSession().then(({ data: { session } }) => {
+      // only this rare reset-link case needs the supabase client, so it is
+      // loaded on demand instead of with the login page
+      import("@/lib/supabase/client").then(({ createClient }) => createClient().auth.getSession()).then(({ data: { session } }) => {
         if (session) {
           router.push("/reset-password");
         } else {
@@ -126,7 +126,7 @@ function LoginFormContent() {
         <GlobalSpotlight gridRef={gridRef} glowColor="10, 41, 71" spotlightRadius={300} />
       )}
       <ParticleCard
-        className="mc-card mc-card--glow tams-auth-panel animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out"
+        className="mc-card mc-card--glow tams-auth-panel motion-safe:animate-in motion-safe:slide-in-from-bottom-4 duration-300 ease-out"
         particleCount={0}
         enableTilt={true}
         enableMagnetism={false}

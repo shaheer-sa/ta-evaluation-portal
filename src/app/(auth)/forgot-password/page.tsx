@@ -61,7 +61,7 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <div className="tams-auth-panel animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out">
+    <div className="tams-auth-panel motion-safe:animate-in motion-safe:slide-in-from-bottom-4 duration-300 ease-out">
       {emailSent ? (
         /* ── Success state ────────────────────────────────────── */
         <div style={{ textAlign: "center" }}>

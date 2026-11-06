@@ -57,9 +57,20 @@ export function NotificationsBell() {
 
   useEffect(() => {
     fetchNotifications();
-    // Poll every 30 seconds
-    const interval = setInterval(fetchNotifications, 30000);
-    return () => clearInterval(interval);
+    // Poll every 30 seconds, but only while the tab is open in front.
+    // background tabs don't need it, and it saves data on phones
+    const interval = setInterval(() => {
+      if (document.visibilityState === "visible") fetchNotifications();
+    }, 30000);
+    // coming back to the tab: check right away instead of waiting
+    const onVisible = () => {
+      if (document.visibilityState === "visible") fetchNotifications();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
   }, [fetchNotifications]);
 
   async function markAllRead() {

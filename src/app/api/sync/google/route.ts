@@ -186,7 +186,8 @@ export async function POST(request: NextRequest) {
       scopes: ["https://www.googleapis.com/auth/spreadsheets"],
     });
 
-    const sheets = google.sheets({ version: "v4", auth });
+    // 20s per request; gaxios retries failed reads with backoff (writes are not retried)
+    const sheets = google.sheets({ version: "v4", auth, timeout: 20_000, retry: true });
 
     // 1. Fetch spreadsheet metadata to dynamically map tabs
     const spreadsheet = await sheets.spreadsheets.get({ spreadsheetId });

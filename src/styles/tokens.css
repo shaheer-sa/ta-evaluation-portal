@@ -36,7 +36,7 @@
   --success: hsl(150 38% 28%);  --success-soft: hsl(150 30% 92%);
   --info:    hsl(210 45% 32%);  --info-soft:    hsl(210 45% 93%);
 
-  /* ---- ambient field (used by AmbientField) ---- */
+  /* ---- ambient field colors (not used right now) ---- */
   --field-glow-core: hsl(63 19% 79% / 0.5);
   --field-glow-mid:  hsl(26 40% 39% / 0.09);
 

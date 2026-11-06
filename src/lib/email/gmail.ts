@@ -45,6 +45,10 @@ const transport = nodemailer.createTransport({
     user: process.env.GMAIL_USER,
     pass: process.env.GMAIL_APP_PASSWORD,
   },
+  // give up instead of hanging if gmail is slow (default waits minutes)
+  connectionTimeout: 10_000,
+  greetingTimeout: 10_000,
+  socketTimeout: 20_000,
 });
 
 // name shown in the inbox instead of the raw gmail address

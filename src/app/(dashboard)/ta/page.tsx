@@ -11,18 +11,12 @@ export default async function TADashboardPage() {
 
   if (!user) return null;
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("full_name")
-    .eq("id", user.id)
-    .single();
-
-  // Get the active term — all stats are scoped to this
-  const { data: activeTerm } = await supabase
-    .from("terms")
-    .select("id, name")
-    .eq("is_active", true)
-    .single();
+  // independent lookups run together instead of one after another
+  const [{ data: profile }, { data: activeTerm }] = await Promise.all([
+    supabase.from("profiles").select("full_name").eq("id", user.id).single(),
+    // Get the active term — all stats are scoped to this
+    supabase.from("terms").select("id, name").eq("is_active", true).single(),
+  ]);
 
   const activeTermId = activeTerm?.id;
 
@@ -39,65 +33,10 @@ export default async function TADashboardPage() {
 
   const activeSectionIds = (activeSections || []).map((s) => s.id);
 
-  // Stat: Students enrolled in sections of the active term
   let studentCount = 0;
-  if (activeSectionIds.length > 0) {
-    const { data: count } = await supabase.rpc("active_student_count", {
-      p_section_ids: activeSectionIds,
-    });
-    studentCount = count || 0;
-  }
-
-  // Stat: Courses linked to sections of the active term
   let courseCount = 0;
-  if (activeSectionIds.length > 0) {
-    const { data: sectionCourses } = await supabase
-      .from("section_courses")
-      .select("course_id")
-      .in("section_id", activeSectionIds);
-    // Deduplicate — a course could be linked to multiple sections
-    const uniqueCourses = new Set((sectionCourses || []).map((sc) => sc.course_id));
-    courseCount = uniqueCourses.size;
-  }
-
-  // Stat: Assessments in section-courses of the active term
   let assessmentCount = 0;
-  if (activeSectionIds.length > 0) {
-    const { data: scIds } = await supabase
-      .from("section_courses")
-      .select("id")
-      .in("section_id", activeSectionIds);
-
-    if (scIds && scIds.length > 0) {
-      const { count } = await supabase
-        .from("assessments")
-        .select("*", { count: "exact", head: true })
-        .in("section_course_id", scIds.map((sc) => sc.id));
-      assessmentCount = count || 0;
-    }
-  }
-
-  // Stat: Pending queries from students enrolled in the active term
-  // Queries join through enrollment → section → term
   let pendingQueries = 0;
-  if (activeSectionIds.length > 0) {
-    const { data: activeEnrollmentIds } = await supabase
-      .from("enrollments")
-      .select("id")
-      .in("section_id", activeSectionIds)
-      .eq("status", "active");
-
-    if (activeEnrollmentIds && activeEnrollmentIds.length > 0) {
-      const { count } = await supabase
-        .from("queries")
-        .select("*", { count: "exact", head: true })
-        .eq("status", "pending")
-        .in("enrollment_id", activeEnrollmentIds.map((e) => e.id));
-      pendingQueries = count || 0;
-    }
-  }
-
-  // Recent queries — also scoped to the active term
   let recentQueries: {
     id: string;
     title: string;
@@ -111,29 +50,66 @@ export default async function TADashboardPage() {
   }[] = [];
 
   if (activeSectionIds.length > 0) {
-    const { data: activeEnrollmentIds } = await supabase
-      .from("enrollments")
-      .select("id")
-      .in("section_id", activeSectionIds)
-      .eq("status", "active");
+    const [countResult, sectionCoursesResult, enrollmentsResult] = await Promise.all([
+      // Stat: Students enrolled in sections of the active term
+      supabase.rpc("active_student_count", { p_section_ids: activeSectionIds }),
+      // Courses + assessments both need the classes of the active term
+      supabase.from("section_courses").select("id, course_id").in("section_id", activeSectionIds),
+      // Pending + recent queries both need the active enrollments
+      supabase
+        .from("enrollments")
+        .select("id")
+        .in("section_id", activeSectionIds)
+        .eq("status", "active"),
+    ]);
 
-    if (activeEnrollmentIds && activeEnrollmentIds.length > 0) {
-      const { data } = await supabase
-        .from("queries")
-        .select(`
-          id,
-          title,
-          status,
-          priority,
-          created_at,
-          profiles:student_id ( full_name, roll_number ),
-          enrollments ( sections ( name ) )
-        `)
-        .in("enrollment_id", activeEnrollmentIds.map((e) => e.id))
-        .order("created_at", { ascending: false })
-        .limit(5);
-      recentQueries = data || [];
-    }
+    studentCount = countResult.data || 0;
+
+    const sectionCourses = sectionCoursesResult.data || [];
+    // Deduplicate — a course could be linked to multiple sections
+    courseCount = new Set(sectionCourses.map((sc) => sc.course_id)).size;
+
+    const scIds = sectionCourses.map((sc) => sc.id);
+    const enrollmentIds = (enrollmentsResult.data || []).map((e) => e.id);
+
+    const [assessmentResult, pendingResult, recentResult] = await Promise.all([
+      // Stat: Assessments in section-courses of the active term
+      scIds.length > 0
+        ? supabase
+            .from("assessments")
+            .select("*", { count: "exact", head: true })
+            .in("section_course_id", scIds)
+        : null,
+      // Stat: Pending queries from students enrolled in the active term
+      enrollmentIds.length > 0
+        ? supabase
+            .from("queries")
+            .select("*", { count: "exact", head: true })
+            .eq("status", "pending")
+            .in("enrollment_id", enrollmentIds)
+        : null,
+      // Recent queries — also scoped to the active term
+      enrollmentIds.length > 0
+        ? supabase
+            .from("queries")
+            .select(`
+              id,
+              title,
+              status,
+              priority,
+              created_at,
+              profiles:student_id ( full_name, roll_number ),
+              enrollments ( sections ( name ) )
+            `)
+            .in("enrollment_id", enrollmentIds)
+            .order("created_at", { ascending: false })
+            .limit(5)
+        : null,
+    ]);
+
+    assessmentCount = assessmentResult?.count || 0;
+    pendingQueries = pendingResult?.count || 0;
+    recentQueries = recentResult?.data || [];
   }
 
   const stats = [

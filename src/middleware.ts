@@ -25,13 +25,16 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  const { supabase, user, supabaseResponse } = await updateSession(request);
-
   // ── Pass-through routes ──────────────────────────────────────
-  // API routes and the auth callback handle their own authentication.
+  // API routes and the auth callback check the user themselves, so skip the
+  // session lookups here (saves two supabase round trips on every api call,
+  // including the notification polling)
   if (pathname.startsWith("/api/") || pathname.startsWith("/auth/")) {
-    return supabaseResponse;
+    return NextResponse.next();
   }
+
+  const { supabase, user, supabaseResponse, profile, profileError } =
+    await updateSession(request);
 
   // Reset password page — always accessible
   if (pathname === RESET_ROUTE) {
@@ -49,12 +52,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // ── Logged in — resolve role ─────────────────────────────────
-  const { data: profile, error: profileError } = await supabase
-    .from("profiles")
-    .select("role, must_change_password")
-    .eq("id", user.id)
-    .single();
+  // ── Logged in — role comes from the profile loaded with the session ──
 
   // a temporary db/network problem shouldnt log anyone out
   // (PGRST116 just means no row came back)

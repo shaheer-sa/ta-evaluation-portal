@@ -16,9 +16,11 @@ export default async function StudentQueriesPage({ searchParams }: PageProps) {
   const selectedEnrollment = params.enrollment || "";
   const openQueryId = params.open;
 
-  const { data: rawQueries } = await supabase
-    .from("queries")
-    .select(`
+  // the query list and the course list don't depend on each other
+  const [{ data: rawQueries }, { data: rawEnrollments }] = await Promise.all([
+    supabase
+      .from("queries")
+      .select(`
       id,
       title,
       description,
@@ -28,43 +30,36 @@ export default async function StudentQueriesPage({ searchParams }: PageProps) {
       assessments:assessment_id ( title ),
       enrollments ( sections ( name ) )
     `)
-    .eq("student_id", user.id)
-    .order("created_at", { ascending: false });
-
-  const { data: rawEnrollments } = await supabase
-    .from("enrollments")
-    .select(`
+      .eq("student_id", user.id)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("enrollments")
+      .select(`
       id,
       section_id,
       course_id,
       courses ( code, name ),
       sections ( name )
     `)
-    .eq("student_id", user.id);
-  
+      .eq("student_id", user.id),
+  ]);
+
   const enrollments = (rawEnrollments as unknown as EnrollmentRow[]) || [];
 
   let assessments: AssessmentRow[] = [];
-  
   if (selectedEnrollment) {
     const enrollment = enrollments.find(e => e.id === selectedEnrollment);
     if (enrollment) {
-      const { data: sc } = await supabase
-        .from("section_courses")
-        .select("id")
-        .eq("section_id", enrollment.section_id || "")
-        .eq("course_id", enrollment.course_id || "")
-        .single();
-      
-      if (sc) {
-        const { data: assessData } = await supabase
-          .from("assessments")
-          .select("id, title, type")
-          .eq("section_course_id", sc.id)
-          .order("created_at", { ascending: true });
-        
-        assessments = (assessData as unknown as AssessmentRow[]) || [];
-      }
+      // one query: assessments of the class this enrollment belongs to
+      const { data: assessData } = await supabase
+        .from("assessments")
+        .select("id, title, type, section_courses!inner ( section_id, course_id )")
+        .eq("section_courses.section_id", enrollment.section_id || "")
+        .eq("section_courses.course_id", enrollment.course_id || "")
+        .order("created_at", { ascending: true });
+      assessments = ((assessData || []) as { id: string; title: string; type: string }[]).map(
+        ({ id, title, type }) => ({ id, title, type })
+      ) as unknown as AssessmentRow[];
     }
   }
 

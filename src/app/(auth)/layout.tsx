@@ -1,7 +1,3 @@
-"use client";
-
-import AmbientField from "@/components/shell/AmbientField";
-
 export default function AuthLayout({
   children,
 }: {
@@ -16,8 +12,6 @@ export default function AuthLayout({
         fontFamily: 'var(--font-body, "Inter", system-ui, sans-serif)',
       }}
     >
-      <AmbientField />
-
       <div style={{ position: "relative", zIndex: 10, width: "100%", maxWidth: "440px" }}>
         {children}
       </div>

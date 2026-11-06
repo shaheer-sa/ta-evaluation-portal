@@ -11,9 +11,16 @@ export default async function AnalyticsPage(props: {
   const searchParams = await props.searchParams;
   const scId = typeof searchParams.sc === "string" ? searchParams.sc : "";
 
+  // start the class numbers right away (when a class is picked) so they load
+  // while the term and sections are fetched, instead of after them
+  const rpcPromise = scId
+    ? supabase.rpc("analytics_for_section_course", { p_sc_id: scId }).then((r) => r)
+    : null;
+
+  // the active term with its sections and classes, in one request
   const { data: activeTerm } = await supabase
     .from("terms")
-    .select("id, name")
+    .select("id, name, sections ( id, name, section_courses ( id, courses ( code, name ) ) )")
     .eq("is_active", true)
     .single();
 
@@ -35,11 +42,7 @@ export default async function AnalyticsPage(props: {
     );
   }
 
-  // Get active sections
-  const { data: sections } = await supabase
-    .from("sections")
-    .select("id, name, section_courses(id, courses(code, name))")
-    .eq("term_id", activeTerm.id);
+  const sections = activeTerm.sections;
 
   if (!sections || sections.length === 0) {
     return (
@@ -96,9 +99,7 @@ export default async function AnalyticsPage(props: {
   }
 
   // STEP 2 — Once ?sc is set, fetch for that section_course via RPC:
-  const { data: rpcData, error } = await supabase.rpc("analytics_for_section_course", {
-    p_sc_id: scId,
-  });
+  const { data: rpcData, error } = await rpcPromise!;
 
   if (error || !rpcData) {
     return <div>Invalid section course or data could not be loaded.</div>;

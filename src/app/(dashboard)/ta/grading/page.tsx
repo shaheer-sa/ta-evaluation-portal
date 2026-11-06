@@ -19,10 +19,20 @@ export default async function GradingPage({ searchParams }: PageProps) {
   const selectedSC = params.sc || "";
   const selectedAssessment = params.assessment || "";
 
-  // 1. Fetch sectionCourses
-  const { data: rawSections } = await supabase
-    .from("section_courses")
-    .select(`id, section_id, course_id, sections ( name, terms ( name, is_active ) ), courses ( code, name )`);
+  // 1. Fetch sectionCourses, and the selected class's assessments at the same time
+  const [{ data: rawSections }, assessResult] = await Promise.all([
+    supabase
+      .from("section_courses")
+      .select(`id, section_id, course_id, sections ( name, terms ( name, is_active ) ), courses ( code, name )`),
+    selectedSC
+      ? supabase
+          .from("assessments")
+          .select("id, title, type, max_marks, created_at")
+          .eq("section_course_id", selectedSC)
+          .order("created_at", { ascending: true })
+      : null,
+  ]);
+
   const sectionCourses = (rawSections as unknown as SectionCourseRow[]) || [];
 
   let assessments: AssessmentRow[] = [];
@@ -30,13 +40,8 @@ export default async function GradingPage({ searchParams }: PageProps) {
   let maxMarks = 0;
 
   if (selectedSC) {
-    // 2. Fetch assessments
-    const { data: assessData } = await supabase
-      .from("assessments")
-      .select("id, title, type, max_marks, created_at")
-      .eq("section_course_id", selectedSC)
-      .order("created_at", { ascending: true });
-    assessments = sortAssessments((assessData as unknown as AssessmentRow[]) || []);
+    // 2. Assessments (loaded above)
+    assessments = sortAssessments((assessResult?.data as unknown as AssessmentRow[]) || []);
 
     if (selectedAssessment) {
       const assessment = assessments.find((a) => a.id === selectedAssessment);

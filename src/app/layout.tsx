@@ -9,7 +9,8 @@ import "@/styles/react-bits.css";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "swap" });
 const outfit = Outfit({ subsets: ["latin"], variable: "--font-outfit", display: "swap" });
-const mono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-mono-jet", display: "swap" });
+// only used for numbers in tables, so it isn't preloaded with every page
+const mono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-mono-jet", display: "swap", preload: false });
 
 export const metadata: Metadata = {
   title: "TAMS — Teaching Assistant Management System",

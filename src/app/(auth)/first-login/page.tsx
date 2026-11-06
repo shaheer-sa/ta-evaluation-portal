@@ -8,7 +8,6 @@ import { toast } from "sonner";
 import { Eye, EyeOff, KeyRound, Loader2 } from "lucide-react";
 
 import { fetchJson } from "@/lib/fetch-json";
-import { createClient } from "@/lib/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import SpecularButton from "@/components/react-bits/SpecularButton";
@@ -77,7 +76,7 @@ export default function FirstLoginPage() {
   }
 
   return (
-    <div className="tams-auth-panel animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out">
+    <div className="tams-auth-panel motion-safe:animate-in motion-safe:slide-in-from-bottom-4 duration-300 ease-out">
       <div style={{ marginBottom: "1.5rem", textAlign: "center" }}>
         <div
           style={{
@@ -224,6 +223,7 @@ export default function FirstLoginPage() {
           <button
             type="button"
             onClick={async () => {
+              const { createClient } = await import("@/lib/supabase/client");
               const supabase = createClient();
               await supabase.auth.signOut();
               window.location.href = "/login";

@@ -1,7 +1,28 @@
 'use client';
 
-import React, { useRef, useEffect, useCallback, CSSProperties } from 'react';
-import { gsap } from 'gsap';
+import React, { useRef, useEffect, useCallback, useState, CSSProperties } from 'react';
+
+// gsap is only downloaded when a hover effect actually starts (never on phones)
+type Gsap = typeof import('gsap').gsap;
+let gsap: Gsap;
+let gsapPromise: Promise<Gsap> | null = null;
+const loadGsap = () =>
+  (gsapPromise ??= import('gsap').then(m => {
+    gsap = m.gsap;
+    return gsap;
+  }));
+
+// true on devices with a real mouse and no reduced-motion setting
+export function useHoverEffects() {
+  const [enabled, setEnabled] = useState(false);
+  useEffect(() => {
+    setEnabled(
+      window.matchMedia('(hover: hover)').matches &&
+        !window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    );
+  }, []);
+  return enabled;
+}
 const DEFAULT_PARTICLE_COUNT = 10;
 const DEFAULT_SPOTLIGHT_RADIUS = 340;
 const DEFAULT_GLOW_COLOR = 'var(--tams-glow-rgb)';
@@ -55,12 +76,13 @@ export const ParticleCard: React.FC<{
   onActivate
 }) => {
   const cardRef = useRef<HTMLDivElement>(null);
+  const hoverOk = useHoverEffects();
   const particlesRef = useRef<HTMLDivElement[]>([]);
   const timeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
   const isHoveredRef = useRef(false);
   const memoizedParticles = useRef<HTMLDivElement[]>([]);
   const particlesInitialized = useRef(false);
-  const magnetismAnimationRef = useRef<gsap.core.Tween | null>(null);
+  const magnetismAnimationRef = useRef<ReturnType<Gsap['to']> | null>(null);
 
   const initializeParticles = useCallback(() => {
     if (particlesInitialized.current || !cardRef.current) return;
@@ -120,7 +142,9 @@ export const ParticleCard: React.FC<{
   }, [initializeParticles]);
 
   useEffect(() => {
-    if (disableAnimations || !cardRef.current) return;
+    // phones: a tap fires mouseenter, which would start endless particle
+    // animations. effects only run with a real mouse
+    if (disableAnimations || !hoverOk || !cardRef.current) return;
     const element = cardRef.current;
 
     const handleMouseEnter = () => {
@@ -196,12 +220,19 @@ export const ParticleCard: React.FC<{
       );
     };
 
-    element.addEventListener('mouseenter', handleMouseEnter);
-    element.addEventListener('mouseleave', handleMouseLeave);
-    element.addEventListener('mousemove', handleMouseMove);
-    element.addEventListener('click', handleClick);
+    let cancelled = false;
+    loadGsap()
+      .then(() => {
+        if (cancelled) return;
+        element.addEventListener('mouseenter', handleMouseEnter);
+        element.addEventListener('mouseleave', handleMouseLeave);
+        element.addEventListener('mousemove', handleMouseMove);
+        element.addEventListener('click', handleClick);
+      })
+      .catch(() => {});
 
     return () => {
+      cancelled = true;
       isHoveredRef.current = false;
       element.removeEventListener('mouseenter', handleMouseEnter);
       element.removeEventListener('mouseleave', handleMouseLeave);
@@ -209,7 +240,7 @@ export const ParticleCard: React.FC<{
       element.removeEventListener('click', handleClick);
       clearAllParticles();
     };
-  }, [animateParticles, clearAllParticles, disableAnimations, enableTilt, enableMagnetism, clickEffect, onActivate]);
+  }, [animateParticles, clearAllParticles, disableAnimations, hoverOk, enableTilt, enableMagnetism, clickEffect, onActivate]);
 
   return (
     <div ref={cardRef} className={className} style={style}>
@@ -232,9 +263,10 @@ export const GlobalSpotlight: React.FC<{
   glowColor = DEFAULT_GLOW_COLOR
 }) => {
   const spotlightRef = useRef<HTMLDivElement | null>(null);
+  const hoverOk = useHoverEffects();
 
   useEffect(() => {
-    if (disableAnimations || !gridRef?.current || !enabled) return;
+    if (disableAnimations || !hoverOk || !gridRef?.current || !enabled) return;
 
     const spotlight = document.createElement('div');
     spotlight.className = 'mc-spotlight';
@@ -308,15 +340,22 @@ export const GlobalSpotlight: React.FC<{
       }
     };
 
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseleave', handleMouseLeave);
+    let cancelled = false;
+    loadGsap()
+      .then(() => {
+        if (cancelled) return;
+        document.addEventListener('mousemove', handleMouseMove);
+        document.addEventListener('mouseleave', handleMouseLeave);
+      })
+      .catch(() => {});
 
     return () => {
+      cancelled = true;
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseleave', handleMouseLeave);
       spotlightRef.current?.parentNode?.removeChild(spotlightRef.current);
     };
-  }, [gridRef, disableAnimations, enabled, spotlightRadius, glowColor]);
+  }, [gridRef, disableAnimations, hoverOk, enabled, spotlightRadius, glowColor]);
 
   return null;
 };
