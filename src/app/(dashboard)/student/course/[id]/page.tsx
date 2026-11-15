@@ -280,8 +280,8 @@ export default async function CourseDetailPage({ params }: PageProps) {
                             <th className="tams-numeral">Total</th>
                             <th className="tams-numeral">Absolutes</th>
                             <th className="tams-numeral">Class Avg</th>
-                            <th className="tams-numeral">Highest</th>
-                            <th className="tams-numeral">Lowest</th>
+                            <th className="tams-numeral">Max</th>
+                            <th className="tams-numeral">Min</th>
                             <th className="tams-numeral">Weight</th>
                           </tr>
                         </thead>

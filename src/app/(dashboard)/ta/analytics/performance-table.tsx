@@ -77,7 +77,7 @@ export function PerformanceTable({
   return (
     <Card data-edge>
       <CardContent>
-        <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+        <div className="mb-4">
           <div className="relative w-full max-w-sm">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
@@ -87,11 +87,6 @@ export function PerformanceTable({
               className="pl-9"
             />
           </div>
-          <p className="max-w-md text-xs text-muted-foreground">
-            Ranked by weight obtained out of {formatWeight(possible)} ({marked}{" "}
-            {marked === 1 ? "assessment" : "assessments"} marked so far). A missing mark
-            counts as 0 here, so students can&apos;t rank high on just a few marks.
-          </p>
         </div>
 
         {filteredStudents.length === 0 ? (

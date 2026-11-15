@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent } from "@/components/ui/card";
 import { SectionPicker, type PickerOption } from "./section-picker";
 import { rankStudents } from "@/lib/analytics-rank";
+import { AssessmentStats } from "./assessment-stats";
 import { sortAssessments } from "@/lib/assessment-order";
 import { PerformanceTable, type StudentPerformance, type AssessmentPerformance, type MarkEntry } from "./performance-table";
 
@@ -162,44 +163,11 @@ export default async function AnalyticsPage(props: {
         </div>
       )}
 
-      <Card data-edge className="mb-8">
-        <CardContent>
-          <div className="tams-table-wrap">
-            <table className="tams-table">
-              <thead>
-                <tr>
-                  <th>Assessment</th>
-                  <th className="tams-numeral">Total Marks</th>
-                  <th className="tams-numeral">Graded</th>
-                  <th className="tams-numeral">Average</th>
-                  <th className="tams-numeral">Highest</th>
-                  <th className="tams-numeral">Lowest</th>
-                </tr>
-              </thead>
-              <tbody>
-                {sortedAssessments.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="text-center text-muted-foreground py-8">
-                      No assessments found.
-                    </td>
-                  </tr>
-                ) : (
-                  sortedAssessments.map(a => (
-                    <tr key={a.id} className="transition-colors">
-                      <td>{a.title}</td>
-                      <td className="tams-numeral">{a.total_marks}</td>
-                      <td className="tams-numeral">{a.graded}</td>
-                      <td className="tams-numeral">{a.avg !== null ? a.avg : "—"}</td>
-                      <td className="tams-numeral">{a.high !== null ? a.high : "—"}</td>
-                      <td className="tams-numeral">{a.low !== null ? a.low : "—"}</td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
+      <AssessmentStats
+        assessments={sortedAssessments}
+        marks={marks || []}
+        names={Object.fromEntries(performance.map((p) => [p.roll_number, p.full_name]))}
+      />
 
       <PerformanceTable
         students={performance}
