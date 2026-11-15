@@ -15,6 +15,10 @@ import RouteProgress from "@/components/shell/RouteProgress";
 
 import { TA_NAV, STUDENT_NAV } from "@/components/shell/nav-config";
 
+// "Report an issue" for students is hidden unless NEXT_PUBLIC_ISSUE_REPORTS=on
+// is set in Vercel (then redeploy). lets it be switched off without code changes.
+const ISSUE_REPORTS_ON = process.env.NEXT_PUBLIC_ISSUE_REPORTS === "on";
+
 export default function DashboardLayout({
   children,
 }: {
@@ -106,7 +110,7 @@ export default function DashboardLayout({
             </div>
 
             <div className="tams-rail__footer">
-              {isStudent && <ReportIssueButton variant="rail" />}
+              {isStudent && ISSUE_REPORTS_ON && <ReportIssueButton variant="rail" />}
               <button className="tams-iconbtn w-full" onClick={handleLogout} style={{ width: '100%', padding: '0 1rem', display: 'flex', gap: '0.5rem' }}>
                 <LogOut size={16} /> Sign out
               </button>
@@ -127,7 +131,7 @@ export default function DashboardLayout({
               </div>
               <div className="tams-topbar__spacer" />
               <div className="flex items-center gap-2">
-                {isStudent && <ReportIssueButton variant="topbar" />}
+                {isStudent && ISSUE_REPORTS_ON && <ReportIssueButton variant="topbar" />}
                 <ThemeToggle />
                 <NotificationsBell />
               </div>
