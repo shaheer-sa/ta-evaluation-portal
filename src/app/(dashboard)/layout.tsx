@@ -33,6 +33,12 @@ export default function DashboardLayout({
   );
 
   async function handleLogout() {
+    // an unsent issue report draft shouldn't stay for the next person on this browser
+    try {
+      localStorage.removeItem("tams-issue-draft");
+    } catch {
+      // ignore
+    }
     try {
       const res = await fetch("/api/auth/logout", { method: "POST" });
       if (res.ok) {

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Bug, Camera, CheckCircle2, ImagePlus, Loader2, X } from "lucide-react";
@@ -17,6 +18,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const CATEGORIES = [
   { value: "bug", label: "Something isn't working" },
@@ -33,6 +42,39 @@ const MAX = 2000;
 const MAX_SHOTS = 3;
 
 type Shot = { blob: Blob; url: string };
+
+// unsent report kept in this browser when the student picks "Save draft"
+// (cleared on send, discard and sign out). screenshots aren't kept across a refresh.
+export const DRAFT_KEY = "tams-issue-draft";
+
+function readDraft(): { category: Category | null; message: string } | null {
+  try {
+    const raw = localStorage.getItem(DRAFT_KEY);
+    if (!raw) return null;
+    const d = JSON.parse(raw);
+    const category = CATEGORIES.some((c) => c.value === d?.category) ? (d.category as Category) : null;
+    const message = typeof d?.message === "string" ? d.message.slice(0, MAX) : "";
+    return category || message ? { category, message } : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeDraft(category: Category | null, message: string) {
+  try {
+    localStorage.setItem(DRAFT_KEY, JSON.stringify({ category, message }));
+  } catch {
+    // storage blocked: the draft still stays until the page is refreshed
+  }
+}
+
+function clearDraft() {
+  try {
+    localStorage.removeItem(DRAFT_KEY);
+  } catch {
+    // ignore
+  }
+}
 
 // shrink a screenshot/photo to at most 1600px and save it as jpeg, so even a
 // big phone photo uploads quickly on slow data
@@ -67,6 +109,20 @@ export function ReportIssueButton({ variant = "topbar" }: { variant?: "topbar" |
   const [shots, setShots] = useState<Shot[]>([]);
   const [adding, setAdding] = useState(false);
   const [capturing, setCapturing] = useState(false);
+  // picture is being made after the student pressed Capture
+  const [processing, setProcessing] = useState(false);
+  const [confirmClose, setConfirmClose] = useState(false);
+  const [draftRestored, setDraftRestored] = useState(false);
+
+  // bring back a saved draft (e.g. after a refresh)
+  useEffect(() => {
+    const d = readDraft();
+    if (d) {
+      setCategory(d.category);
+      setMessage(d.message);
+      setDraftRestored(true);
+    }
+  }, []);
   const fileRef = useRef<HTMLInputElement>(null);
   const shotsRef = useRef<Shot[]>([]);
   shotsRef.current = shots;
@@ -129,6 +185,7 @@ export function ReportIssueButton({ variant = "topbar" }: { variant?: "topbar" |
 
   async function confirmCapture(area: CaptureRect) {
     setSelecting(false);
+    setProcessing(true);
     // one frame so the picker is gone before the picture is taken
     await new Promise((r) => requestAnimationFrame(() => r(null)));
     try {
@@ -175,6 +232,7 @@ export function ReportIssueButton({ variant = "topbar" }: { variant?: "topbar" |
       setOpen(true);
       toast.error("Couldn't capture this page. Take a screenshot yourself and use Add screenshot instead.");
     } finally {
+      setProcessing(false);
       setCapturing(false);
     }
   }
@@ -206,16 +264,48 @@ export function ReportIssueButton({ variant = "topbar" }: { variant?: "topbar" |
     setOpen(true);
   }
 
+  const hasUnsent = !sentRef && (category !== null || message.trim().length > 0 || shots.length > 0);
+
+  function resetForm() {
+    setCategory(null);
+    setMessage("");
+    setSentRef(null);
+    setDraftRestored(false);
+    clearShots();
+    clearDraft();
+  }
+
   function onOpenChange(next: boolean) {
     if (sending || capturing) return;
-    setOpen(next);
-    if (!next && sentRef) {
-      // start fresh next time after a successful report
-      setCategory(null);
-      setMessage("");
-      setSentRef(null);
-      clearShots();
+    if (next) {
+      setOpen(true);
+      return;
     }
+    // something written but not sent yet: ask before closing
+    if (hasUnsent) {
+      setConfirmClose(true);
+      return;
+    }
+    setOpen(false);
+    // start fresh next time after a successful report
+    if (sentRef) resetForm();
+  }
+
+  function saveDraftAndClose() {
+    writeDraft(category, message);
+    setConfirmClose(false);
+    setOpen(false);
+    if (shots.length > 0) {
+      toast.info("Draft saved. Screenshots stay until you refresh the page.");
+    } else {
+      toast.success("Draft saved.");
+    }
+  }
+
+  function discardAndClose() {
+    resetForm();
+    setConfirmClose(false);
+    setOpen(false);
   }
 
   async function send(e: React.FormEvent) {
@@ -233,6 +323,7 @@ export function ReportIssueButton({ variant = "topbar" }: { variant?: "topbar" |
         reference: string;
       };
       setSentRef(res.reference);
+      clearDraft();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Couldn't send your report. Please try again.");
     } finally {
@@ -263,6 +354,42 @@ export function ReportIssueButton({ variant = "topbar" }: { variant?: "topbar" |
     <>
       {trigger}
       {selecting && <CaptureOverlay onConfirm={confirmCapture} onCancel={cancelCapture} />}
+      {processing &&
+        createPortal(
+          <div
+            data-capture-ignore=""
+            role="status"
+            aria-live="polite"
+            className="fixed inset-x-0 bottom-6 z-[9999] mx-auto flex w-fit items-center gap-2 rounded-full bg-[#0A2947] px-4 py-2.5 text-sm font-medium text-[#F3E4C9] shadow-2xl"
+          >
+            <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+            Capturing the screenshot…
+          </div>,
+          document.body
+        )}
+      <AlertDialog open={confirmClose} onOpenChange={setConfirmClose}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Close without sending?</AlertDialogTitle>
+            <AlertDialogDescription>
+              You haven&apos;t sent this report yet. Save it as a draft to finish later, or discard it.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setConfirmClose(false)}>
+              Keep writing
+            </Button>
+            <Button
+              variant="outline"
+              onClick={discardAndClose}
+              className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+            >
+              Discard
+            </Button>
+            <Button onClick={saveDraftAndClose}>Save draft</Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="sm:max-w-lg" style={{ maxHeight: "92dvh", overflowY: "auto" }}>
           {sentRef ? (
@@ -286,11 +413,21 @@ export function ReportIssueButton({ variant = "topbar" }: { variant?: "topbar" |
                 </DialogDescription>
               </DialogHeader>
 
+              {draftRestored && hasUnsent && (
+                <p className="rounded-md bg-primary/10 px-3 py-2 text-xs text-foreground" role="status">
+                  Your saved draft is back. Finish it and press Send report, or clear it with Discard when
+                  you close.
+                </p>
+              )}
+
               <p className="rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
                 Question about your marks? Use{" "}
                 <Link
                   href="/student/queries"
-                  onClick={() => setOpen(false)}
+                  onClick={() => {
+                    if (hasUnsent) writeDraft(category, message);
+                    setOpen(false);
+                  }}
                   className="font-medium text-foreground underline underline-offset-2"
                 >
                   My Queries
@@ -410,9 +547,8 @@ export function ReportIssueButton({ variant = "topbar" }: { variant?: "topbar" |
                   )}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  &ldquo;Capture this page&rdquo; lets you pick part of the screen behind this form, no
-                  need to take a screenshot first. You can also add your own, or paste one with Ctrl+V
-                  on a computer.
+                  &ldquo;Capture this page&rdquo; lets you pick part of the screen behind this form. You
+                  can also add your own, or paste one with Ctrl+V on a computer.
                 </p>
               </div>
 

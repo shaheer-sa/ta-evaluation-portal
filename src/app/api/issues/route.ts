@@ -92,7 +92,9 @@ export async function POST(request: Request) {
     const pageUrl = parsed.data.pageUrl?.startsWith("/") ? parsed.data.pageUrl : null;
     const userAgent = request.headers.get("user-agent")?.slice(0, 500) || null;
 
-    const files = form.getAll("screenshots").filter((f): f is File => f instanceof File && f.size > 0);
+    const files = form
+      .getAll("screenshots")
+      .filter((f): f is File => typeof f === "object" && f !== null && "arrayBuffer" in f && f.size > 0);
     if (files.length > MAX_SCREENSHOTS) {
       return NextResponse.json({ error: `You can attach up to ${MAX_SCREENSHOTS} screenshots.` }, { status: 400 });
     }
@@ -121,15 +123,17 @@ export async function POST(request: Request) {
         upsert: false,
       });
       if (upErr) {
-        console.error("screenshot upload failed:", upErr);
+        console.error("screenshot upload failed:", { message: upErr.message, name: upErr.name });
         if (paths.length) await admin.storage.from(BUCKET).remove(paths);
         return NextResponse.json({ error: "Couldn't upload your screenshot. Try again, or send without it." }, { status: 500 });
       }
       paths.push(path);
     }
 
-    // insert as the student, so the database rules check it's really theirs
-    const { data: report, error } = await supabase
+    // saved by the server: we already checked above that this is a signed-in
+    // student, and reporter_id / file paths are set here, not by the browser.
+    // (any student can report a site problem, enrolled this term or not)
+    const { data: report, error } = await admin
       .from("issue_reports")
       .insert({
         id: reportId,
@@ -144,9 +148,19 @@ export async function POST(request: Request) {
       .single();
 
     if (error || !report) {
-      console.error("issue report insert failed:", error);
+      console.error("issue report insert failed:", { code: error?.code, message: error?.message, details: error?.details });
       if (paths.length) await admin.storage.from(BUCKET).remove(paths);
-      return NextResponse.json({ error: "Couldn't send your report. Please try again." }, { status: 500 });
+      // database not updated yet (sql step skipped)
+      const missingSetup =
+        error?.code === "42P01" || error?.code === "42703" || error?.code === "PGRST204" || error?.code === "PGRST205";
+      return NextResponse.json(
+        {
+          error: missingSetup
+            ? "Reporting isn't fully set up yet. Please tell your TA directly for now."
+            : "Couldn't send your report. Please try again.",
+        },
+        { status: 500 }
+      );
     }
 
     const { data: tas } = await admin.from("profiles").select("id, email").eq("role", "ta");
@@ -203,7 +217,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: true, reference: report.id.slice(0, 8).toUpperCase() });
   } catch (err) {
-    console.error("issue report error:", err);
+    console.error("issue report error:", err instanceof Error ? `${err.name}: ${err.message}` : err);
     return NextResponse.json({ error: "Couldn't send your report. Please try again." }, { status: 500 });
   }
 }
