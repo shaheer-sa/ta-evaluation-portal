@@ -28,6 +28,13 @@ export type AssessmentPerformance = {
   graded: number;
 };
 
+export type RankedPerformance = StudentPerformance & {
+  // weight obtained out of everything marked so far for the class (missing = 0)
+  overall: number | null;
+  // assessments marked for the class that this student has no mark for
+  missing: number;
+};
+
 export type MarkEntry = {
   roll_number: string;
   assessment_id: string;
@@ -39,10 +46,14 @@ export function PerformanceTable({
   students,
   sortedAssessments,
   marks,
+  possible,
+  marked,
 }: {
-  students: StudentPerformance[];
+  students: RankedPerformance[];
   sortedAssessments: AssessmentPerformance[];
   marks: MarkEntry[];
+  possible: number;
+  marked: number;
 }) {
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -50,6 +61,9 @@ export function PerformanceTable({
   const toggleRow = (roll_number: string) => {
     setExpandedRow((prev) => (prev === roll_number ? null : roll_number));
   };
+
+  // rank stays the same while searching
+  const rankOf = new Map(students.map((s, i) => [s.roll_number, s.overall === null ? null : i + 1]));
 
   const query = searchQuery.trim().toLowerCase();
   const filteredStudents = students.filter((s) => {
@@ -63,14 +77,21 @@ export function PerformanceTable({
   return (
     <Card data-edge>
       <CardContent>
-        <div className="relative max-w-sm mb-4">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search by name or roll number"
-            className="pl-9"
-          />
+        <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+          <div className="relative w-full max-w-sm">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search by name or roll number"
+              className="pl-9"
+            />
+          </div>
+          <p className="max-w-md text-xs text-muted-foreground">
+            Ranked by weight obtained out of {formatWeight(possible)} ({marked}{" "}
+            {marked === 1 ? "assessment" : "assessments"} marked so far). A missing mark
+            counts as 0 here, so students can&apos;t rank high on just a few marks.
+          </p>
         </div>
 
         {filteredStudents.length === 0 ? (
@@ -83,12 +104,17 @@ export function PerformanceTable({
               <thead>
                 <tr>
                   <th className="w-8"></th>
+                  <th className="tams-numeral w-10">#</th>
                   <th>Roll Number</th>
                   <th>Student</th>
-                  <th className="tams-numeral">Graded</th>
+                  <th className="tams-numeral">Marked</th>
                   <th className="tams-numeral">Weight Obtained</th>
-                  <th className="tams-numeral">Total Weight</th>
-                  <th className="tams-numeral">Percentage</th>
+                  <th className="tams-numeral" data-tip="Out of everything marked so far. This is what the ranking uses.">
+                    Overall
+                  </th>
+                  <th className="tams-numeral" data-tip="Average on only the assessments this student has marks for.">
+                    On marked only
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -111,24 +137,32 @@ export function PerformanceTable({
                           <ChevronRight className="h-4 w-4" />
                         )}
                       </td>
-                      <td>{p.roll_number}</td>
+                      <td className="tams-numeral text-muted-foreground">
+                        {rankOf.get(p.roll_number) ?? "—"}
+                      </td>
+                      <td className="whitespace-nowrap">{p.roll_number}</td>
                       <td>{p.full_name}</td>
                       <td className="tams-numeral">
-                        {p.graded === 0 ? "—" : p.graded}
+                        <span
+                          className={p.missing > 0 ? "font-medium text-amber-600 dark:text-amber-400" : undefined}
+                          data-tip={p.missing > 0 ? `${p.missing} marked ${p.missing === 1 ? "assessment has" : "assessments have"} no mark for this student` : undefined}
+                        >
+                          {p.graded} / {marked}
+                        </span>
                       </td>
                       <td className="tams-numeral">
-                        {p.graded === 0 ? "—" : p.obtained}
+                        {p.graded === 0 ? "—" : `${formatWeight(p.obtained)} / ${formatWeight(possible)}`}
                       </td>
-                      <td className="tams-numeral">
-                        {p.graded === 0 ? "—" : formatWeight(p.total_weight)}
+                      <td className="tams-numeral font-semibold">
+                        {p.overall === null ? "—" : `${p.overall.toFixed(1)}%`}
                       </td>
-                      <td className="tams-numeral">
+                      <td className="tams-numeral text-muted-foreground">
                         {p.percentage === null ? "—" : `${p.percentage.toFixed(1)}%`}
                       </td>
                     </tr>
                     {isExpanded && (
                       <tr className="bg-muted/20">
-                        <td colSpan={7} className="p-0 border-b">
+                        <td colSpan={8} className="p-0 border-b">
                           <div className="p-4 pl-12">
                             <table className="tams-table w-full text-sm">
                               <thead>

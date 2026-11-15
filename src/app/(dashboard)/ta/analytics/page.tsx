@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent } from "@/components/ui/card";
-import { SectionPicker } from "./section-picker";
+import { SectionPicker, type PickerOption } from "./section-picker";
+import { rankStudents } from "@/lib/analytics-rank";
 import { sortAssessments } from "@/lib/assessment-order";
 import { PerformanceTable, type StudentPerformance, type AssessmentPerformance, type MarkEntry } from "./performance-table";
 
@@ -20,7 +21,7 @@ export default async function AnalyticsPage(props: {
   // the active term with its sections and classes, in one request
   const { data: activeTerm } = await supabase
     .from("terms")
-    .select("id, name, sections ( id, name, section_courses ( id, courses ( code, name ) ) )")
+    .select("id, name, sections ( id, name, section_courses ( id, best_of_quizzes, best_of_assignments, courses ( code, name ) ) )")
     .eq("is_active", true)
     .single();
 
@@ -62,20 +63,25 @@ export default async function AnalyticsPage(props: {
     );
   }
 
-  const options: { id: string; label: string }[] = [];
+  const options: PickerOption[] = [];
   sections.forEach((sec) => {
-    sec.section_courses?.forEach((sc: { id: string; courses: { code: string, name: string } | null } | null) => {
+    sec.section_courses?.forEach((sc) => {
       if (sc && sc.courses?.code) {
-        const cName = sc.courses.name || "";
-        const shortName = cName.length > 40 ? cName.slice(0, 39) + "…" : cName;
         options.push({
           id: sc.id,
-          label: `${activeTerm.name} — Section ${sec.name} · ${shortName || "Course"} (${sc.courses.code})`,
+          section: sec.name,
+          code: sc.courses.code,
+          name: sc.courses.name || "",
         });
       }
     });
   });
-  
+  options.sort(
+    (x, y) =>
+      x.section.localeCompare(y.section, undefined, { numeric: true }) ||
+      x.code.localeCompare(y.code, undefined, { numeric: true })
+  );
+
   if (!scId) {
     return (
       <div className="space-y-8">
@@ -110,10 +116,19 @@ export default async function AnalyticsPage(props: {
     assessments: AssessmentPerformance[],
     marks: MarkEntry[] 
   }) || { students: [], assessments: [], marks: [] };
-  const performance = students || [];
   const sortedAssessments = sortAssessments(assessments || []);
 
-  const top3 = performance.filter(p => p.percentage !== null).slice(0, 3);
+  // rank against the same total for everyone (missing marks count as 0),
+  // not by the percentage of whatever happens to be marked
+  const selectedSc = sections
+    .flatMap((sec) => sec.section_courses || [])
+    .find((sc) => sc?.id === scId);
+  const { ranked: performance, possible, marked } = rankStudents(students || [], assessments || [], {
+    quiz: selectedSc?.best_of_quizzes ?? null,
+    assignment: selectedSc?.best_of_assignments ?? null,
+  });
+
+  const top3 = performance.filter((p) => p.overall !== null).slice(0, 3);
   const ranks = ["1ST", "2ND", "3RD"];
 
   return (
@@ -128,9 +143,7 @@ export default async function AnalyticsPage(props: {
         </p>
       </div>
 
-      <div className="flex justify-between items-center">
-        <SectionPicker options={options} />
-      </div>
+      <SectionPicker options={options} />
 
       {top3.length > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
@@ -139,8 +152,11 @@ export default async function AnalyticsPage(props: {
               <div className="tams-stat__header">
                 <span className="tams-stat__label">{ranks[i]}</span>
               </div>
-              <div className="tams-stat__value">{p.percentage?.toFixed(1)}%</div>
-              <div className="tams-stat__meta">{p.full_name}</div>
+              <div className="tams-stat__value">{p.overall?.toFixed(1)}%</div>
+              <div className="tams-stat__meta">
+                {p.full_name}
+                {p.missing > 0 && ` · ${p.missing} not marked`}
+              </div>
             </div>
           ))}
         </div>
@@ -185,7 +201,13 @@ export default async function AnalyticsPage(props: {
         </CardContent>
       </Card>
 
-      <PerformanceTable students={performance} sortedAssessments={sortedAssessments} marks={marks || []} />
+      <PerformanceTable
+        students={performance}
+        sortedAssessments={sortedAssessments}
+        marks={marks || []}
+        possible={possible}
+        marked={marked}
+      />
     </div>
   );
 }
