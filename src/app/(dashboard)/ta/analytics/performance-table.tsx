@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, Fragment, type ReactNode } from "react";
+import { useState, useEffect, useRef, Fragment, type ReactNode } from "react";
+import { FOCUS_STUDENT_EVENT } from "./focus-student";
 import { ChevronDown, ChevronRight, Search } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -57,6 +58,33 @@ export function PerformanceTable({
 }) {
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [highlight, setHighlight] = useState<string | null>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  // another part of the page asked to show a student: search their roll
+  // number, open their row and scroll down to it
+  useEffect(() => {
+    const onFocus = (e: Event) => {
+      const roll = (e as CustomEvent<string>).detail;
+      if (!roll) return;
+      setSearchQuery(roll);
+      setExpandedRow(roll);
+      setHighlight(roll);
+      // wait for the filtered table to render before scrolling
+      requestAnimationFrame(() => {
+        const row = document.getElementById(`student-row-${roll}`);
+        (row || cardRef.current)?.scrollIntoView({ behavior: "smooth", block: "center" });
+      });
+    };
+    window.addEventListener(FOCUS_STUDENT_EVENT, onFocus);
+    return () => window.removeEventListener(FOCUS_STUDENT_EVENT, onFocus);
+  }, []);
+
+  useEffect(() => {
+    if (!highlight) return;
+    const t = setTimeout(() => setHighlight(null), 2500);
+    return () => clearTimeout(t);
+  }, [highlight]);
 
   const toggleRow = (roll_number: string) => {
     setExpandedRow((prev) => (prev === roll_number ? null : roll_number));
@@ -75,7 +103,7 @@ export function PerformanceTable({
   });
 
   return (
-    <Card data-edge>
+    <Card data-edge ref={cardRef} className="scroll-mt-20">
       <CardContent>
         <div className="mb-4">
           <div className="relative w-full max-w-sm">
@@ -122,7 +150,10 @@ export function PerformanceTable({
                 return (
                   <Fragment key={p.roll_number}>
                     <tr
-                      className="transition-colors hover:bg-muted/50 cursor-pointer"
+                      id={`student-row-${p.roll_number}`}
+                      className={`transition-colors hover:bg-muted/50 cursor-pointer ${
+                        highlight === p.roll_number ? "bg-primary/10 motion-safe:animate-pulse" : ""
+                      }`}
                       onClick={() => toggleRow(p.roll_number)}
                     >
                       <td className="w-8 text-muted-foreground">

@@ -3,6 +3,7 @@
 import { Fragment, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import type { AssessmentPerformance, MarkEntry } from "./performance-table";
+import { focusStudent } from "./focus-student";
 
 type Pick = { id: string; kind: "max" | "min" } | null;
 
@@ -38,12 +39,19 @@ export function AssessmentStats({
     const value = kind === "max" ? a.high : a.low;
     if (value === null) return <>—</>;
     const isOpen = open?.id === a.id && open.kind === kind;
+    // hover shows who scored it (first 3, then "+N more")
+    const who = scoredBy(a.id, value);
+    const shown = who.slice(0, 3).map((w) => `${w.name} (${w.roll})`).join(", ");
+    const tip = who.length === 0 ? "No active student" : who.length > 3 ? `${shown} +${who.length - 3} more` : shown;
     return (
       <button
         type="button"
         onClick={() => toggle(a.id, kind)}
         aria-expanded={isOpen}
-        data-tip={isOpen ? undefined : "See who scored this"}
+        aria-label={`${kind === "max" ? "Max" : "Min"} ${value}: ${tip}`}
+        data-tip={tip}
+        data-tip-pos="left"
+        data-tip-fast=""
         className={`rounded px-1.5 py-0.5 underline decoration-dotted underline-offset-4 transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
           isOpen ? "bg-muted font-semibold" : ""
         }`}
@@ -106,7 +114,13 @@ export function AssessmentStats({
                             {who.map((w, i) => (
                               <span key={w.roll}>
                                 {i > 0 && ", "}
-                                {w.name} <span className="text-muted-foreground">({w.roll})</span>
+                                <button
+                                  type="button"
+                                  onClick={() => focusStudent(w.roll)}
+                                  className="rounded px-0.5 font-medium underline decoration-dotted underline-offset-4 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                >
+                                  {w.name} <span className="font-normal text-muted-foreground">({w.roll})</span>
+                                </button>
                               </span>
                             ))}
                           </td>

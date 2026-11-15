@@ -3,6 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { SectionPicker, type PickerOption } from "./section-picker";
 import { rankStudents } from "@/lib/analytics-rank";
 import { AssessmentStats } from "./assessment-stats";
+import { TopStudents } from "./top-students";
 import { sortAssessments } from "@/lib/assessment-order";
 import { PerformanceTable, type StudentPerformance, type AssessmentPerformance, type MarkEntry } from "./performance-table";
 
@@ -130,7 +131,6 @@ export default async function AnalyticsPage(props: {
   });
 
   const top3 = performance.filter((p) => p.overall !== null).slice(0, 3);
-  const ranks = ["1ST", "2ND", "3RD"];
 
   return (
     <div className="space-y-8">
@@ -146,22 +146,7 @@ export default async function AnalyticsPage(props: {
 
       <SectionPicker options={options} />
 
-      {top3.length > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-          {top3.map((p, i) => (
-            <div key={p.roll_number} className="tams-stat" data-cat="count">
-              <div className="tams-stat__header">
-                <span className="tams-stat__label">{ranks[i]}</span>
-              </div>
-              <div className="tams-stat__value">{p.overall?.toFixed(1)}%</div>
-              <div className="tams-stat__meta">
-                {p.full_name}
-                {p.missing > 0 && ` · ${p.missing} not marked`}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+      <TopStudents students={top3} />
 
       <AssessmentStats
         assessments={sortedAssessments}
