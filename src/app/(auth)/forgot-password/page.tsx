@@ -95,7 +95,7 @@ export default function ForgotPasswordPage() {
                 alignItems: "center",
                 gap: "0.4rem",
                 fontSize: "0.85rem",
-                color: "var(--navy)",
+                color: "var(--heading)",
                 textDecoration: "none",
               }}
             >
@@ -164,7 +164,7 @@ export default function ForgotPasswordPage() {
                 block
                 size="md"
                 radius={14}
-                tint="hsl(210 75% 16%)"
+                tint="var(--auth-btn)"
                 tintOpacity={1}
                 blur={10}
                 textColor="hsl(40 55% 97%)"

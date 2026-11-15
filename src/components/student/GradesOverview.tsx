@@ -118,8 +118,8 @@ function ProgressRing({ percentage }: { percentage: number | null }) {
       />
       <defs>
         <linearGradient id="gradeGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#0A2947" />
-          <stop offset="100%" stopColor="#2D5276" />
+          <stop offset="0%" style={{ stopColor: "var(--ring-start)" }} />
+          <stop offset="100%" style={{ stopColor: "var(--ring-end)" }} />
         </linearGradient>
       </defs>
     </svg>
@@ -172,7 +172,7 @@ export function GradeCard({ course }: { course: CourseGrade }) {
                 {course.code}
               </p>
               {isPending ? (
-                <Loader2 size={18} strokeWidth={1.5} className="animate-spin text-[var(--navy)]" />
+                <Loader2 size={18} strokeWidth={1.5} className="animate-spin text-primary" />
               ) : (
                 <ChevronDown size={18} strokeWidth={1.5} className="tams-expand-icon text-muted-foreground" />
               )}

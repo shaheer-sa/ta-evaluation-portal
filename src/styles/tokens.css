@@ -40,6 +40,18 @@
   --field-glow-core: hsl(63 19% 79% / 0.5);
   --field-glow-mid:  hsl(26 40% 39% / 0.09);
 
+  /* ---- theme-aware roles (navy in light, sand in dark) ---- */
+  --heading:       var(--navy);           /* page titles, big numbers */
+  --emph-rule:     var(--navy);           /* strong lines and edges */
+  --table-head-bg: var(--navy);
+  --table-head-fg: hsl(40 55% 97%);
+  --ring-start:    #0A2947;               /* grade ring gradient */
+  --ring-end:      #2D5276;
+  --auth-btn:      hsl(210 75% 16%);      /* sign in / submit buttons */
+  --auth-logo-bg:  linear-gradient(145deg, hsl(210 75% 16%), hsl(210 75% 12%));
+  --auth-logo-fg:  hsl(40 55% 97%);
+  --title-end:     var(--slate);          /* login title gradient end */
+
   /* ---- elevation: warm-tinted, never neutral grey ---- */
   --shadow-sm:   0 1px 2px hsl(30 20% 25% / 0.06);
   --shadow:      0 4px 16px hsl(30 20% 25% / 0.08);
@@ -74,6 +86,20 @@
   --info:    hsl(210 55% 66%);  --info-soft:    hsl(210 40% 18%);
   --field-glow-core: hsl(210 50% 40% / 0.35);
   --field-glow-mid:  hsl(26 45% 45% / 0.10);
+  --heading:       var(--sand);
+  --emph-rule:     hsl(39 50% 72%);
+  --table-head-bg: hsl(210 40% 18%);
+  --table-head-fg: var(--sand);
+  --ring-start:    #F3E4C9;
+  --ring-end:      #C9A27A;
+  --auth-btn:      hsl(210 50% 30%);
+  --auth-logo-bg:  linear-gradient(145deg, hsl(39 64% 87%), hsl(39 50% 78%));
+  --auth-logo-fg:  hsl(210 75% 16%);
+  --title-end:     hsl(39 30% 68%);
+  --shadow-sm:   0 1px 2px hsl(210 60% 3% / 0.4);
+  --shadow:      0 4px 16px hsl(210 60% 3% / 0.45);
+  --shadow-lift: 0 12px 32px hsl(210 60% 3% / 0.55);
+  color-scheme: dark;
 }
 
 @media (prefers-reduced-motion: reduce) {

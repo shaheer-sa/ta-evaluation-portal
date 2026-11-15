@@ -143,12 +143,12 @@ function LoginFormContent() {
             borderRadius: "16px",
             display: "grid",
             placeItems: "center",
-            background: "linear-gradient(145deg, var(--navy), hsl(210 75% 12%))",
-            border: "1px solid hsl(153 41% 19% / 0.7)",
-            boxShadow: "0 0 16px hsl(153 41% 19% / 0.25), inset 0 1px 2px hsl(0 0% 100% / 0.2)",
+            background: "var(--auth-logo-bg)",
+            border: "1px solid hsl(210 40% 30% / 0.5)",
+            boxShadow: "0 0 16px hsl(210 40% 20% / 0.2), inset 0 1px 2px hsl(0 0% 100% / 0.2)",
           }}
         >
-          <GraduationCap style={{ width: 30, height: 30, color: "var(--primary-fg)" }} />
+          <GraduationCap style={{ width: 30, height: 30, color: "var(--auth-logo-fg)" }} />
         </div>
         <h1
           style={{
@@ -156,7 +156,7 @@ function LoginFormContent() {
             fontWeight: 700,
             letterSpacing: "-0.03em",
             margin: 0,
-            background: "linear-gradient(135deg, var(--navy), var(--slate))",
+            background: "linear-gradient(135deg, var(--heading), var(--title-end))",
             WebkitBackgroundClip: "text",
             backgroundClip: "text",
             color: "transparent",
@@ -279,7 +279,7 @@ function LoginFormContent() {
             block
             size="lg"
             radius={14}
-            tint="hsl(210 75% 16%)"
+            tint="var(--auth-btn)"
             tintOpacity={1}
             blur={10}
             textColor="hsl(40 55% 97%)"

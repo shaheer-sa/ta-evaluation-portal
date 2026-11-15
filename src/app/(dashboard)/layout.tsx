@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { NotificationsBell } from "@/components/notifications-bell";
+import { ThemeToggle } from "@/components/theme-toggle";
 import LineSidebar from "@/components/react-bits/LineSidebar";
 import ClickSpark from "@/components/react-bits/ClickSpark";
 import RouteProgress from "@/components/shell/RouteProgress";
@@ -117,7 +118,10 @@ export default function DashboardLayout({
                 {navItems[activeIndex]?.label || "Dashboard"}
               </div>
               <div className="tams-topbar__spacer" />
-              <NotificationsBell />
+              <div className="flex items-center gap-2">
+                <ThemeToggle />
+                <NotificationsBell />
+              </div>
             </header>
             
             <main className="tams-main">

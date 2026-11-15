@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, Outfit, JetBrains_Mono } from "next/font/google";
-import { Toaster } from "sonner";
+import { ThemedToaster } from "@/components/themed-toaster";
+import { themeInitScript } from "@/lib/theme";
 
 import "@/styles/tokens.css";
 import "./globals.css";
@@ -25,17 +26,15 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${inter.variable} ${outfit.variable} ${mono.variable}`} suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+      </head>
       <body
         className="min-h-screen font-sans text-foreground antialiased"
         suppressHydrationWarning
       >
         {children}
-        <Toaster
-          position="top-right"
-          richColors
-          closeButton
-          toastOptions={{ duration: 4000 }}
-        />
+        <ThemedToaster />
       </body>
     </html>
   );
