@@ -36,14 +36,17 @@ function StatTile({
   label,
   value,
   href,
+  cat = "count",
 }: {
   label: string;
   value: string | number;
   href?: string;
+  // top edge colour: count = navy, pending = tan, neutral = sage
+  cat?: "count" | "pending" | "neutral";
 }) {
   const content = (
     <ParticleCard 
-      className="mc-card mc-card--glow h-full p-6 flex flex-col justify-center tams-card" 
+      className={`mc-card mc-card--glow h-full p-6 flex flex-col justify-center tams-card tams-cat--${cat}`}
       enableTilt={true}
       clickEffect={true}
       particleCount={6}
@@ -52,7 +55,7 @@ function StatTile({
         <p className="text-xs uppercase tracking-wider text-muted-foreground mb-1">
           {label}
         </p>
-        <p className="text-3xl font-bold text-foreground">{value}</p>
+        <p className="text-3xl font-bold tams-tile-value">{value}</p>
       </div>
     </ParticleCard>
   );
@@ -78,8 +81,8 @@ export function StatStrip({
   return (
     <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8 w-full">
       <StatTile label="Overall Standing" value={overall} href="/student" />
-      <StatTile label="Courses Enrolled" value={courseCount} href="/student" />
-      <StatTile label="Pending Queries" value={pendingQueries} href="/student/queries" />
+      <StatTile label="Courses Enrolled" value={courseCount} href="/student" cat="neutral" />
+      <StatTile label="Pending Queries" value={pendingQueries} href="/student/queries" cat="pending" />
     </div>
   );
 }

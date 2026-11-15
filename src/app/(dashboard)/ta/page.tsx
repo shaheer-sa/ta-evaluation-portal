@@ -149,6 +149,7 @@ export default async function TADashboardPage() {
     } else if (s.title === "Students") {
       href = "/ta/roster";
     } else if (s.title === "Courses") {
+      cat = "neutral";
       href = "/ta/courses";
     } else if (s.title === "Assessments") {
       href = "/ta/assessments";

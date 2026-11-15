@@ -65,7 +65,7 @@ export default function DashboardLayout({
             <div className="tams-rail__brand">
               <Link href={isTA ? "/ta" : "/student"} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', textDecoration: 'none', color: 'inherit' }}>
                 <div className="tams-rail__mark">
-                  <GraduationCap size={20} color="var(--primary-fg)" />
+                  <GraduationCap size={20} color="var(--navy)" />
                 </div>
                 <div>
                   <div className="tams-rail__name">TAMS</div>
@@ -88,8 +88,9 @@ export default function DashboardLayout({
                 items={navItems.map(n => n.label)}
                 hrefs={navItems.map(n => n.href)}
                 defaultActive={activeIndex >= 0 ? activeIndex : null}
-                accentColor="var(--navy)"
-                textColor="var(--navy)"
+                accentColor="var(--sand)"
+                textColor="hsl(39 45% 88%)"
+                markerColor="hsl(39 40% 90% / 0.4)"
                 onItemClick={() => {
                    setMobileMenuOpen(false);
                 }}

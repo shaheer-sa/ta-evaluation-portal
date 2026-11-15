@@ -825,3 +825,99 @@ button.tams-stat {
     display: none;
   }
 }
+
+/* ============================================================
+   Navy frame: the sidebar is solid navy, headings and big numbers
+   are navy, stat cards get a coloured top edge by meaning
+   (navy = counts, tan = needs attention, sage = neutral).
+   The content area stays cream so text stays easy to read.
+   ============================================================ */
+
+.tams-rail {
+  --rail-ink: hsl(39 45% 88%);          /* main text on navy */
+  --rail-ink-muted: hsl(39 22% 72%);    /* secondary text on navy */
+  --rail-line: hsl(39 40% 90% / 0.16);  /* borders on navy */
+  background: var(--navy);
+  color: var(--rail-ink);
+  border-right: 1px solid hsl(210 75% 10%);
+}
+
+.tams-rail__name {
+  color: var(--sand);
+}
+
+.tams-rail__role {
+  color: var(--rail-ink-muted);
+}
+
+/* logo tile flips to sand so it stands out on the navy rail */
+.tams-rail__mark {
+  background: var(--sand);
+  border: 0;
+  color: var(--navy);
+  box-shadow: none;
+}
+
+/* sign out and close buttons inside the rail */
+.tams-rail .tams-iconbtn {
+  background: transparent;
+  border-color: var(--rail-line);
+  color: var(--rail-ink);
+}
+.tams-rail .tams-iconbtn:hover {
+  background: hsl(39 40% 90% / 0.1);
+  border-color: hsl(39 40% 90% / 0.35);
+  color: var(--sand);
+}
+.tams-rail .tams-iconbtn:focus-visible,
+.tams-rail .rb-line__item:focus-visible {
+  outline-color: var(--sand);
+}
+
+/* active page: sand pill */
+.tams-rail .rb-line__item[data-active="true"] .rb-line__label {
+  background: var(--sand);
+  color: var(--navy);
+  font-weight: 600;
+  border-radius: 8px;
+  padding: 0.45rem 0.7rem;
+  margin: -0.45rem 0 -0.45rem -0.7rem;
+  width: calc(100% + 0.7rem);
+  transform: none;
+}
+
+@media (max-width: 900px) {
+  .tams-rail {
+    border-right-color: hsl(210 75% 10%);
+  }
+}
+
+/* headings and key numbers in navy */
+.tams-pagehead {
+  border-bottom-color: var(--navy);
+}
+.tams-pagehead__title,
+.tams-topbar__title,
+.tams-card__title,
+.tams-stat__value {
+  color: var(--navy);
+}
+
+/* student dashboard tiles: same coloured top edge as the TA stat cards */
+.tams-card.tams-cat--count,
+.tams-card.tams-cat--pending,
+.tams-card.tams-cat--neutral {
+  border-top: 2px solid var(--stat-rule, var(--line-strong));
+}
+.tams-cat--count {
+  --stat-rule: var(--navy);
+}
+.tams-cat--pending {
+  --stat-rule: var(--tan);
+}
+.tams-cat--neutral {
+  --stat-rule: var(--sage);
+}
+.tams-tile-value {
+  color: var(--navy);
+}
