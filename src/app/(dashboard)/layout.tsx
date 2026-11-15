@@ -8,6 +8,7 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { NotificationsBell } from "@/components/notifications-bell";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { ReportIssueButton } from "@/components/report-issue";
 import LineSidebar from "@/components/react-bits/LineSidebar";
 import ClickSpark from "@/components/react-bits/ClickSpark";
 import RouteProgress from "@/components/shell/RouteProgress";
@@ -99,6 +100,7 @@ export default function DashboardLayout({
             </div>
 
             <div className="tams-rail__footer">
+              {isStudent && <ReportIssueButton variant="rail" />}
               <button className="tams-iconbtn w-full" onClick={handleLogout} style={{ width: '100%', padding: '0 1rem', display: 'flex', gap: '0.5rem' }}>
                 <LogOut size={16} /> Sign out
               </button>
@@ -119,6 +121,7 @@ export default function DashboardLayout({
               </div>
               <div className="tams-topbar__spacer" />
               <div className="flex items-center gap-2">
+                {isStudent && <ReportIssueButton variant="topbar" />}
                 <ThemeToggle />
                 <NotificationsBell />
               </div>

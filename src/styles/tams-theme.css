@@ -953,3 +953,55 @@ button.tams-stat {
   );
   background-size: 200% 100%;
 }
+
+/* ---- "Report an issue" (student portal) ----
+   tan accent so it's easy to spot, but calmer than an error colour */
+.tams-report-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  height: 38px;
+  padding: 0 0.85rem;
+  border-radius: 11px;
+  border: 1px solid var(--tan);
+  background: color-mix(in srgb, var(--tan) 10%, transparent);
+  color: var(--accent-deep);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+.tams-report-btn:hover {
+  background: color-mix(in srgb, var(--tan) 18%, transparent);
+  transform: translateY(-1px);
+}
+.tams-report-btn:focus-visible {
+  outline: 2px solid var(--line-focus);
+  outline-offset: 2px;
+}
+.dark .tams-report-btn {
+  color: hsl(30 60% 75%);
+  border-color: hsl(30 45% 55%);
+}
+/* very small phones: icon only, the tooltip and aria-label still say what it is */
+@media (max-width: 420px) {
+  .tams-report-btn {
+    padding: 0;
+    width: 38px;
+    justify-content: center;
+  }
+  .tams-report-btn__text {
+    display: none;
+  }
+}
+
+.tams-rail .tams-rail-report {
+  width: 100%;
+  padding: 0 1rem;
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-start;
+  border-color: hsl(30 50% 60% / 0.6);
+  color: hsl(30 65% 80%);
+}

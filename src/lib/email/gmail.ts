@@ -59,14 +59,18 @@ function sender() {
   };
 }
 
+type MailAttachment = { filename: string; content: Buffer; contentType: string };
+
 async function sendMail({
   to,
   subject,
   html,
+  attachments,
 }: {
   to: string;
   subject: string;
   html: string;
+  attachments?: MailAttachment[];
 }) {
   if (!to || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) {
     console.error("sendMail aborted: invalid email address", to);
@@ -84,6 +88,7 @@ async function sendMail({
     subject: safeSubject,
     html,
     text: htmlToText(html),
+    attachments,
   });
   console.log("email sent", { to, subject: safeSubject, response: info.response });
 }
@@ -223,6 +228,95 @@ export async function sendPasswordResetDoneEmail({
   await sendMail({
     to,
     subject,
+    html,
+  });
+}
+
+const ISSUE_CATEGORY_LABELS: Record<string, string> = {
+  bug: "Something isn't working",
+  display: "Something looks wrong",
+  login: "Login or password",
+  suggestion: "Suggestion",
+  other: "Other",
+};
+
+export function issueCategoryLabel(category: string): string {
+  return ISSUE_CATEGORY_LABELS[category] || "Other";
+}
+
+// to the ta: a student reported a problem with the site
+export async function sendIssueReportEmail({
+  to,
+  studentName,
+  rollNumber,
+  category,
+  message,
+  pageUrl,
+  reportId,
+  screenshots,
+}: {
+  to: string;
+  studentName: string;
+  rollNumber: string;
+  category: string;
+  message: string;
+  pageUrl?: string | null;
+  reportId: string;
+  screenshots?: MailAttachment[];
+}) {
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "";
+  const link = `${siteUrl}/ta/reports?open=${encodeURIComponent(reportId)}`;
+  const label = issueCategoryLabel(category);
+
+  const html = `
+    <p>${escapeHtml(studentName)} (${escapeHtml(rollNumber)}) reported an issue.</p>
+    <p><strong>Type:</strong> ${escapeHtml(label)}</p>
+    ${pageUrl ? `<p><strong>Page:</strong> ${escapeHtml(pageUrl)}</p>` : ""}
+    <blockquote style="border-left:3px solid #ccc;padding-left:12px;color:#444">${escapeHtmlMultiline(message)}</blockquote>
+    ${screenshots && screenshots.length > 0 ? `<p>${screenshots.length} screenshot${screenshots.length > 1 ? "s" : ""} attached.</p>` : ""}
+    <p><a href="${link}">Open in TAMS</a></p>
+  `;
+
+  await sendMail({
+    to,
+    subject: `Issue report: ${label} from ${studentName} (${rollNumber})`,
+    html,
+    attachments: screenshots,
+  });
+}
+
+// to the student: automatic thank-you after they report an issue
+export async function sendIssueReportThanksEmail({
+  to,
+  studentName,
+  category,
+  message,
+  reportId,
+}: {
+  to: string;
+  studentName: string;
+  category: string;
+  message: string;
+  reportId: string;
+}) {
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "";
+  const ref = reportId.slice(0, 8).toUpperCase();
+
+  const html = `
+    <p>Hi ${escapeHtml(studentName)},</p>
+    <p>Thank you for reporting this issue. We really appreciate you taking the time to let us know, it helps make TAMS better for everyone.</p>
+    <p>Your report has been received and will be reviewed. If it needs a fix, it will be fixed as soon as possible after the review.</p>
+    <p><strong>Reference:</strong> #${escapeHtml(ref)}<br/>
+    <strong>Type:</strong> ${escapeHtml(issueCategoryLabel(category))}</p>
+    <blockquote style="border-left:3px solid #ccc;padding-left:12px;color:#444">${escapeHtmlMultiline(message)}</blockquote>
+    <p>If your question is about your marks, please use <a href="${siteUrl}/student/queries">My Queries</a> in TAMS instead, so it reaches your TA directly.</p>
+    <p>Thanks again,<br/>TAMS</p>
+    <p style="color:#888;font-size:12px">This is an automatic message, there's no need to reply.</p>
+  `;
+
+  await sendMail({
+    to,
+    subject: `We received your issue report (#${ref})`,
     html,
   });
 }

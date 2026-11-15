@@ -18,6 +18,18 @@ interface Notification {
   created_at: string;
 }
 
+// the bell groups notifications into these sections (empty ones are hidden)
+const SECTIONS: { key: string; label: string; types: string[] | null }[] = [
+  { key: "queries", label: "Queries", types: ["new_query", "query_reply", "query_update"] },
+  { key: "issues", label: "Issue reports", types: ["issue_report"] },
+  { key: "resets", label: "Password resets", types: ["password_reset_request"] },
+  { key: "other", label: "Other", types: null },
+];
+
+function sectionOf(type: string): string {
+  return SECTIONS.find((s) => s.types?.includes(type))?.key || "other";
+}
+
 function getNotificationTargetUrl(n: Notification, pathname: string): string | null {
   const isTA = pathname.startsWith("/ta");
 
@@ -26,6 +38,10 @@ function getNotificationTargetUrl(n: Notification, pathname: string): string | n
       return `/ta/roster?student=${n.related_id}`;
     }
     return null;
+  }
+
+  if (n.type === "issue_report") {
+    return n.related_id ? `/ta/reports?open=${n.related_id}` : "/ta/reports";
   }
 
   if (n.type === "new_query" || n.type === "query_reply" || n.type === "query_update") {
@@ -98,6 +114,29 @@ export function NotificationsBell() {
       if (!res.ok) {
         throw new Error();
       }
+    } catch {
+      toast.error("Couldn't clear notifications. Please try again.");
+      setNotifications(previousNotifications);
+      setUnreadCount(previousUnread);
+    }
+  }
+
+  async function clearSection(sectionKey: string) {
+    const items = notifications.filter((n) => sectionOf(n.type) === sectionKey);
+    if (items.length === 0) return;
+    const previousNotifications = notifications;
+    const previousUnread = unreadCount;
+    const ids = new Set(items.map((n) => n.id));
+    setNotifications((prev) => prev.filter((n) => !ids.has(n.id)));
+    setUnreadCount((prev) => Math.max(0, prev - items.filter((n) => !n.is_read).length));
+
+    try {
+      const res = await fetch("/api/notifications", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: [...ids] }),
+      });
+      if (!res.ok) throw new Error();
     } catch {
       toast.error("Couldn't clear notifications. Please try again.");
       setNotifications(previousNotifications);
@@ -189,7 +228,7 @@ export function NotificationsBell() {
           />
 
           {/* Dropdown */}
-          <div className="absolute right-0 top-full mt-2 z-50 w-80 rounded-lg border bg-card shadow-lg">
+          <div className="absolute right-0 top-full mt-2 z-50 w-80 sm:w-96 overflow-hidden rounded-lg border bg-card shadow-lg">
             <div className="flex items-center justify-between border-b p-3">
               <span className="text-sm font-semibold">Notifications</span>
               <div className="flex items-center gap-2">
@@ -211,67 +250,93 @@ export function NotificationsBell() {
                 )}
               </div>
             </div>
-            <div className="max-h-72 overflow-y-auto">
+            <div className="max-h-96 overflow-y-auto">
               {notifications.length === 0 ? (
                 <p className="p-4 text-center text-sm text-muted-foreground">
                   No notifications yet.
                 </p>
               ) : (
-                notifications.map((n) => {
-                  const content = (
-                    <>
-                      <div className="flex items-start justify-between gap-2">
-                        <div>
-                          <p className="font-medium">{n.title}</p>
-                          {n.body && (
-                            <p className="text-xs text-muted-foreground mt-0.5">
-                              {n.body}
-                            </p>
-                          )}
-                        </div>
-                        {!n.is_read && (
-                          <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-primary" />
-                        )}
-                      </div>
-                      <p className="text-[10px] text-muted-foreground mt-1">
-                        {formatTime(n.created_at)}
-                      </p>
-                    </>
-                  );
-
-                  const targetUrl = getNotificationTargetUrl(n, pathname);
+                SECTIONS.map((section) => {
+                  const items = notifications.filter((n) => sectionOf(n.type) === section.key);
+                  if (items.length === 0) return null;
+                  const unread = items.filter((n) => !n.is_read).length;
                   return (
-                    <div
-                      key={n.id}
-                      className={cn(
-                        "flex items-start justify-between border-b last:border-0 hover:bg-muted/50 transition-colors",
-                        !n.is_read && "bg-primary/5"
-                      )}
-                    >
-                      {targetUrl ? (
+                    <section key={section.key} aria-label={section.label}>
+                      <div className="sticky top-0 z-10 flex items-center justify-between gap-2 border-b bg-muted px-3 py-1.5">
+                        <span className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                          {section.label}
+                          {unread > 0 && (
+                            <span className="rounded-full bg-primary px-1.5 py-px text-[10px] font-bold normal-case tracking-normal text-primary-foreground">
+                              {unread} new
+                            </span>
+                          )}
+                        </span>
                         <button
                           type="button"
-                          onClick={() => handleNotificationClick(n)}
-                          className="flex-1 text-left p-3 text-sm cursor-pointer"
+                          onClick={() => clearSection(section.key)}
+                          className="text-[11px] text-muted-foreground hover:text-foreground hover:underline"
                         >
-                          {content}
+                          Clear
                         </button>
-                      ) : (
-                        <div className="flex-1 p-3 text-sm">
-                          {content}
-                        </div>
-                      )}
-                      <button
-                        type="button"
-                        onClick={(e) => dismissNotification(e, n)}
-                        aria-label="Dismiss notification"
-                        data-tip="Dismiss"
-                        data-tip-pos="left"
-                        className="p-3 text-muted-foreground hover:text-foreground text-sm font-medium leading-none shrink-0"
-                      >
-                        ×
-                      </button>
-                    </div>
+                      </div>
+                      {items.map((n) => {
+                        const content = (
+                          <>
+                            <div className="flex items-start justify-between gap-2">
+                              <div>
+                                <p className="font-medium">{n.title}</p>
+                                {n.body && (
+                                  <p className="text-xs text-muted-foreground mt-0.5">
+                                    {n.body}
+                                  </p>
+                                )}
+                              </div>
+                              {!n.is_read && (
+                                <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-primary" />
+                              )}
+                            </div>
+                            <p className="text-[10px] text-muted-foreground mt-1">
+                              {formatTime(n.created_at)}
+                            </p>
+                          </>
+                        );
+
+                        const targetUrl = getNotificationTargetUrl(n, pathname);
+                        return (
+                          <div
+                            key={n.id}
+                            className={cn(
+                              "flex items-start justify-between border-b last:border-0 hover:bg-muted/50 transition-colors",
+                              !n.is_read && "bg-primary/5"
+                            )}
+                          >
+                            {targetUrl ? (
+                              <button
+                                type="button"
+                                onClick={() => handleNotificationClick(n)}
+                                className="flex-1 text-left p-3 text-sm cursor-pointer"
+                              >
+                                {content}
+                              </button>
+                            ) : (
+                              <div className="flex-1 p-3 text-sm">
+                                {content}
+                              </div>
+                            )}
+                            <button
+                              type="button"
+                              onClick={(e) => dismissNotification(e, n)}
+                              aria-label="Dismiss notification"
+                              data-tip="Dismiss"
+                              data-tip-pos="left"
+                              className="p-3 text-muted-foreground hover:text-foreground text-sm font-medium leading-none shrink-0"
+                            >
+                              ×
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </section>
                   );
                 })
               )}

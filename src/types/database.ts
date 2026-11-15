@@ -307,6 +307,53 @@ export interface Database {
         }
         Relationships: []
       }
+      issue_reports: {
+        Row: {
+          category: "bug" | "display" | "login" | "suggestion" | "other"
+          created_at: string
+          id: string
+          message: string
+          page_url: string | null
+          reporter_id: string
+          resolved_at: string | null
+          screenshot_paths: string[]
+          status: "open" | "fixed"
+          user_agent: string | null
+        }
+        Insert: {
+          category: "bug" | "display" | "login" | "suggestion" | "other"
+          created_at?: string
+          id?: string
+          message: string
+          page_url?: string | null
+          reporter_id: string
+          resolved_at?: string | null
+          screenshot_paths?: string[]
+          status?: "open" | "fixed"
+          user_agent?: string | null
+        }
+        Update: {
+          category?: "bug" | "display" | "login" | "suggestion" | "other"
+          created_at?: string
+          id?: string
+          message?: string
+          page_url?: string | null
+          reporter_id?: string
+          resolved_at?: string | null
+          screenshot_paths?: string[]
+          status?: "open" | "fixed"
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "issue_reports_reporter_id_fkey"
+            columns: ["reporter_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       queries: {
         Row: {
           assessment_id: string | null

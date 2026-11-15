@@ -99,12 +99,14 @@ export async function POST(request: Request) {
 
 const deleteNotificationSchema = z.object({
   id: z.string().uuid("Invalid notification ID.").optional(),
+  // clear one section of the bell at once
+  ids: z.array(z.string().uuid("Invalid notification ID.")).min(1).max(100).optional(),
 });
 
 /**
  * DELETE /api/notifications
  * Clear notifications for current user.
- * Body: { id?: string }
+ * Body: { id?: string, ids?: string[] } (neither = clear all)
  */
 export async function DELETE(request: Request) {
   try {
@@ -132,12 +134,15 @@ export async function DELETE(request: Request) {
       );
     }
 
-    const { id } = parsed.data;
+    const { id, ids } = parsed.data;
     const admin = createAdminClient();
 
+    // always limited to the user's own notifications
     let query = admin.from("notifications").delete().eq("recipient_id", user.id);
     if (id) {
       query = query.eq("id", id);
+    } else if (ids) {
+      query = query.in("id", ids);
     }
 
     const { error } = await query;
