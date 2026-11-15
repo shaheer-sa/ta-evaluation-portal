@@ -3,9 +3,10 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Bug, CheckCircle2, ImagePlus, Loader2, X } from "lucide-react";
+import { Bug, Camera, CheckCircle2, ImagePlus, Loader2, X } from "lucide-react";
 import { toast } from "sonner";
 import { fetchJson } from "@/lib/fetch-json";
+import { CaptureOverlay, type CaptureRect } from "@/components/capture-overlay";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
@@ -65,6 +66,7 @@ export function ReportIssueButton({ variant = "topbar" }: { variant?: "topbar" |
   const [sentRef, setSentRef] = useState<string | null>(null);
   const [shots, setShots] = useState<Shot[]>([]);
   const [adding, setAdding] = useState(false);
+  const [capturing, setCapturing] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const shotsRef = useRef<Shot[]>([]);
   shotsRef.current = shots;
@@ -103,6 +105,80 @@ export function ReportIssueButton({ variant = "topbar" }: { variant?: "topbar" |
     setAdding(false);
   }
 
+  // "Capture this page": hide the form and let the student pick the area.
+  // nothing is captured until they press Capture in the picker.
+  const [selecting, setSelecting] = useState(false);
+
+  async function capturePage() {
+    if (shots.length >= MAX_SHOTS) {
+      toast.error(`You can attach up to ${MAX_SHOTS} screenshots.`);
+      return;
+    }
+    setCapturing(true);
+    setOpen(false);
+    // let the form finish closing so the student sees the page
+    await new Promise((r) => setTimeout(r, 300));
+    setSelecting(true);
+  }
+
+  function cancelCapture() {
+    setSelecting(false);
+    setCapturing(false);
+    setOpen(true);
+  }
+
+  async function confirmCapture(area: CaptureRect) {
+    setSelecting(false);
+    // one frame so the picker is gone before the picture is taken
+    await new Promise((r) => requestAnimationFrame(() => r(null)));
+    try {
+      const { domToCanvas } = await import("modern-screenshot");
+      const sx = window.scrollX;
+      const sy = window.scrollY;
+      const scale = Math.min(window.devicePixelRatio || 1, 1.5);
+      const full = await domToCanvas(document.body, {
+        scale,
+        backgroundColor: getComputedStyle(document.body).backgroundColor || "#ffffff",
+        // leave out the picker, pop-up messages and the click sparks
+        filter: (node) =>
+          !(
+            node instanceof Element &&
+            (node.hasAttribute("data-capture-ignore") ||
+              node.hasAttribute("data-sonner-toaster") ||
+              node.classList.contains("rb-spark__canvas"))
+          ),
+        timeout: 8000,
+      });
+      // cut out just the box the student chose
+      const crop = document.createElement("canvas");
+      crop.width = Math.max(1, Math.round(area.w * scale));
+      crop.height = Math.max(1, Math.round(area.h * scale));
+      const ctx = crop.getContext("2d");
+      if (!ctx) throw new Error("no canvas");
+      ctx.drawImage(
+        full,
+        (sx + area.x) * scale,
+        (sy + area.y) * scale,
+        area.w * scale,
+        area.h * scale,
+        0,
+        0,
+        crop.width,
+        crop.height
+      );
+      const blob = await new Promise<Blob | null>((resolve) => crop.toBlob(resolve, "image/png"));
+      if (!blob) throw new Error("could not encode");
+      setOpen(true);
+      await addFiles([blob]);
+    } catch (err) {
+      console.error("page capture failed:", err);
+      setOpen(true);
+      toast.error("Couldn't capture this page. Take a screenshot yourself and use Add screenshot instead.");
+    } finally {
+      setCapturing(false);
+    }
+  }
+
   function removeShot(i: number) {
     setShots((prev) => {
       URL.revokeObjectURL(prev[i].url);
@@ -121,7 +197,7 @@ export function ReportIssueButton({ variant = "topbar" }: { variant?: "topbar" |
 
   const trimmed = message.trim();
   const canSend =
-    category !== null && trimmed.length >= MIN && trimmed.length <= MAX && !sending && !adding;
+    category !== null && trimmed.length >= MIN && trimmed.length <= MAX && !sending && !adding && !capturing;
 
   function openForm() {
     // remember the page they were on when they opened it
@@ -131,7 +207,7 @@ export function ReportIssueButton({ variant = "topbar" }: { variant?: "topbar" |
   }
 
   function onOpenChange(next: boolean) {
-    if (sending) return;
+    if (sending || capturing) return;
     setOpen(next);
     if (!next && sentRef) {
       // start fresh next time after a successful report
@@ -186,6 +262,7 @@ export function ReportIssueButton({ variant = "topbar" }: { variant?: "topbar" |
   return (
     <>
       {trigger}
+      {selecting && <CaptureOverlay onConfirm={confirmCapture} onCancel={cancelCapture} />}
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="sm:max-w-lg" style={{ maxHeight: "92dvh", overflowY: "auto" }}>
           {sentRef ? (
@@ -312,8 +389,19 @@ export function ReportIssueButton({ variant = "topbar" }: { variant?: "topbar" |
                   {shots.length < MAX_SHOTS && (
                     <button
                       type="button"
+                      onClick={capturePage}
+                      disabled={adding || capturing}
+                      className="flex h-16 items-center gap-2 rounded-md border border-primary/40 bg-primary/5 px-3 text-sm font-medium text-foreground transition-colors hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-wait"
+                    >
+                      {capturing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
+                      {capturing ? "Capturing…" : "Capture this page"}
+                    </button>
+                  )}
+                  {shots.length < MAX_SHOTS && (
+                    <button
+                      type="button"
                       onClick={() => fileRef.current?.click()}
-                      disabled={adding}
+                      disabled={adding || capturing}
                       className="flex h-16 items-center gap-2 rounded-md border border-dashed px-3 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-wait"
                     >
                       {adding ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-4 w-4" />}
@@ -322,7 +410,9 @@ export function ReportIssueButton({ variant = "topbar" }: { variant?: "topbar" |
                   )}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  A screenshot of the problem helps a lot. On a computer you can also paste one with Ctrl+V.
+                  &ldquo;Capture this page&rdquo; lets you pick part of the screen behind this form, no
+                  need to take a screenshot first. You can also add your own, or paste one with Ctrl+V
+                  on a computer.
                 </p>
               </div>
 
