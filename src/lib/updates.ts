@@ -13,18 +13,66 @@ export type ReleaseItem = {
   title: string;
   body: string;
   audience: Audience[];
+  action?: "marks-email"; // shows a setting right under the item
 };
 
 export type Release = {
+  version: string; // shown to users, e.g. "1.4" (raise it with every release)
   id: string; // a-z, 0-9 and dashes only (stored as "release:<id>")
   date: string; // YYYY-MM-DD
   title: string;
   summary: Partial<Record<Audience, string>>;
+  // an important message shown in a highlighted box with this release
+  notice?: Partial<Record<Audience, string>>;
+  popup?: boolean; // open it in a popup once, the next time the user visits
   items: ReleaseItem[];
 };
 
 export const RELEASES: Release[] = [
   {
+    version: "1.5",
+    id: "2026-11-22-marks",
+    date: "2026-11-22",
+    title: "Marks and Progress Update",
+    popup: true,
+    summary: {
+      ta: "A list of students who may need support on the Overview, and the version number in the sidebar.",
+      student: "Notifications for new marks, and an optional email when marks are posted.",
+    },
+    notice: {
+      student:
+        "Emails from TAMS are sent from tams.official.notifications@gmail.com. If you don't find an email from TAMS in your inbox, please check your Spam folder and mark it as Not spam, so future emails arrive in your inbox.",
+    },
+    items: [
+      {
+        kind: "new",
+        title: "Students who may need support",
+        body: "The Overview page now lists the students in each class whose overall percentage is below a level you choose (30%, 40%, 50% or 60%). Select a name to open their full report, or use Email them to write to the group.",
+        audience: ["ta"],
+      },
+      {
+        kind: "new",
+        title: "New marks notifications",
+        body: "You are now notified in TAMS when new marks are posted in any of your courses. Select the notification to open that course's marks.",
+        audience: ["student"],
+      },
+      {
+        kind: "new",
+        title: "Email for new marks",
+        body: "You can also choose to get an email when new marks are posted. It is off unless you turn it on. When it is on, TAMS sends one email in the evening listing any new marks you haven't viewed yet. You can change this at any time from the notifications panel.",
+        audience: ["student"],
+        action: "marks-email",
+      },
+      {
+        kind: "new",
+        title: "Version number",
+        body: "The current TAMS version is shown at the bottom of the sidebar. Select it to open the What's New page.",
+        audience: ["ta", "student"],
+      },
+    ],
+  },
+  {
+    version: "1.4",
     id: "2026-11-22-reports",
     date: "2026-11-22",
     title: "Issue Reports Update",
@@ -41,6 +89,7 @@ export const RELEASES: Release[] = [
     ],
   },
   {
+    version: "1.3",
     id: "2026-11-22-filters",
     date: "2026-11-22",
     title: "Analytics Filter Update",
@@ -57,6 +106,7 @@ export const RELEASES: Release[] = [
     ],
   },
   {
+    version: "1.2",
     id: "2026-11-22",
     date: "2026-11-22",
     title: "November Update",
@@ -104,6 +154,7 @@ export const RELEASES: Release[] = [
     ],
   },
   {
+    version: "1.1",
     id: "2026-11-16",
     date: "2026-11-16",
     title: "Design and Performance Update",
@@ -146,6 +197,9 @@ export const RELEASES: Release[] = [
   },
 ];
 
+// the version of the newest release, shown in the sidebar
+export const CURRENT_VERSION = RELEASES[0]?.version ?? "1.0";
+
 // new-feature sticky notes: shown next to the feature until dismissed, and
 // only for a few weeks after the release
 export const FEATURE_NOTES: Record<string, { release: string; title: string; body: string; audience: Audience }> = {
@@ -178,7 +232,7 @@ export const FEATURE_NOTES: Record<string, { release: string; title: string; bod
 const NOTE_DAYS = 21; // sticky notes stop showing after this
 const RELEASE_DAYS = 45; // releases older than this aren't shown as unread
 
-function daysSince(date: string) {
+export function daysSince(date: string) {
   return (Date.now() - new Date(`${date}T00:00:00Z`).getTime()) / 86_400_000;
 }
 

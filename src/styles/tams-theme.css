@@ -1076,3 +1076,24 @@ button.tams-stat {
   background: hsl(43 70% 85%);
   color: hsl(30 45% 14%);
 }
+
+/* version link at the bottom of the sidebar */
+.tams-rail__version {
+  display: block;
+  margin-top: 0.35rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  text-align: center;
+  font-size: 0.7rem;
+  letter-spacing: 0.04em;
+  color: var(--rail-ink-muted);
+  transition: color 0.15s ease, background 0.15s ease;
+}
+.tams-rail__version:hover {
+  color: var(--sand);
+  background: hsl(39 40% 90% / 0.08);
+}
+.tams-rail__version:focus-visible {
+  outline: 2px solid var(--sand);
+  outline-offset: 2px;
+}

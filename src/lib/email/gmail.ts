@@ -346,7 +346,7 @@ export async function sendIssueResolvedEmail({
     <blockquote style="border-left:3px solid #ccc;padding-left:12px;color:#444">${escapeHtmlMultiline(message)}</blockquote>
     <p>If you still see the problem, please open <a href="${siteUrl}/student">TAMS</a> and report it again with a short note, so it can be looked at once more.</p>
     <p>Thank you for helping improve TAMS.</p>
-    <p>Regards,<br/>TAMS Team</p>
+    <p>Regards,<br/>TAMS</p>
     <p style="color:#888;font-size:12px">This is an automatic message, there's no need to reply.</p>
   `;
 
@@ -355,4 +355,78 @@ export async function sendIssueResolvedEmail({
     subject: `Your issue report #${ref} has been resolved`,
     html,
   });
+}
+
+// to the student, once a day at most: new marks they haven't seen in TAMS yet
+export async function sendMarksDigestEmail({
+  to,
+  studentName,
+  courses,
+}: {
+  to: string;
+  studentName: string;
+  courses: { title: string; assessments: string; enrollmentId: string | null }[];
+}) {
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "";
+  const list = courses
+    .map(
+      (c) =>
+        `<li style="margin-bottom:6px"><strong>${escapeHtml(c.title)}</strong>: ${escapeHtml(c.assessments)}${
+          c.enrollmentId
+            ? ` (<a href="${siteUrl}/student/course/${encodeURIComponent(c.enrollmentId)}">view marks</a>)`
+            : ""
+        }</li>`
+    )
+    .join("");
+
+  const html = `
+    <p>Hi ${escapeHtml(studentName)},</p>
+    <p>New marks have been posted in TAMS:</p>
+    <ul style="padding-left:18px">${list}</ul>
+    <p>You can see the full breakdown, including your totals, on your course page in <a href="${siteUrl}/student">TAMS</a>.</p>
+    <p>If you think a mark is incorrect, please submit a query from My Queries in TAMS.</p>
+    <p>Regards,<br/>TAMS</p>
+    <p style="color:#888;font-size:12px">You are receiving this because you turned on marks emails in TAMS. You can turn them off at any time from the notifications panel in TAMS.</p>
+  `;
+
+  await sendMail({ to, subject: "New marks posted in TAMS", html });
+}
+
+// to the student, once per release: what's new, if they haven't read it in TAMS
+export async function sendReleaseDigestEmail({
+  to,
+  studentName,
+  releases,
+}: {
+  to: string;
+  studentName: string;
+  releases: { title: string; date: string; items: { kind: string; title: string; body: string }[] }[];
+}) {
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "";
+  const sections = releases
+    .map(
+      (r) => `
+      <p style="margin-bottom:4px"><strong>TAMS ${escapeHtml(r.title)}</strong> <span style="color:#888">· ${escapeHtml(r.date)}</span></p>
+      <ul style="padding-left:18px;margin-top:4px">
+        ${r.items
+          .map(
+            (i) =>
+              `<li style="margin-bottom:6px"><strong>${escapeHtml(i.title)}</strong> (${escapeHtml(i.kind)}): ${escapeHtml(i.body)}</li>`
+          )
+          .join("")}
+      </ul>`
+    )
+    .join("");
+
+  const html = `
+    <p>Hi ${escapeHtml(studentName)},</p>
+    <p>Here is what's new in TAMS:</p>
+    ${sections}
+    <p>You can read all release notes on the <a href="${siteUrl}/student/updates">What's New</a> page in TAMS.</p>
+    <p>Regards,<br/>TAMS</p>
+    <p style="color:#888;font-size:12px">You receive this email once per update, only if you haven't already read it in TAMS.</p>
+  `;
+
+  const subject = releases.length === 1 ? `What's new in TAMS: ${releases[0].title}` : "What's new in TAMS";
+  await sendMail({ to, subject, html });
 }

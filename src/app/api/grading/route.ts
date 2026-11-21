@@ -1,7 +1,9 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createRateLimiter } from "@/lib/rate-limit";
+import { notifyMarksUpdated } from "@/lib/marks-notify";
 
 const gradingRateLimit = createRateLimiter({ tokens: 60, window: "10 m" });
 
@@ -162,6 +164,19 @@ export async function POST(request: Request) {
       new Map(rows.map((r) => [r.enrollment_id, r])).values()
     );
 
+    // old scores, so students are only told about marks that are new or changed
+    const previous = new Map<string, number | null>();
+    if (deduped.length > 0) {
+      const { data: before } = await supabase
+        .from("marks")
+        .select("enrollment_id, score")
+        .eq("assessment_id", assessmentId)
+        .in("enrollment_id", deduped.map((r) => r.enrollment_id));
+      for (const m of before || []) {
+        previous.set(m.enrollment_id, m.score === null ? null : Number(m.score));
+      }
+    }
+
     let savedCount = 0;
     if (rows.length > 0) {
       const { error: upsertError, count } = await supabase
@@ -184,6 +199,21 @@ export async function POST(request: Request) {
         );
       }
       savedCount = count ?? rows.length;
+
+      const changed = deduped
+        .filter((r) => {
+          const old = previous.get(r.enrollment_id);
+          return old === undefined || old === null || old !== r.score;
+        })
+        .map((r) => ({ enrollmentId: r.enrollment_id, assessmentId }));
+      if (changed.length > 0) {
+        // after the response, so saving stays fast
+        after(async () => {
+          await notifyMarksUpdated(createAdminClient(), changed).catch((err) =>
+            console.error("marks notice failed:", err)
+          );
+        });
+      }
     }
 
     if (clearEnrollmentIds && clearEnrollmentIds.length > 0) {

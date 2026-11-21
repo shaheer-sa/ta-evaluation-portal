@@ -11,6 +11,8 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { ReportIssueButton } from "@/components/report-issue";
 import { UpdatesProvider } from "@/components/updates/updates-provider";
 import { FeatureNote } from "@/components/updates/feature-note";
+import { WhatsNewPopup } from "@/components/updates/whats-new-popup";
+import { CURRENT_VERSION } from "@/lib/updates";
 import LineSidebar from "@/components/react-bits/LineSidebar";
 import ClickSpark from "@/components/react-bits/ClickSpark";
 import RouteProgress from "@/components/shell/RouteProgress";
@@ -117,6 +119,15 @@ export default function DashboardLayout({
               <button className="tams-iconbtn w-full" onClick={handleLogout} style={{ width: '100%', padding: '0 1rem', display: 'flex', gap: '0.5rem' }}>
                 <LogOut size={16} /> Sign out
               </button>
+              <Link
+                href={isStudent ? "/student/updates" : "/ta/updates"}
+                onClick={() => setMobileMenuOpen(false)}
+                className="tams-rail__version"
+                data-tip="See what's new in this version"
+                data-tip-pos="top"
+              >
+                TAMS v{CURRENT_VERSION} · What&apos;s New
+              </Link>
             </div>
           </aside>
 
@@ -144,6 +155,7 @@ export default function DashboardLayout({
               {isStudent && <FeatureNote id="bell-updates" className="mb-6" />}
               {children}
             </main>
+            <WhatsNewPopup />
           </div>
         </div>
       </div>

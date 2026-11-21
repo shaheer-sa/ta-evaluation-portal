@@ -5,6 +5,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { formatReleaseDate, KIND_LABELS, type UpdateKind } from "@/lib/updates";
 import { useUpdates } from "@/components/updates/updates-provider";
+import { MarksEmailToggle } from "@/components/updates/marks-email-toggle";
+import { MailWarning } from "lucide-react";
 
 const KIND_STYLES: Record<UpdateKind, string> = {
   new: "bg-primary text-primary-foreground",
@@ -61,11 +63,18 @@ export function WhatsNew() {
                           </span>
                         )}
                       </div>
-                      <time dateTime={r.date} className="text-xs text-muted-foreground">
-                        {formatReleaseDate(r.date)}
-                      </time>
+                      <span className="text-xs text-muted-foreground">
+                        Version {r.version} ·{" "}
+                        <time dateTime={r.date}>{formatReleaseDate(r.date)}</time>
+                      </span>
                     </div>
                     {r.summary[ctx.role] && <p className="text-sm text-muted-foreground">{r.summary[ctx.role]}</p>}
+                    {r.notice?.[ctx.role] && (
+                      <div className="flex gap-2.5 rounded-lg border border-amber-400/60 bg-amber-100/70 p-3 text-sm text-amber-950 dark:bg-amber-400/10 dark:text-amber-100">
+                        <MailWarning className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+                        <p>{r.notice[ctx.role]}</p>
+                      </div>
+                    )}
                     <ul className="space-y-3">
                       {r.items.map((item) => (
                         <li key={item.title} className="flex gap-3">
@@ -77,9 +86,16 @@ export function WhatsNew() {
                           >
                             {KIND_LABELS[item.kind]}
                           </span>
-                          <div>
-                            <p className="text-sm font-medium">{item.title}</p>
-                            <p className="text-sm text-muted-foreground">{item.body}</p>
+                          <div className="min-w-0 flex-1 space-y-2">
+                            <div>
+                              <p className="text-sm font-medium">{item.title}</p>
+                              <p className="text-sm text-muted-foreground">{item.body}</p>
+                            </div>
+                            {item.action === "marks-email" && ctx.role === "student" && (
+                              <div className="max-w-sm">
+                                <MarksEmailToggle variant="card" />
+                              </div>
+                            )}
                           </div>
                         </li>
                       ))}

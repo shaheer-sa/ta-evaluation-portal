@@ -1,9 +1,10 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import { z } from "zod";
 import { google } from "googleapis";
 import { escapeLikePattern } from "@/lib/identifiers";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { notifyMarksUpdated } from "@/lib/marks-notify";
 import type { Database } from "@/types/database";
 import { createRateLimiter } from "@/lib/rate-limit";
 
@@ -504,6 +505,8 @@ export async function POST(request: NextRequest) {
           updated_by: string;
         };
         const marksToUpsert: MarkUpsert[] = [];
+        // marks that came FROM the sheet (new or changed in TAMS): students get a notice
+        const pulledMarks: { enrollmentId: string; assessmentId: string }[] = [];
 
         for (const [tabName, tabAssessments] of tabToAssessments.entries()) {
           const tabData = await sheets.spreadsheets.values.get({ spreadsheetId, range: tabName });
@@ -633,6 +636,9 @@ export async function POST(request: NextRequest) {
                            sheet_synced_score: sheetScore,
                            updated_by: user.id
                         });
+                        if (tamsScore !== sheetScore) {
+                           pulledMarks.push({ enrollmentId: enrollment.id, assessmentId: assessment.id });
+                        }
                         existingMark.score = sheetScore;
                         existingMark.sheet_synced_score = sheetScore;
                      }
@@ -647,6 +653,7 @@ export async function POST(request: NextRequest) {
                         sheet_synced_score: sheetScore,
                         updated_by: user.id
                      });
+                     pulledMarks.push({ enrollmentId: enrollment.id, assessmentId: assessment.id });
                      // Create local ref to prevent duplicates if processed again
                      if (enrollment.marks) {
                         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -700,6 +707,14 @@ export async function POST(request: NextRequest) {
              );
           } else {
              gradesWritten = true; // Signals that grades were processed
+             if (pulledMarks.length > 0) {
+                const toNotify = [...pulledMarks];
+                after(async () => {
+                   await notifyMarksUpdated(admin, toNotify).catch((err) =>
+                      console.error("marks notice failed:", err)
+                   );
+                });
+             }
           }
         }
 

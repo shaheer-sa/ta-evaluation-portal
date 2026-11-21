@@ -2,6 +2,9 @@ import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import { Users, BookOpen, FileQuestion, ClipboardList } from "lucide-react";
 import { formatStatus } from "@/lib/format";
+import { rankStudents } from "@/lib/analytics-rank";
+import type { AssessmentPerformance, StudentPerformance } from "./analytics/performance-table";
+import { AtRiskCard, type AtRiskClass } from "./at-risk-card";
 
 export default async function TADashboardPage() {
   const supabase = await createClient();
@@ -37,6 +40,7 @@ export default async function TADashboardPage() {
   let courseCount = 0;
   let assessmentCount = 0;
   let pendingQueries = 0;
+  let atRisk: AtRiskClass[] = [];
   let recentQueries: {
     id: string;
     title: string;
@@ -54,7 +58,10 @@ export default async function TADashboardPage() {
       // Stat: Students enrolled in sections of the active term
       supabase.rpc("active_student_count", { p_section_ids: activeSectionIds }),
       // Courses + assessments both need the classes of the active term
-      supabase.from("section_courses").select("id, course_id").in("section_id", activeSectionIds),
+      supabase
+        .from("section_courses")
+        .select("id, course_id, best_of_quizzes, best_of_assignments, sections ( name ), courses ( code )")
+        .in("section_id", activeSectionIds),
       // Pending + recent queries both need the active enrollments
       supabase
         .from("enrollments")
@@ -71,6 +78,13 @@ export default async function TADashboardPage() {
 
     const scIds = sectionCourses.map((sc) => sc.id);
     const enrollmentIds = (enrollmentsResult.data || []).map((e) => e.id);
+
+    // class standings for the at-risk card, loaded alongside the stats below
+    const standingsPromise = Promise.all(
+      sectionCourses.map((sc) =>
+        supabase.rpc("analytics_for_section_course", { p_sc_id: sc.id }).then((r) => ({ sc, data: r.data }))
+      )
+    );
 
     const [assessmentResult, pendingResult, recentResult] = await Promise.all([
       // Stat: Assessments in section-courses of the active term
@@ -106,6 +120,32 @@ export default async function TADashboardPage() {
             .limit(5)
         : null,
     ]);
+
+    // students below a level, per class (same numbers as Analytics)
+    const standings = await standingsPromise;
+    const perClass = standings.map(({ sc, data }) => {
+      const d = (data || {}) as { students?: StudentPerformance[]; assessments?: AssessmentPerformance[] };
+      const { ranked } = rankStudents(d.students || [], d.assessments || [], {
+        quiz: sc.best_of_quizzes ?? null,
+        assignment: sc.best_of_assignments ?? null,
+      });
+      const info = sc as unknown as { sections: { name: string } | null; courses: { code: string } | null };
+      return {
+        scId: sc.id,
+        label: `${info.sections?.name ?? "?"} · ${info.courses?.code ?? "?"}`,
+        students: ranked
+          .filter((s) => s.overall !== null)
+          .map((s) => ({ roll: s.roll_number, name: s.full_name, overall: s.overall as number, missing: s.missing })),
+      };
+    });
+    const rolls = [...new Set(perClass.flatMap((c) => c.students.map((s) => s.roll)))];
+    const { data: emailRows } = rolls.length
+      ? await supabase.from("profiles").select("roll_number, email").in("roll_number", rolls)
+      : { data: [] as { roll_number: string | null; email: string | null }[] };
+    const emailOf = new Map((emailRows || []).map((p) => [p.roll_number, p.email]));
+    atRisk = perClass
+      .map((c) => ({ ...c, students: c.students.map((s) => ({ ...s, email: emailOf.get(s.roll) ?? null })) }))
+      .sort((a, b) => a.label.localeCompare(b.label, undefined, { numeric: true }));
 
     assessmentCount = assessmentResult?.count || 0;
     pendingQueries = pendingResult?.count || 0;
@@ -195,6 +235,8 @@ export default async function TADashboardPage() {
         ))}
       </div>
       
+      <AtRiskCard classes={atRisk} />
+
       {/* Recent Queries List */}
       <div className="tams-card" data-edge>
         <div className="mb-4">

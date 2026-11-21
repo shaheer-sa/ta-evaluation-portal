@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import Link from "next/link";
 import { Bell, Megaphone } from "lucide-react";
 import { useUpdates } from "@/components/updates/updates-provider";
+import { MarksEmailToggle } from "@/components/updates/marks-email-toggle";
 import { formatReleaseDate } from "@/lib/updates";
 import { fetchJson } from "@/lib/fetch-json";
 import { Button } from "@/components/ui/button";
@@ -23,6 +24,7 @@ interface Notification {
 
 // the bell groups notifications into these sections (empty ones are hidden)
 const SECTIONS: { key: string; label: string; types: string[] | null }[] = [
+  { key: "marks", label: "Marks", types: ["marks_updated"] },
   { key: "queries", label: "Queries", types: ["new_query", "query_reply", "query_update"] },
   { key: "issues", label: "Issue reports", types: ["issue_report", "issue_resolved"] },
   { key: "resets", label: "Password resets", types: ["password_reset_request"] },
@@ -45,6 +47,11 @@ function getNotificationTargetUrl(n: Notification, pathname: string): string | n
 
   if (n.type === "issue_report") {
     return n.related_id ? `/ta/reports?open=${n.related_id}` : "/ta/reports";
+  }
+
+  // new marks: open that course's marks (related_id is the enrollment)
+  if (n.type === "marks_updated") {
+    return n.related_id ? `/student/course/${n.related_id}` : "/student";
   }
 
   if (n.type === "new_query" || n.type === "query_reply" || n.type === "query_update") {
@@ -409,6 +416,7 @@ export function NotificationsBell() {
                 })
               )}
             </div>
+            {updates?.role === "student" && <MarksEmailToggle />}
             <Link
               href={`/${updates?.role ?? "student"}/updates`}
               onClick={() => setIsOpen(false)}

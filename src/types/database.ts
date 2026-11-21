@@ -237,6 +237,7 @@ export interface Database {
         Row: {
           body: string | null
           created_at: string
+          emailed_at: string | null
           id: string
           is_read: boolean
           recipient_id: string
@@ -247,6 +248,7 @@ export interface Database {
         Insert: {
           body?: string | null
           created_at?: string
+          emailed_at?: string | null
           id?: string
           is_read?: boolean
           recipient_id: string
@@ -257,6 +259,7 @@ export interface Database {
         Update: {
           body?: string | null
           created_at?: string
+          emailed_at?: string | null
           id?: string
           is_read?: boolean
           recipient_id?: string
@@ -283,6 +286,7 @@ export interface Database {
           role: "ta" | "student"
           roll_number: string | null
           must_change_password: boolean
+          marks_email: boolean
           updated_at: string
         }
         Insert: {
@@ -293,6 +297,7 @@ export interface Database {
           role: "ta" | "student"
           roll_number?: string | null
           must_change_password?: boolean
+          marks_email?: boolean
           updated_at?: string
         }
         Update: {
@@ -303,6 +308,7 @@ export interface Database {
           role?: "ta" | "student"
           roll_number?: string | null
           must_change_password?: boolean
+          marks_email?: boolean
           updated_at?: string
         }
         Relationships: []
