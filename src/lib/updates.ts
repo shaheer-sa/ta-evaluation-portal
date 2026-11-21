@@ -25,6 +25,22 @@ export type Release = {
 
 export const RELEASES: Release[] = [
   {
+    id: "2026-11-22-reports",
+    date: "2026-11-22",
+    title: "Issue Reports Update",
+    summary: {
+      ta: "Screenshots in issue reports now open on the same page.",
+    },
+    items: [
+      {
+        kind: "improved",
+        title: "Screenshot viewer",
+        body: "Select a screenshot in an issue report to view it full size without leaving the page. Close it with the × button, the Esc key, or by clicking outside the image. Use the arrows to move between screenshots.",
+        audience: ["ta"],
+      },
+    ],
+  },
+  {
     id: "2026-11-22-filters",
     date: "2026-11-22",
     title: "Analytics Filter Update",

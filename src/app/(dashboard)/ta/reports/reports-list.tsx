@@ -8,6 +8,7 @@ import { fetchJson } from "@/lib/fetch-json";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { ImageViewer } from "@/components/image-viewer";
 
 export type IssueReport = {
   id: string;
@@ -64,6 +65,8 @@ export function ReportsList({ reports }: { reports: IssueReport[] }) {
   const [filter, setFilter] = useState<Filter>("open");
   const [highlightId, setHighlightId] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  // screenshot viewer: which report's images, and which one is showing
+  const [viewer, setViewer] = useState<{ images: string[]; index: number } | null>(null);
   const [, startTransition] = useTransition();
 
   // coming from the bell or the email link: show that report
@@ -199,17 +202,17 @@ export function ReportsList({ reports }: { reports: IssueReport[] }) {
                 {r.screenshots.length > 0 && (
                   <div className="flex flex-wrap gap-2">
                     {r.screenshots.map((url, i) => (
-                      <a
+                      <button
                         key={url}
-                        href={url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        data-tip="Open full size"
-                        className="block h-24 w-32 overflow-hidden rounded-md border transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        type="button"
+                        onClick={() => setViewer({ images: r.screenshots, index: i })}
+                        data-tip="View full size"
+                        aria-label={`View screenshot ${i + 1} full size`}
+                        className="block h-24 w-32 cursor-zoom-in overflow-hidden rounded-md border transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                       >
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img src={url} alt={`Screenshot ${i + 1}`} className="h-full w-full object-cover" loading="lazy" />
-                      </a>
+                      </button>
                     ))}
                   </div>
                 )}
@@ -251,6 +254,14 @@ export function ReportsList({ reports }: { reports: IssueReport[] }) {
             </Card>
           );
         })
+      )}
+      {viewer && (
+        <ImageViewer
+          images={viewer.images}
+          index={viewer.index}
+          onIndexChange={(i) => setViewer((v) => (v ? { ...v, index: i } : v))}
+          onClose={() => setViewer(null)}
+        />
       )}
     </div>
   );
