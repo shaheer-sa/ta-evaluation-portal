@@ -135,7 +135,8 @@ export const config = {
      * - favicon.ico
      * - static assets (svg, png, jpg, etc.)
      * - the service worker and app manifest (needed for notifications)
+     * - _vercel (Speed Insights script and its reports)
      */
-    "/((?!_next/static|_next/image|favicon.ico|sw\\.js|manifest\\.webmanifest|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next/static|_next/image|_vercel|favicon.ico|sw\\.js|manifest\\.webmanifest|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };

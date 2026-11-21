@@ -89,11 +89,16 @@ export function NotificationsBell() {
 
   useEffect(() => {
     fetchNotifications();
-    // Poll every 30 seconds, but only while the tab is open in front.
+    // Check every 2 minutes, but only while the tab is open in front.
     // background tabs don't need it, and it saves data on phones
     const interval = setInterval(() => {
       if (document.visibilityState === "visible") fetchNotifications();
-    }, 30000);
+    }, 120000);
+    // a phone/desktop notification just arrived: update the bell right away
+    const onPush = (e: MessageEvent) => {
+      if (e.data?.type === "tams-push") fetchNotifications();
+    };
+    navigator.serviceWorker?.addEventListener("message", onPush);
     // coming back to the tab: check right away instead of waiting
     const onVisible = () => {
       if (document.visibilityState === "visible") fetchNotifications();
@@ -102,6 +107,7 @@ export function NotificationsBell() {
     return () => {
       clearInterval(interval);
       document.removeEventListener("visibilitychange", onVisible);
+      navigator.serviceWorker?.removeEventListener("message", onPush);
     };
   }, [fetchNotifications]);
 
