@@ -8,6 +8,9 @@ import { createAdminClient } from "@/lib/supabase/admin";
 const subscribeSchema = z.object({
   endpoint: z.string().url().startsWith("https://").max(1000),
   keys: z.object({ p256dh: z.string().min(1).max(200), auth: z.string().min(1).max(100) }),
+  // enable = the user pressed the switch; sync = page load, only if it's theirs
+  mode: z.enum(["enable", "sync"]).default("enable"),
+  owner: z.string().max(100).nullable().optional(),
 });
 const unsubscribeSchema = z.object({ endpoint: z.string().url().max(1000) });
 
@@ -22,13 +25,33 @@ export async function POST(request: Request) {
   const parsed = subscribeSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "Invalid subscription." }, { status: 400 });
 
-  // a device belongs to whoever is signed in on it now
-  const { error } = await createAdminClient()
+  const admin = createAdminClient();
+  const { endpoint, mode, owner } = parsed.data;
+
+  if (mode === "sync") {
+    const { data: existing } = await admin
+      .from("push_subscriptions")
+      .select("user_id")
+      .eq("endpoint", endpoint)
+      .maybeSingle();
+    // fine if the server already has it for this user, or this user is the one
+    // who turned notifications on in this browser (logged out and back in)
+    const mine = existing?.user_id === user.id || owner === user.id;
+    if (!mine) {
+      // someone else turned them on here: stop their alerts coming to this
+      // browser while another account is using it, and don't turn them on for this one
+      if (existing) await admin.from("push_subscriptions").delete().eq("endpoint", endpoint);
+      return NextResponse.json({ on: false });
+    }
+  }
+
+  // the device now belongs to the signed-in user
+  const { error } = await admin
     .from("push_subscriptions")
     .upsert(
       {
         user_id: user.id,
-        endpoint: parsed.data.endpoint,
+        endpoint,
         p256dh: parsed.data.keys.p256dh,
         auth: parsed.data.keys.auth,
         user_agent: request.headers.get("user-agent")?.slice(0, 300) || null,
@@ -39,7 +62,7 @@ export async function POST(request: Request) {
     console.error("push subscribe failed:", error.code, error.message);
     return NextResponse.json({ error: `Couldn't turn on notifications (code ${error.code}).` }, { status: 500 });
   }
-  return NextResponse.json({ success: true });
+  return NextResponse.json({ on: true, userId: user.id });
 }
 
 /** DELETE /api/push — turn them off for this device */

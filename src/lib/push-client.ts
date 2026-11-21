@@ -48,16 +48,34 @@ export async function currentSubscription(): Promise<PushSubscription | null> {
   return (await reg?.pushManager.getSubscription()) || null;
 }
 
-async function save(sub: PushSubscription) {
+// which account turned notifications on in this browser. Logging out pauses
+// them; logging back in as the same account turns them back on by itself.
+const OWNER_KEY = "tams-push-owner";
+function getOwner() {
+  try {
+    return localStorage.getItem(OWNER_KEY);
+  } catch {
+    return null;
+  }
+}
+function setOwner(id: string | null) {
+  try {
+    if (id) localStorage.setItem(OWNER_KEY, id);
+    else localStorage.removeItem(OWNER_KEY);
+  } catch {
+    // private mode etc.
+  }
+}
+
+async function save(sub: PushSubscription, mode: "enable" | "sync") {
   const res = await fetch("/api/push", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(sub.toJSON()),
+    body: JSON.stringify({ ...sub.toJSON(), mode, owner: getOwner() }),
   });
-  if (!res.ok) {
-    const data = await res.json().catch(() => ({}));
-    throw new Error(data.error || "Couldn't turn on notifications.");
-  }
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || "Couldn't turn on notifications.");
+  return data as { on: boolean; userId?: string };
 }
 
 /** asks for permission (if needed) and turns notifications on for this device */
@@ -70,11 +88,16 @@ export async function turnOnPush(): Promise<"on" | "denied"> {
   if (!sub) {
     sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyToBytes(PUBLIC_KEY) });
   }
-  await save(sub);
+  const result = await save(sub, "enable");
+  setOwner(result.userId || null);
+  syncing = Promise.resolve(true);
   return "on";
 }
 
+/** the user switched them off: forget this device completely */
 export async function turnOffPush() {
+  setOwner(null);
+  syncing = Promise.resolve(false);
   const sub = await currentSubscription();
   if (!sub) return;
   await fetch("/api/push", {
@@ -85,9 +108,32 @@ export async function turnOffPush() {
   await sub.unsubscribe().catch(() => {});
 }
 
-/** makes sure the server still has this device for the signed-in user */
-export async function resyncPush() {
+/** logging out: stop sending to this device, but remember who turned them on */
+export async function pausePushForLogout() {
+  syncing = null;
   const sub = await currentSubscription();
-  if (sub && Notification.permission === "granted") await save(sub).catch(() => {});
-  return !!sub;
+  if (!sub) return;
+  await fetch("/api/push", {
+    method: "DELETE",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ endpoint: sub.endpoint }),
+  }).catch(() => {});
+}
+
+let syncing: Promise<boolean> | null = null;
+
+/**
+ * On page load: if notifications were turned on in this browser by the account
+ * that is signed in now, make sure the server has the device (turns them back
+ * on after a log out / log in). Returns whether they're on for this account.
+ */
+export function syncPush(): Promise<boolean> {
+  syncing ??= (async () => {
+    const sub = await currentSubscription();
+    if (!sub || Notification.permission !== "granted") return false;
+    const result = await save(sub, "sync").catch(() => ({ on: false, userId: undefined }));
+    if (result.on && result.userId) setOwner(result.userId);
+    return !!result.on;
+  })();
+  return syncing;
 }

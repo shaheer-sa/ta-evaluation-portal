@@ -5,7 +5,7 @@ import Link from "next/link";
 import { LogOut, Menu, X, GraduationCap } from "lucide-react";
 import { toast } from "sonner";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { NotificationsBell } from "@/components/notifications-bell";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { ReportIssueButton } from "@/components/report-issue";
@@ -18,7 +18,7 @@ import ClickSpark from "@/components/react-bits/ClickSpark";
 import RouteProgress from "@/components/shell/RouteProgress";
 
 import { TA_NAV, STUDENT_NAV } from "@/components/shell/nav-config";
-import { turnOffPush } from "@/lib/push-client";
+import { pausePushForLogout, pushSupport, syncPush } from "@/lib/push-client";
 
 // "Report an issue" for students is hidden unless NEXT_PUBLIC_ISSUE_REPORTS=on
 // is set in Vercel (then redeploy). lets it be switched off without code changes.
@@ -37,6 +37,11 @@ export default function DashboardLayout({
   
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
+  // turn phone notifications back on for this account if it had them on here
+  useEffect(() => {
+    if (pushSupport() === "ok") syncPush().catch(() => {});
+  }, []);
+
   const activeIndex = navItems.findIndex(item => 
     item.exact ? pathname === item.href : pathname.startsWith(item.href)
   );
@@ -48,8 +53,8 @@ export default function DashboardLayout({
     } catch {
       // ignore
     }
-    // stop phone notifications on this device for the account that's leaving
-    await Promise.race([turnOffPush().catch(() => {}), new Promise((r) => setTimeout(r, 2500))]);
+    // pause phone notifications on this device until the same account logs in again
+    await Promise.race([pausePushForLogout().catch(() => {}), new Promise((r) => setTimeout(r, 2500))]);
     try {
       const res = await fetch("/api/auth/logout", { method: "POST" });
       if (res.ok) {

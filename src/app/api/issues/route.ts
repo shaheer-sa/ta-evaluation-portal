@@ -11,7 +11,7 @@ import {
   sendIssueReportThanksEmail,
   sendIssueResolvedEmail,
 } from "@/lib/email/gmail";
-import { pushForNotifications } from "@/lib/push";
+import { startPush } from "@/lib/push";
 
 // a few reports per student per hour is plenty, stops spam
 const reportRateLimit = createRateLimiter({ tokens: 5, window: "1 h" });
@@ -174,6 +174,7 @@ export async function POST(request: Request) {
     const studentName = profile.full_name || "Student";
     const rollNumber = profile.roll_number || "";
 
+    let pushed: Promise<Set<string>> = Promise.resolve(new Set());
     if (tas && tas.length > 0) {
       const notices = tas.map((ta) => ({
         recipient_id: ta.id,
@@ -183,14 +184,16 @@ export async function POST(request: Request) {
         related_id: report.id,
       }));
       await admin.from("notifications").insert(notices);
-      after(() => pushForNotifications(admin, notices));
+      pushed = startPush(admin, notices);
     }
 
     // emails go out after the response so the student isn't kept waiting
     after(async () => {
+      const reached = await pushed;
       const jobs: Promise<unknown>[] = [];
       for (const ta of tas || []) {
-        if (!ta.email) continue;
+        // TAs who got the phone notification can open the report in TAMS
+        if (!ta.email || reached.has(ta.id)) continue;
         jobs.push(
           sendIssueReportEmail({
             to: ta.email,
@@ -279,9 +282,11 @@ export async function PATCH(request: Request) {
         related_id: updated.id,
       };
       await admin.from("notifications").insert(notice);
-      after(() => pushForNotifications(admin, [notice]));
+      const pushed = startPush(admin, [notice]);
+      after(() => pushed);
       if (reporter?.email) {
         after(async () => {
+          if ((await pushed).has(updated.reporter_id)) return;
           await sendIssueResolvedEmail({
             to: reporter.email as string,
             studentName: reporter.full_name || "Student",

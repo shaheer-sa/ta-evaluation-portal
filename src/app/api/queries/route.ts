@@ -8,7 +8,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import type { Database } from "@/types/database";
 import { sendQueryEmail } from "@/lib/email/gmail";
 import { formatStatus } from "@/lib/format";
-import { pushForNotifications } from "@/lib/push";
+import { startPush } from "@/lib/push";
 
 import { createRateLimiter } from "@/lib/rate-limit";
 
@@ -191,6 +191,7 @@ export async function POST(request: Request) {
 
       if (queryData) {
         // Create notification for the student
+        let pushed: Promise<Set<string>> = Promise.resolve(new Set());
         try {
           const notice = {
             recipient_id: queryData.student_id,
@@ -200,7 +201,8 @@ export async function POST(request: Request) {
             related_id: queryId,
           };
           await supabase.from("notifications").insert(notice);
-          after(() => pushForNotifications(createAdminClient(), [notice]));
+          pushed = startPush(createAdminClient(), [notice]);
+          after(() => pushed);
         } catch (notifErr) {
           console.error("Failed to insert notification:", notifErr);
         }
@@ -209,6 +211,8 @@ export async function POST(request: Request) {
         const studentEmail = queryData.profiles?.email;
         if (studentEmail) {
           after(async () => {
+            // got it as a phone notification: no email needed
+            if ((await pushed).has(queryData.student_id)) return;
             await Promise.allSettled([
               sendQueryEmail({
                 to: studentEmail,
@@ -296,13 +300,14 @@ export async function POST(request: Request) {
           related_id: data.id,
         }));
         await supabase.from("notifications").insert(notifications);
-        after(() => pushForNotifications(createAdminClient(), notifications));
+        const pushed = startPush(createAdminClient(), notifications);
 
-        // Send emails
+        // Send emails (not to TAs who got it as a phone notification)
         after(async () => {
+          const reached = await pushed;
           const emailPromises = tas
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            .filter((ta: any) => ta.email)
+            .filter((ta: any) => ta.email && !reached.has(ta.id))
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             .map((ta: any) =>
               sendQueryEmail({

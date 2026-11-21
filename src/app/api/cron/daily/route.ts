@@ -59,6 +59,11 @@ export async function GET(request: Request) {
         ? await admin.from("profiles").select("id, full_name, email, role, marks_email").in("id", ids)
         : { data: [] };
       const personOf = new Map((people || []).map((p) => [p.id, p]));
+      // students with notifications on already got these on their device
+      const { data: devices } = ids.length
+        ? await admin.from("push_subscriptions").select("user_id").in("user_id", ids)
+        : { data: [] as { user_id: string }[] };
+      const hasDevice = new Set((devices || []).map((d) => d.user_id));
 
       let sent = 0;
       let failed = 0;
@@ -66,6 +71,7 @@ export async function GET(request: Request) {
         const person = personOf.get(studentId);
         const items = byStudent.get(studentId) || [];
         if (!person?.email || person.role !== "student" || !person.marks_email || items.length === 0) return;
+        if (hasDevice.has(studentId)) return;
 
         // claim these notices first: only the ones still unclaimed get emailed
         const { data: claimed } = await admin

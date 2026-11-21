@@ -30,6 +30,30 @@ export type Release = {
 
 export const RELEASES: Release[] = [
   {
+    version: "1.7",
+    id: "2026-11-22-notify-settings",
+    date: "2026-11-22",
+    title: "Notification Settings Update",
+    summary: {
+      ta: "Notifications stay on after logging out, and fewer duplicate emails.",
+      student: "Notifications stay on after logging out, and fewer duplicate emails.",
+    },
+    items: [
+      {
+        kind: "improved",
+        title: "Notifications stay on",
+        body: "Notifications on a device now stay on when you log out and log back in, until you turn them off.",
+        audience: ["ta", "student"],
+      },
+      {
+        kind: "improved",
+        title: "Fewer duplicate emails",
+        body: "If notifications are on for one of your devices, TAMS no longer also sends you an email for the same update. If a notification can't reach any of your devices, you will still get the email.",
+        audience: ["ta", "student"],
+      },
+    ],
+  },
+  {
     version: "1.6",
     id: "2026-11-22-push",
     date: "2026-11-22",

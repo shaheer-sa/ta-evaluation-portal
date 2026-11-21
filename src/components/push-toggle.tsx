@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { BellRing, BellOff } from "lucide-react";
-import { pushSupport, resyncPush, turnOffPush, turnOnPush, type PushSupport } from "@/lib/push-client";
+import { pushSupport, syncPush, turnOffPush, turnOnPush, type PushSupport } from "@/lib/push-client";
 
 type State = "loading" | "on" | "off" | "denied";
 
@@ -22,7 +22,7 @@ export function PushToggle({ variant = "panel" }: { variant?: "panel" | "card" }
       setState("denied");
       return;
     }
-    resyncPush()
+    syncPush()
       .then((on) => setState(on ? "on" : "off"))
       .catch(() => setState("off"));
   }, []);
@@ -78,30 +78,37 @@ export function PushToggle({ variant = "panel" }: { variant?: "panel" | "card" }
 
   const on = state === "on";
   return (
-    <div className={`flex items-center justify-between gap-3 ${box} py-2`}>
-      <span className="flex items-center gap-2 text-xs text-muted-foreground">
-        {on ? (
-          <BellRing className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
-        ) : (
-          <BellOff className="h-3.5 w-3.5" aria-hidden="true" />
-        )}
-        Notifications on this device
-      </span>
-      <button
-        type="button"
-        role="switch"
-        aria-checked={on}
-        aria-label="Notifications on this device"
-        disabled={busy}
-        onClick={toggle}
-        className="relative h-5 w-9 shrink-0 rounded-full transition-colors disabled:opacity-60"
-        style={{ background: on ? "hsl(var(--primary))" : "hsl(var(--muted-foreground) / 0.45)" }}
-      >
-        <span
-          className="absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform"
-          style={{ left: 2, transform: on ? "translateX(16px)" : "translateX(0)" }}
-        />
-      </button>
+    <div className={`${box} py-2`}>
+      <div className="flex items-center justify-between gap-3">
+        <span className="flex items-center gap-2 text-xs text-muted-foreground">
+          {on ? (
+            <BellRing className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
+          ) : (
+            <BellOff className="h-3.5 w-3.5" aria-hidden="true" />
+          )}
+          Notifications on this device
+        </span>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={on}
+          aria-label="Notifications on this device"
+          disabled={busy}
+          onClick={toggle}
+          className="relative h-5 w-9 shrink-0 rounded-full transition-colors disabled:opacity-60"
+          style={{ background: on ? "hsl(var(--primary))" : "hsl(var(--muted-foreground) / 0.45)" }}
+        >
+          <span
+            className="absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform"
+            style={{ left: 2, transform: on ? "translateX(16px)" : "translateX(0)" }}
+          />
+        </button>
+      </div>
+      {on && (
+        <p className="mt-1 text-[11px] leading-snug text-muted-foreground">
+          While notifications are on, TAMS won&apos;t also email you about these updates.
+        </p>
+      )}
     </div>
   );
 }

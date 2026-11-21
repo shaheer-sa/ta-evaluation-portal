@@ -7,7 +7,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { z } from "zod";
 import { escapeLikePattern } from "@/lib/identifiers";
 import { sendResetRequestEmail } from "@/lib/email/gmail";
-import { pushForNotifications } from "@/lib/push";
+import { startPush } from "@/lib/push";
 
 const schema = z.object({
   identifier: z.string().min(1, "Enter your email or roll number"),
@@ -120,11 +120,13 @@ export async function POST(request: NextRequest) {
             related_id: profile.id,
           }));
           await admin.from("notifications").insert(notifs);
-          after(() => pushForNotifications(admin, notifs));
+          const pushed = startPush(admin, notifs);
 
+          // email the TAs the phone notification didn't reach
           after(async () => {
+            const reached = await pushed;
             const emailPromises = tas
-              .filter(ta => ta.email)
+              .filter(ta => ta.email && !reached.has(ta.id))
               .map(ta =>
                 sendResetRequestEmail({
                   to: ta.email,

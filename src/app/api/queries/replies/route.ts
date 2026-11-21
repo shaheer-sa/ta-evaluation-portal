@@ -6,7 +6,7 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendQueryEmail } from "@/lib/email/gmail";
-import { pushForNotifications } from "@/lib/push";
+import { startPush } from "@/lib/push";
 import { createRateLimiter } from "@/lib/rate-limit";
 
 const replyRateLimit = createRateLimiter({ tokens: 20, window: "10 m" });
@@ -209,12 +209,15 @@ export async function POST(request: Request) {
           related_id: queryId,
         };
         await supabase.from("notifications").insert(notice);
-        after(() => pushForNotifications(createAdminClient(), [notice]));
+        const pushed = startPush(createAdminClient(), [notice]);
+        after(() => pushed);
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const studentProfile = queryData.profiles as any;
         if (studentProfile?.email) {
           after(async () => {
+            // got it as a phone notification: no email needed
+            if ((await pushed).has(queryData.student_id)) return;
             await Promise.allSettled([
               sendQueryEmail({
                 to: studentProfile.email,
@@ -244,7 +247,10 @@ export async function POST(request: Request) {
           }));
           const { error: notifyError } = await supabase.from("notifications").insert(taNotices);
           if (notifyError) console.error("TA notify failed:", notifyError);
-          else after(() => pushForNotifications(createAdminClient(), taNotices));
+          const pushed: Promise<Set<string>> = notifyError
+            ? Promise.resolve(new Set())
+            : startPush(createAdminClient(), taNotices);
+          after(() => pushed);
 
           // Get emails for all TAs using the SECURITY DEFINER RPC
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -252,9 +258,10 @@ export async function POST(request: Request) {
 
           if (taProfiles && taProfiles.length > 0) {
             after(async () => {
+              const reached = await pushed;
               const emailPromises = taProfiles
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                .filter((taProfile: any) => taProfile.email)
+                .filter((taProfile: any) => taProfile.email && !reached.has(taProfile.id))
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 .map((taProfile: any) =>
                   sendQueryEmail({

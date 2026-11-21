@@ -26,15 +26,22 @@ function ready() {
   return configured;
 }
 
-/** one message per user id; users with no devices are skipped */
-export async function sendPush(admin: Admin, messages: { userId: string; message: PushMessage }[]) {
-  if (messages.length === 0 || !ready()) return;
+/**
+ * one message per user id; users with no devices are skipped.
+ * Returns the users it reached on at least one device.
+ */
+export async function sendPush(
+  admin: Admin,
+  messages: { userId: string; message: PushMessage }[]
+): Promise<Set<string>> {
+  const reached = new Set<string>();
+  if (messages.length === 0 || !ready()) return reached;
   const userIds = [...new Set(messages.map((m) => m.userId))];
   const { data: subs } = await admin
     .from("push_subscriptions")
     .select("id, user_id, endpoint, p256dh, auth")
     .in("user_id", userIds);
-  if (!subs || subs.length === 0) return;
+  if (!subs || subs.length === 0) return reached;
 
   const dead: string[] = [];
   await Promise.allSettled(
@@ -48,6 +55,9 @@ export async function sendPush(admin: Admin, messages: { userId: string; message
               JSON.stringify({ ...message, body: (message.body || "").slice(0, 180) }),
               { TTL: 60 * 60 * 24 }
             )
+            .then(() => {
+              reached.add(userId);
+            })
             .catch((err: { statusCode?: number }) => {
               // the device unsubscribed or the browser dropped it: forget it
               if (err?.statusCode === 404 || err?.statusCode === 410) dead.push(s.id);
@@ -57,6 +67,7 @@ export async function sendPush(admin: Admin, messages: { userId: string; message
     )
   );
   if (dead.length > 0) await admin.from("push_subscriptions").delete().in("id", dead);
+  return reached;
 }
 
 type NotificationRow = { recipient_id: string; type: string; title: string; body?: string | null; related_id?: string | null };
@@ -85,12 +96,12 @@ function urlFor(n: NotificationRow, role: string | undefined): string {
 }
 
 /** push for notification rows that were just saved (same title/body as the bell) */
-export async function pushForNotifications(admin: Admin, rows: NotificationRow[]) {
-  if (rows.length === 0 || !ready()) return;
+export async function pushForNotifications(admin: Admin, rows: NotificationRow[]): Promise<Set<string>> {
+  if (rows.length === 0 || !ready()) return new Set();
   const ids = [...new Set(rows.map((r) => r.recipient_id))];
   const { data: roles } = await admin.from("profiles").select("id, role").in("id", ids);
   const roleOf = new Map((roles || []).map((r) => [r.id, r.role as string]));
-  await sendPush(
+  return sendPush(
     admin,
     rows.map((r) => ({
       userId: r.recipient_id,
@@ -102,4 +113,16 @@ export async function pushForNotifications(admin: Admin, rows: NotificationRow[]
       },
     }))
   );
+}
+
+/**
+ * Starts the phone notifications right away. Await the result before sending
+ * emails: people it reached don't get the same update by email too (if it
+ * reached none of their devices, they still get the email).
+ */
+export function startPush(admin: Admin, rows: NotificationRow[]): Promise<Set<string>> {
+  return pushForNotifications(admin, rows).catch((err) => {
+    console.error("push failed:", err);
+    return new Set<string>();
+  });
 }
