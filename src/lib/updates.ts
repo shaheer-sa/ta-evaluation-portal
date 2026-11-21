@@ -30,6 +30,24 @@ export type Release = {
 
 export const RELEASES: Release[] = [
   {
+    version: "1.8",
+    id: "2026-11-22-install",
+    date: "2026-11-22",
+    title: "App Install Update",
+    summary: {
+      ta: "Install TAMS as an app on your phone or computer.",
+      student: "Install TAMS as an app on your phone or computer.",
+    },
+    items: [
+      {
+        kind: "improved",
+        title: "Install TAMS as an app",
+        body: "You can now install TAMS on your phone or computer from Install TAMS app at the bottom of the sidebar. It opens in its own window, like a normal app.",
+        audience: ["ta", "student"],
+      },
+    ],
+  },
+  {
     version: "1.7",
     id: "2026-11-22-notify-settings",
     date: "2026-11-22",

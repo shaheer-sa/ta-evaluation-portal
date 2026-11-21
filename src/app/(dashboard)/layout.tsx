@@ -12,6 +12,7 @@ import { ReportIssueButton } from "@/components/report-issue";
 import { UpdatesProvider } from "@/components/updates/updates-provider";
 import { FeatureNote } from "@/components/updates/feature-note";
 import { WhatsNewPopup } from "@/components/updates/whats-new-popup";
+import { InstallButton } from "@/components/install-button";
 import { CURRENT_VERSION } from "@/lib/updates";
 import LineSidebar from "@/components/react-bits/LineSidebar";
 import ClickSpark from "@/components/react-bits/ClickSpark";
@@ -124,6 +125,7 @@ export default function DashboardLayout({
 
             <div className="tams-rail__footer">
               {isStudent && ISSUE_REPORTS_ON && <ReportIssueButton variant="rail" />}
+              <InstallButton variant="rail" />
               <button className="tams-iconbtn w-full" onClick={handleLogout} style={{ width: '100%', padding: '0 1rem', display: 'flex', gap: '0.5rem' }}>
                 <LogOut size={16} /> Sign out
               </button>

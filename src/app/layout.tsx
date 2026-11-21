@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Inter, Outfit, JetBrains_Mono } from "next/font/google";
 import { ThemedToaster } from "@/components/themed-toaster";
+import { InstallWatch } from "@/components/install-watch";
 import { themeInitScript } from "@/lib/theme";
 
 import "@/styles/tokens.css";
@@ -42,6 +43,7 @@ export default function RootLayout({
       >
         {children}
         <ThemedToaster />
+        <InstallWatch />
       </body>
     </html>
   );
