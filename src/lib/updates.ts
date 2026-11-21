@@ -25,6 +25,22 @@ export type Release = {
 
 export const RELEASES: Release[] = [
   {
+    id: "2026-11-22-filters",
+    date: "2026-11-22",
+    title: "Analytics Filter Update",
+    summary: {
+      ta: "More ways to filter students in Analytics.",
+    },
+    items: [
+      {
+        kind: "improved",
+        title: "More filter conditions",
+        body: "The Analytics filter now supports less than, less than or equal to, equal to, greater than or equal to, and greater than, for assignment, quiz or overall absolutes.",
+        audience: ["ta"],
+      },
+    ],
+  },
+  {
     id: "2026-11-22",
     date: "2026-11-22",
     title: "November Update",
@@ -121,6 +137,12 @@ export const FEATURE_NOTES: Record<string, { release: string; title: string; bod
     release: "2026-11-22",
     title: "New in Analytics",
     body: "Filter the class below a number of absolutes, see assignment and quiz totals per student, and open a full student report from any row.",
+    audience: "ta",
+  },
+  "analytics-filter-conditions": {
+    release: "2026-11-22",
+    title: "New in Analytics",
+    body: 'Choose a condition for the filter: less than, equal to, greater than, or their "or equal to" versions.',
     audience: "ta",
   },
   "course-totals": {

@@ -166,7 +166,12 @@ export default async function AnalyticsPage(props: {
           assignment: selectedSc?.best_of_assignments ?? null,
         })}
         scId={scId}
-        filterNote={<FeatureNote key="analytics-filters" id="analytics-filters" />}
+        filterNote={
+          <div key="analytics-notes" className="space-y-2">
+            <FeatureNote id="analytics-filters" />
+            <FeatureNote id="analytics-filter-conditions" />
+          </div>
+        }
       />
     </div>
   );

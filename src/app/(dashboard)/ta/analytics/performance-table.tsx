@@ -44,6 +44,35 @@ export type MarkEntry = {
   counted: boolean;
 };
 
+type FilterOp = "lt" | "lte" | "eq" | "gte" | "gt";
+
+const FILTER_OPS: Record<FilterOp, { label: string; symbol: string }> = {
+  lt: { label: "less than", symbol: "<" },
+  lte: { label: "less than or equal to", symbol: "≤" },
+  eq: { label: "equal to", symbol: "=" },
+  gte: { label: "greater than or equal to", symbol: "≥" },
+  gt: { label: "greater than", symbol: ">" },
+};
+
+// compared at 2 decimals, the same precision the table shows, so "equal to 4.5"
+// matches a student shown as 4.5 even if the exact value is 4.4999
+function matchesFilter(value: number, op: FilterOp, limit: number) {
+  const v = Math.round(value * 100);
+  const l = Math.round(limit * 100);
+  switch (op) {
+    case "lt":
+      return v < l;
+    case "lte":
+      return v <= l;
+    case "eq":
+      return v === l;
+    case "gte":
+      return v >= l;
+    case "gt":
+      return v > l;
+  }
+}
+
 export function PerformanceTable({
   students,
   sortedAssessments,
@@ -112,6 +141,7 @@ export function PerformanceTable({
   // filter: only students below a number of absolutes
   const [filterBy, setFilterBy] = useState<"overall" | "assignment" | "quiz">("overall");
   const [filterBelow, setFilterBelow] = useState("");
+  const [filterOp, setFilterOp] = useState<FilterOp>("lte");
   const threshold = filterBelow.trim() === "" ? null : Number(filterBelow);
   const filterActive = threshold !== null && Number.isFinite(threshold);
   const valueFor = (s: RankedPerformance) =>
@@ -128,7 +158,7 @@ export function PerformanceTable({
 
   const query = searchQuery.trim().toLowerCase();
   const filteredStudents = students.filter((s) => {
-    if (filterActive && !(valueFor(s) < (threshold as number))) return false;
+    if (filterActive && !matchesFilter(valueFor(s), filterOp, threshold as number)) return false;
     if (!query) return true;
     return (
       s.roll_number.toLowerCase().includes(query) ||
@@ -154,7 +184,30 @@ export function PerformanceTable({
 
           <div className="flex flex-wrap items-center gap-2 text-sm" role="group" aria-label="Filter students">
             <Filter className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
-            <span className="text-muted-foreground">Show students below</span>
+            <span className="text-muted-foreground">Show students with</span>
+            <select
+              value={filterBy}
+              onChange={(e) => setFilterBy(e.target.value as typeof filterBy)}
+              aria-label="Filter by"
+              className="h-9 rounded-md border border-input bg-background px-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <option value="overall">Overall</option>
+              {hasAssignments && <option value="assignment">Assignments</option>}
+              {hasQuizzes && <option value="quiz">Quizzes</option>}
+            </select>
+            <span className="text-muted-foreground">absolutes</span>
+            <select
+              value={filterOp}
+              onChange={(e) => setFilterOp(e.target.value as FilterOp)}
+              aria-label="Condition"
+              className="h-9 rounded-md border border-input bg-background px-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              {(Object.keys(FILTER_OPS) as FilterOp[]).map((op) => (
+                <option key={op} value={op}>
+                  {FILTER_OPS[op].label}
+                </option>
+              ))}
+            </select>
             <Input
               type="number"
               inputMode="decimal"
@@ -167,21 +220,11 @@ export function PerformanceTable({
               aria-label="Absolutes limit"
               className="h-9 w-24"
             />
-            <span className="text-muted-foreground">absolutes in</span>
-            <select
-              value={filterBy}
-              onChange={(e) => setFilterBy(e.target.value as typeof filterBy)}
-              aria-label="Filter by"
-              className="h-9 rounded-md border border-input bg-background px-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              <option value="overall">Overall</option>
-              {hasAssignments && <option value="assignment">Assignments</option>}
-              {hasQuizzes && <option value="quiz">Quizzes</option>}
-            </select>
             {filterActive && (
               <>
                 <span className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium">
-                  {filteredStudents.length} of {students.length} students · below {formatWeight(threshold)} / {formatWeight(filterOutOf)} in {filterLabel}
+                  {filteredStudents.length} of {students.length} students · {filterLabel} {FILTER_OPS[filterOp].symbol}{" "}
+                  {formatWeight(threshold)} / {formatWeight(filterOutOf)}
                 </span>
                 <button
                   type="button"
@@ -199,7 +242,7 @@ export function PerformanceTable({
         {filteredStudents.length === 0 ? (
           <p className="text-sm text-muted-foreground py-2">
             {filterActive
-              ? `No students are below ${formatWeight(threshold)} absolutes in ${filterLabel}${query ? ` matching "${searchQuery}"` : ""}.`
+              ? `No students have ${FILTER_OPS[filterOp].label} ${formatWeight(threshold)} absolutes in ${filterLabel}${query ? ` matching "${searchQuery}"` : ""}.`
               : `No students match "${searchQuery}".`}
           </p>
         ) : (
