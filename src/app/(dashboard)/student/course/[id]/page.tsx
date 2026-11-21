@@ -58,11 +58,25 @@ export default async function CourseDetailPage({ params }: PageProps) {
     );
   }
 
-  const report = await loadCourseReport(supabase, {
-    id: enrollment.id,
-    section_id: enrollment.section_id,
-    course_id: enrollment.course_id,
-  });
+  const [report] = await Promise.all([
+    loadCourseReport(supabase, {
+      id: enrollment.id,
+      section_id: enrollment.section_id,
+      course_id: enrollment.course_id,
+    }),
+    // the student is looking at these marks now: clear the "new marks" notice
+    // (so the bell is up to date and the evening email skips them)
+    supabase
+      .from("notifications")
+      .update({ is_read: true })
+      .eq("recipient_id", user.id)
+      .eq("type", "marks_updated")
+      .eq("related_id", enrollment.id)
+      .eq("is_read", false)
+      .then(({ error }) => {
+        if (error) console.error("marks notice read failed:", error.code);
+      }),
+  ]);
 
   if (!report) {
     return <p className="text-muted-foreground">This course isn&apos;t set up yet. Ask your TA.</p>;

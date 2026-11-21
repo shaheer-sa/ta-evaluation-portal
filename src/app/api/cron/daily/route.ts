@@ -60,37 +60,44 @@ export async function GET(request: Request) {
         : { data: [] };
       const personOf = new Map((people || []).map((p) => [p.id, p]));
 
-      const emailedIds: string[] = [];
       let sent = 0;
       let failed = 0;
       await inBatches(ids, 4, async (studentId) => {
         const person = personOf.get(studentId);
         const items = byStudent.get(studentId) || [];
         if (!person?.email || person.role !== "student" || !person.marks_email || items.length === 0) return;
+
+        // claim these notices first: only the ones still unclaimed get emailed
+        const { data: claimed } = await admin
+          .from("notifications")
+          .update({ emailed_at: new Date().toISOString() })
+          .in("id", items.map((n) => n.id))
+          .is("emailed_at", null)
+          .eq("is_read", false)
+          .select("id");
+        const claimedIds = new Set((claimed || []).map((c) => c.id));
+        const mine = items.filter((n) => claimedIds.has(n.id));
+        if (mine.length === 0) return;
+
         try {
           await sendMarksDigestEmail({
             to: person.email,
             studentName: person.full_name || "Student",
-            courses: items.map((n) => ({
+            courses: mine.map((n) => ({
               title: n.title.replace(/^New marks in /, ""),
               assessments: n.body || "",
               enrollmentId: n.related_id,
             })),
           });
-          emailedIds.push(...items.map((n) => n.id));
           sent++;
         } catch (err) {
           failed++;
           console.error("marks digest email failed:", err);
+          // give them back so tomorrow's run can try again
+          await admin.from("notifications").update({ emailed_at: null }).in("id", [...claimedIds]);
         }
       });
 
-      for (let i = 0; i < emailedIds.length; i += 200) {
-        await admin
-          .from("notifications")
-          .update({ emailed_at: new Date().toISOString() })
-          .in("id", emailedIds.slice(i, i + 200));
-      }
       summary.marks = { students: ids.length, sent, failed };
     }
   } else {

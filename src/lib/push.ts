@@ -14,7 +14,15 @@ function ready() {
   const priv = process.env.VAPID_PRIVATE_KEY;
   const subject = process.env.VAPID_SUBJECT || "mailto:tams.official.notifications@gmail.com";
   configured = !!(pub && priv);
-  if (configured) webpush.setVapidDetails(subject, pub as string, priv as string);
+  if (configured) {
+    try {
+      webpush.setVapidDetails(subject, pub as string, priv as string);
+    } catch (err) {
+      // usually a key copied with a missing character or an extra space
+      console.error("push keys are invalid, notifications are off:", err instanceof Error ? err.message : err);
+      configured = false;
+    }
+  }
   return configured;
 }
 
