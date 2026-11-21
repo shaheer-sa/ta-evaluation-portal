@@ -78,3 +78,16 @@ export function rankStudents<S extends Student>(
 
   return { ranked, possible, marked };
 }
+
+// what each type is worth so far (only assessments marked for someone),
+// best-of respected: e.g. { assignment: 10, quiz: 6 }
+export function possibleByType(assessments: Assessment[], bestOf: BestOfSettings): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const type of new Set(assessments.filter((a) => a.graded > 0).map((a) => a.type))) {
+    out[type] = possibleWeight(
+      assessments.filter((a) => a.type === type),
+      bestOf
+    );
+  }
+  return out;
+}

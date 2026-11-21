@@ -3,7 +3,10 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { toast } from "sonner";
-import { Bell } from "lucide-react";
+import Link from "next/link";
+import { Bell, Megaphone } from "lucide-react";
+import { useUpdates } from "@/components/updates/updates-provider";
+import { formatReleaseDate } from "@/lib/updates";
 import { fetchJson } from "@/lib/fetch-json";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -21,7 +24,7 @@ interface Notification {
 // the bell groups notifications into these sections (empty ones are hidden)
 const SECTIONS: { key: string; label: string; types: string[] | null }[] = [
   { key: "queries", label: "Queries", types: ["new_query", "query_reply", "query_update"] },
-  { key: "issues", label: "Issue reports", types: ["issue_report"] },
+  { key: "issues", label: "Issue reports", types: ["issue_report", "issue_resolved"] },
   { key: "resets", label: "Password resets", types: ["password_reset_request"] },
   { key: "other", label: "Other", types: null },
 ];
@@ -59,6 +62,10 @@ export function NotificationsBell() {
   const pathname = usePathname();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  // release notes the user hasn't seen yet (from the updates provider)
+  const updates = useUpdates();
+  const unseenReleases = updates?.unseenReleases ?? [];
+  const totalUnread = unreadCount + unseenReleases.length;
   const [isOpen, setIsOpen] = useState(false);
 
   const fetchNotifications = useCallback(async () => {
@@ -208,13 +215,13 @@ export function NotificationsBell() {
         onClick={() => setIsOpen(!isOpen)}
         data-tip="Notifications"
         data-tip-pos="bottom-end"
-        aria-label={unreadCount > 0 ? `Notifications (${unreadCount} unread)` : "Notifications"}
+        aria-label={totalUnread > 0 ? `Notifications (${totalUnread} unread)` : "Notifications"}
         className="relative text-muted-foreground hover:text-foreground"
       >
         <Bell className="h-4 w-4" />
-        {unreadCount > 0 && (
+        {totalUnread > 0 && (
           <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
-            {unreadCount > 9 ? "9+" : unreadCount}
+            {totalUnread > 9 ? "9+" : totalUnread}
           </span>
         )}
       </Button>
@@ -232,9 +239,12 @@ export function NotificationsBell() {
             <div className="flex items-center justify-between border-b p-3">
               <span className="text-sm font-semibold">Notifications</span>
               <div className="flex items-center gap-2">
-                {unreadCount > 0 && (
+                {totalUnread > 0 && (
                   <button
-                    onClick={markAllRead}
+                    onClick={() => {
+                      if (unreadCount > 0) markAllRead();
+                      updates?.markSeen(unseenReleases.map((r) => `release:${r.id}`));
+                    }}
                     className="text-xs text-primary hover:underline"
                   >
                     Mark all read
@@ -251,10 +261,68 @@ export function NotificationsBell() {
               </div>
             </div>
             <div className="max-h-96 overflow-y-auto">
+              {unseenReleases.length > 0 && (
+                <section aria-label="Updates">
+                  <div className="sticky top-0 z-10 flex items-center justify-between gap-2 border-b bg-muted px-3 py-1.5">
+                    <span className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      Updates
+                      <span className="rounded-full bg-primary px-1.5 py-px text-[10px] font-bold normal-case tracking-normal text-primary-foreground">
+                        {unseenReleases.length} new
+                      </span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => updates?.markSeen(unseenReleases.map((r) => `release:${r.id}`))}
+                      className="text-[11px] text-muted-foreground hover:text-foreground hover:underline"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                  {unseenReleases.map((r) => (
+                    <div
+                      key={r.id}
+                      className="flex items-start justify-between border-b bg-primary/5 transition-colors hover:bg-muted/50"
+                    >
+                      <button
+                        type="button"
+                        onClick={() => {
+                          updates?.markSeen([`release:${r.id}`]);
+                          setIsOpen(false);
+                          router.push(`/${updates?.role ?? "student"}/updates#release-${r.id}`);
+                        }}
+                        className="flex flex-1 items-start gap-2.5 p-3 text-left text-sm"
+                      >
+                        <Megaphone className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
+                        <span>
+                          <span className="block font-medium">TAMS {r.title}</span>
+                          <span className="mt-0.5 block text-xs text-muted-foreground">
+                            {r.summary[updates?.role ?? "student"]}
+                          </span>
+                          <span className="mt-1 block text-[10px] text-muted-foreground">
+                            {formatReleaseDate(r.date)} · {r.items.length} change{r.items.length === 1 ? "" : "s"}
+                          </span>
+                        </span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => updates?.markSeen([`release:${r.id}`])}
+                        aria-label="Dismiss update"
+                        data-tip="Dismiss"
+                        data-tip-pos="left"
+                        className="p-3 text-sm font-medium leading-none text-muted-foreground hover:text-foreground"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </section>
+              )}
               {notifications.length === 0 ? (
-                <p className="p-4 text-center text-sm text-muted-foreground">
-                  No notifications yet.
-                </p>
+                unseenReleases.length === 0 && (
+                  <p className="p-4 text-center text-sm text-muted-foreground">
+                    No notifications yet.
+                  </p>
+                )
               ) : (
                 SECTIONS.map((section) => {
                   const items = notifications.filter((n) => sectionOf(n.type) === section.key);
@@ -341,6 +409,14 @@ export function NotificationsBell() {
                 })
               )}
             </div>
+            <Link
+              href={`/${updates?.role ?? "student"}/updates`}
+              onClick={() => setIsOpen(false)}
+              className="flex items-center justify-center gap-1.5 border-t p-2.5 text-xs font-medium text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+            >
+              <Megaphone className="h-3.5 w-3.5" aria-hidden="true" />
+              What&apos;s new in TAMS
+            </Link>
           </div>
         </>
       )}

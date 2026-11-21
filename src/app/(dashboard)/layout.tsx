@@ -9,6 +9,8 @@ import { useState } from "react";
 import { NotificationsBell } from "@/components/notifications-bell";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { ReportIssueButton } from "@/components/report-issue";
+import { UpdatesProvider } from "@/components/updates/updates-provider";
+import { FeatureNote } from "@/components/updates/feature-note";
 import LineSidebar from "@/components/react-bits/LineSidebar";
 import ClickSpark from "@/components/react-bits/ClickSpark";
 import RouteProgress from "@/components/shell/RouteProgress";
@@ -58,6 +60,7 @@ export default function DashboardLayout({
   }
 
   return (
+    <UpdatesProvider role={isStudent ? "student" : "ta"}>
     <ClickSpark>
       <div className="tams-body">
         <div className="tams-shell">
@@ -138,11 +141,13 @@ export default function DashboardLayout({
             </header>
             
             <main className="tams-main">
+              {isStudent && <FeatureNote id="bell-updates" className="mb-6" />}
               {children}
             </main>
           </div>
         </div>
       </div>
     </ClickSpark>
+    </UpdatesProvider>
   );
 }

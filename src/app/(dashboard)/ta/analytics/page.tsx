@@ -1,8 +1,9 @@
 import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent } from "@/components/ui/card";
 import { SectionPicker, type PickerOption } from "./section-picker";
-import { rankStudents } from "@/lib/analytics-rank";
+import { rankStudents, possibleByType } from "@/lib/analytics-rank";
 import { AssessmentStats } from "./assessment-stats";
+import { FeatureNote } from "@/components/updates/feature-note";
 import { TopStudents } from "./top-students";
 import { sortAssessments } from "@/lib/assessment-order";
 import { PerformanceTable, type StudentPerformance, type AssessmentPerformance, type MarkEntry } from "./performance-table";
@@ -160,6 +161,12 @@ export default async function AnalyticsPage(props: {
         marks={marks || []}
         possible={possible}
         marked={marked}
+        possibleTypes={possibleByType(assessments || [], {
+          quiz: selectedSc?.best_of_quizzes ?? null,
+          assignment: selectedSc?.best_of_assignments ?? null,
+        })}
+        scId={scId}
+        filterNote={<FeatureNote key="analytics-filters" id="analytics-filters" />}
       />
     </div>
   );

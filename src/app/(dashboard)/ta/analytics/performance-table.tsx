@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useRef, Fragment, type ReactNode } from "react";
 import { FOCUS_STUDENT_EVENT } from "./focus-student";
-import { ChevronDown, ChevronRight, Search } from "lucide-react";
+import Link from "next/link";
+import { ChevronDown, ChevronRight, FileText, Filter, Search, X } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { formatWeight } from "@/lib/format";
@@ -49,12 +50,20 @@ export function PerformanceTable({
   marks,
   possible,
   marked,
+  possibleTypes,
+  scId,
+  filterNote,
 }: {
   students: RankedPerformance[];
   sortedAssessments: AssessmentPerformance[];
   marks: MarkEntry[];
   possible: number;
   marked: number;
+  // what assignments / quizzes are worth so far, best-of applied
+  possibleTypes: Record<string, number>;
+  scId: string;
+  // optional "new feature" note shown above the filters
+  filterNote?: ReactNode;
 }) {
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -86,6 +95,30 @@ export function PerformanceTable({
     return () => clearTimeout(t);
   }, [highlight]);
 
+  // absolutes per type for each student, from counted marks only (best-of applied)
+  const assessmentById = new Map(sortedAssessments.map((a) => [a.id, a]));
+  const typeAbs = new Map<string, { assignment: number; quiz: number }>();
+  for (const m of marks) {
+    if (m.score === null || !m.counted) continue;
+    const a = assessmentById.get(m.assessment_id);
+    if (!a || !a.total_marks || (a.type !== "assignment" && a.type !== "quiz")) continue;
+    const cur = typeAbs.get(m.roll_number) || { assignment: 0, quiz: 0 };
+    cur[a.type] += (Number(m.score) / a.total_marks) * (Number(a.weight) || 0);
+    typeAbs.set(m.roll_number, cur);
+  }
+  const hasAssignments = (possibleTypes.assignment || 0) > 0;
+  const hasQuizzes = (possibleTypes.quiz || 0) > 0;
+
+  // filter: only students below a number of absolutes
+  const [filterBy, setFilterBy] = useState<"overall" | "assignment" | "quiz">("overall");
+  const [filterBelow, setFilterBelow] = useState("");
+  const threshold = filterBelow.trim() === "" ? null : Number(filterBelow);
+  const filterActive = threshold !== null && Number.isFinite(threshold);
+  const valueFor = (s: RankedPerformance) =>
+    filterBy === "overall" ? Number(s.obtained) || 0 : typeAbs.get(s.roll_number)?.[filterBy] ?? 0;
+  const filterLabel = { overall: "overall", assignment: "assignments", quiz: "quizzes" }[filterBy];
+  const filterOutOf = filterBy === "overall" ? possible : possibleTypes[filterBy] || 0;
+
   const toggleRow = (roll_number: string) => {
     setExpandedRow((prev) => (prev === roll_number ? null : roll_number));
   };
@@ -95,6 +128,7 @@ export function PerformanceTable({
 
   const query = searchQuery.trim().toLowerCase();
   const filteredStudents = students.filter((s) => {
+    if (filterActive && !(valueFor(s) < (threshold as number))) return false;
     if (!query) return true;
     return (
       s.roll_number.toLowerCase().includes(query) ||
@@ -105,7 +139,7 @@ export function PerformanceTable({
   return (
     <Card data-edge ref={cardRef} className="scroll-mt-20">
       <CardContent>
-        <div className="mb-4">
+        <div className="mb-4 space-y-3">
           <div className="relative w-full max-w-sm">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
@@ -115,11 +149,58 @@ export function PerformanceTable({
               className="pl-9"
             />
           </div>
+
+          {filterNote}
+
+          <div className="flex flex-wrap items-center gap-2 text-sm" role="group" aria-label="Filter students">
+            <Filter className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+            <span className="text-muted-foreground">Show students below</span>
+            <Input
+              type="number"
+              inputMode="decimal"
+              min="0"
+              step="any"
+              value={filterBelow}
+              onChange={(e) => setFilterBelow(e.target.value)}
+              onWheel={(e) => e.currentTarget.blur()}
+              placeholder="e.g. 5"
+              aria-label="Absolutes limit"
+              className="h-9 w-24"
+            />
+            <span className="text-muted-foreground">absolutes in</span>
+            <select
+              value={filterBy}
+              onChange={(e) => setFilterBy(e.target.value as typeof filterBy)}
+              aria-label="Filter by"
+              className="h-9 rounded-md border border-input bg-background px-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <option value="overall">Overall</option>
+              {hasAssignments && <option value="assignment">Assignments</option>}
+              {hasQuizzes && <option value="quiz">Quizzes</option>}
+            </select>
+            {filterActive && (
+              <>
+                <span className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium">
+                  {filteredStudents.length} of {students.length} students · below {formatWeight(threshold)} / {formatWeight(filterOutOf)} in {filterLabel}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setFilterBelow("")}
+                  className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <X className="h-3 w-3" aria-hidden="true" /> Clear filter
+                </button>
+              </>
+            )}
+          </div>
+          <p className="text-xs text-muted-foreground">Best-of settings are applied to every total.</p>
         </div>
 
         {filteredStudents.length === 0 ? (
           <p className="text-sm text-muted-foreground py-2">
-            {`No students match "${searchQuery}".`}
+            {filterActive
+              ? `No students are below ${formatWeight(threshold)} absolutes in ${filterLabel}${query ? ` matching "${searchQuery}"` : ""}.`
+              : `No students match "${searchQuery}".`}
           </p>
         ) : (
           <div className="tams-table-wrap">
@@ -131,6 +212,16 @@ export function PerformanceTable({
                   <th>Roll Number</th>
                   <th>Student</th>
                   <th className="tams-numeral">Marked</th>
+                  {hasAssignments && (
+                    <th className="tams-numeral" data-tip="Absolutes from assignments, best-of applied">
+                      Assignments
+                    </th>
+                  )}
+                  {hasQuizzes && (
+                    <th className="tams-numeral" data-tip="Absolutes from quizzes, best-of applied">
+                      Quizzes
+                    </th>
+                  )}
                   <th className="tams-numeral">Weight Obtained</th>
                   <th className="tams-numeral" data-tip="Out of everything marked so far. This is what the ranking uses.">
                     Overall
@@ -176,6 +267,20 @@ export function PerformanceTable({
                           {p.graded} / {marked}
                         </span>
                       </td>
+                      {hasAssignments && (
+                        <td className="tams-numeral">
+                          {p.graded === 0
+                            ? "—"
+                            : `${formatWeight(typeAbs.get(p.roll_number)?.assignment ?? 0)} / ${formatWeight(possibleTypes.assignment)}`}
+                        </td>
+                      )}
+                      {hasQuizzes && (
+                        <td className="tams-numeral">
+                          {p.graded === 0
+                            ? "—"
+                            : `${formatWeight(typeAbs.get(p.roll_number)?.quiz ?? 0)} / ${formatWeight(possibleTypes.quiz)}`}
+                        </td>
+                      )}
                       <td className="tams-numeral">
                         {p.graded === 0 ? "—" : `${formatWeight(p.obtained)} / ${formatWeight(possible)}`}
                       </td>
@@ -188,8 +293,18 @@ export function PerformanceTable({
                     </tr>
                     {isExpanded && (
                       <tr className="bg-muted/20">
-                        <td colSpan={8} className="p-0 border-b">
+                        <td colSpan={8 + (hasAssignments ? 1 : 0) + (hasQuizzes ? 1 : 0)} className="p-0 border-b">
                           <div className="p-4 pl-12">
+                            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                              <span className="text-sm font-medium">{p.full_name}&apos;s marks</span>
+                              <Link
+                                href={`/ta/analytics/student?sc=${encodeURIComponent(scId)}&roll=${encodeURIComponent(p.roll_number)}`}
+                                className="inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm font-medium transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                              >
+                                <FileText className="h-4 w-4" aria-hidden="true" />
+                                View full report
+                              </Link>
+                            </div>
                             <table className="tams-table w-full text-sm">
                               <thead>
                                 <tr>

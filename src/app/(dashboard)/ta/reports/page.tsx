@@ -6,7 +6,7 @@ export const metadata = { title: "Issue Reports — TAMS" };
 
 export default async function ReportsPage() {
   const supabase = await createClient();
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("issue_reports")
     .select(
       "id, category, message, page_url, user_agent, status, created_at, resolved_at, screenshot_paths, profiles:reporter_id ( full_name, roll_number, email )"
@@ -46,6 +46,12 @@ export default async function ReportsPage() {
           Problems students reported with the website.
         </p>
       </div>
+      {error && (
+        <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm" role="alert">
+          Couldn&apos;t load issue reports (code {error.code || "unknown"}). The database setup for reports may be
+          incomplete. Run the latest SQL migration in Supabase, then refresh.
+        </p>
+      )}
       <ReportsList reports={reports} />
     </div>
   );

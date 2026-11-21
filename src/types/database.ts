@@ -354,6 +354,32 @@ export interface Database {
           },
         ]
       }
+      user_seen: {
+        Row: {
+          key: string
+          seen_at: string
+          user_id: string
+        }
+        Insert: {
+          key: string
+          seen_at?: string
+          user_id: string
+        }
+        Update: {
+          key?: string
+          seen_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_seen_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       queries: {
         Row: {
           assessment_id: string | null

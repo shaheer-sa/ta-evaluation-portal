@@ -320,3 +320,39 @@ export async function sendIssueReportThanksEmail({
     html,
   });
 }
+
+// to the student: the issue they reported has been fixed
+export async function sendIssueResolvedEmail({
+  to,
+  studentName,
+  category,
+  message,
+  reportId,
+}: {
+  to: string;
+  studentName: string;
+  category: string;
+  message: string;
+  reportId: string;
+}) {
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "";
+  const ref = reportId.slice(0, 8).toUpperCase();
+
+  const html = `
+    <p>Hi ${escapeHtml(studentName)},</p>
+    <p>Good news: the issue you reported has been reviewed and resolved.</p>
+    <p><strong>Reference:</strong> #${escapeHtml(ref)}<br/>
+    <strong>Type:</strong> ${escapeHtml(issueCategoryLabel(category))}</p>
+    <blockquote style="border-left:3px solid #ccc;padding-left:12px;color:#444">${escapeHtmlMultiline(message)}</blockquote>
+    <p>If you still see the problem, please open <a href="${siteUrl}/student">TAMS</a> and report it again with a short note, so it can be looked at once more.</p>
+    <p>Thank you for helping improve TAMS.</p>
+    <p>Regards,<br/>TAMS Team</p>
+    <p style="color:#888;font-size:12px">This is an automatic message, there's no need to reply.</p>
+  `;
+
+  await sendMail({
+    to,
+    subject: `Your issue report #${ref} has been resolved`,
+    html,
+  });
+}

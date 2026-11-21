@@ -9,6 +9,7 @@ import {
   issueCategoryLabel,
   sendIssueReportEmail,
   sendIssueReportThanksEmail,
+  sendIssueResolvedEmail,
 } from "@/lib/email/gmail";
 
 // a few reports per student per hour is plenty, stops spam
@@ -125,7 +126,10 @@ export async function POST(request: Request) {
       if (upErr) {
         console.error("screenshot upload failed:", { message: upErr.message, name: upErr.name });
         if (paths.length) await admin.storage.from(BUCKET).remove(paths);
-        return NextResponse.json({ error: "Couldn't upload your screenshot. Try again, or send without it." }, { status: 500 });
+        return NextResponse.json(
+          { error: `Couldn't upload your screenshot (${upErr.message}). Try again, or send without it.` },
+          { status: 500 }
+        );
       }
       paths.push(path);
     }
@@ -153,11 +157,13 @@ export async function POST(request: Request) {
       // database not updated yet (sql step skipped)
       const missingSetup =
         error?.code === "42P01" || error?.code === "42703" || error?.code === "PGRST204" || error?.code === "PGRST205";
+      // the code helps tell what went wrong without digging through logs
+      const code = error?.code ? ` (code ${error.code})` : "";
       return NextResponse.json(
         {
           error: missingSetup
-            ? "Reporting isn't fully set up yet. Please tell your TA directly for now."
-            : "Couldn't send your report. Please try again.",
+            ? `Reporting isn't fully set up yet${code}. Please tell your TA directly for now.`
+            : `Couldn't send your report${code}. Please try again later.`,
         },
         { status: 500 }
       );
@@ -218,7 +224,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: true, reference: report.id.slice(0, 8).toUpperCase() });
   } catch (err) {
     console.error("issue report error:", err instanceof Error ? `${err.name}: ${err.message}` : err);
-    return NextResponse.json({ error: "Couldn't send your report. Please try again." }, { status: 500 });
+    const name = err instanceof Error ? err.name : "unknown";
+    return NextResponse.json({ error: `Couldn't send your report (${name}). Please try again later.` }, { status: 500 });
   }
 }
 
@@ -242,13 +249,45 @@ export async function PATCH(request: Request) {
     }
     const { id, status } = parsed.data;
 
-    const { error } = await supabase
+    const { data: updated, error } = await supabase
       .from("issue_reports")
       .update({ status, resolved_at: status === "fixed" ? new Date().toISOString() : null })
-      .eq("id", id);
-    if (error) {
+      .eq("id", id)
+      .select("id, category, message, reporter_id")
+      .single();
+    if (error || !updated) {
       console.error("issue report update failed:", error);
-      return NextResponse.json({ error: "Couldn't update the report." }, { status: 500 });
+      const code = error?.code ? ` (code ${error.code})` : "";
+      return NextResponse.json({ error: `Couldn't update the report${code}.` }, { status: 500 });
+    }
+
+    // let the student who reported it know it's been resolved (bell + email)
+    if (status === "fixed") {
+      const admin = createAdminClient();
+      const ref = updated.id.slice(0, 8).toUpperCase();
+      const { data: reporter } = await admin
+        .from("profiles")
+        .select("full_name, email")
+        .eq("id", updated.reporter_id)
+        .single();
+      await admin.from("notifications").insert({
+        recipient_id: updated.reporter_id,
+        type: "issue_resolved",
+        title: `Your report #${ref} has been resolved`,
+        body: "Thank you for reporting it. The issue has been reviewed and fixed.",
+        related_id: updated.id,
+      });
+      if (reporter?.email) {
+        after(async () => {
+          await sendIssueResolvedEmail({
+            to: reporter.email as string,
+            studentName: reporter.full_name || "Student",
+            category: updated.category,
+            message: updated.message,
+            reportId: updated.id,
+          }).catch((err) => console.error("issue resolved email failed:", err));
+        });
+      }
     }
 
     // the bell notification for this report is done with

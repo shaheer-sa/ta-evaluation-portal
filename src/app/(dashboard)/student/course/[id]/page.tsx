@@ -2,17 +2,9 @@ import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
-import { sortAssessments } from "@/lib/assessment-order";
-import { formatWeight } from "@/lib/format";
-import { bestOfFromSectionCourse, countedAssessmentIds } from "@/lib/best-of";
+import { loadCourseReport } from "@/lib/course-report";
+import { CourseReportView } from "@/components/course-report-view";
+import { FeatureNote } from "@/components/updates/feature-note";
 import type { Database } from "@/types/database";
 
 type EnrollmentRow = Pick<Database["public"]["Tables"]["enrollments"]["Row"], "id" | "course_id" | "section_id"> & {
@@ -66,138 +58,18 @@ export default async function CourseDetailPage({ params }: PageProps) {
     );
   }
 
-  // Group 3: Fetch section_course and marks in parallel
-  const [
-    { data: sectionCourse },
-    { data: marks }
-  ] = await Promise.all([
-    supabase
-      .from("section_courses")
-      .select("id, best_of_quizzes, best_of_assignments")
-      .eq("section_id", enrollment.section_id)
-      .eq("course_id", enrollment.course_id)
-      .single(),
-    supabase
-      .from("marks")
-      .select("assessment_id, score")
-      .eq("enrollment_id", enrollmentId)
-  ]);
-
-  if (!sectionCourse?.id) {
-    return <p className="text-muted-foreground">This course isn&apos;t set up yet. Ask your TA.</p>;
-  }
-  const scId = sectionCourse.id;
-
-  // Group 4: Fetch assessments and class averages in parallel
-  const [
-    { data: assessments },
-    { data: rawAverages }
-  ] = await Promise.all([
-    supabase
-      .from("assessments")
-      .select("id, title, type, max_marks, weight, created_at")
-      .eq("section_course_id", scId)
-      .order("created_at", { ascending: true }),
-    supabase.rpc("class_averages_for_section_course", { p_sc_id: scId })
-  ]);
-
-  const classAverages = new Map<string, { avg: number; high: number; low: number }>();
-  if (rawAverages) {
-    const avgObj = rawAverages as Record<string, { avg: number | null; high: number | null; low: number | null } | null>;
-    for (const [id, stats] of Object.entries(avgObj)) {
-      if (stats && stats.avg !== null && stats.avg !== undefined) {
-        classAverages.set(id, { avg: stats.avg, high: stats.high as number, low: stats.low as number });
-      }
-    }
-  }
-
-  const bestOf = bestOfFromSectionCourse(sectionCourse);
-  const totalQuizzes = (assessments || []).filter((a) => a.type === "quiz").length;
-  const totalAssignments = (assessments || []).filter((a) => a.type === "assignment").length;
-
-  // Build the table data
-  const marksMap = new Map<string, number>();
-  for (const m of marks || []) {
-    // A mark row with no score means "not graded yet", not zero.
-    if (m.score === null || m.score === undefined) continue;
-    marksMap.set(m.assessment_id, Number(m.score));
-  }
-
-  const countedIds = countedAssessmentIds(assessments || [], marksMap, bestOf);
-
-  let totalWeightedScore = 0;
-  let totalWeight = 0;
-
-  const sortedAssessments = sortAssessments(assessments || []);
-
-  const rows = sortedAssessments.map((a) => {
-    const score = marksMap.get(a.id);
-    const hasScore = score !== undefined;
-    const isCounted = hasScore ? countedIds.has(a.id) : false;
-
-    let notCountedReason: string | null = null;
-    if (hasScore && !isCounted) {
-      if (a.type === "quiz" && bestOf.quiz) {
-        notCountedReason = `Not counted (best ${bestOf.quiz} of ${totalQuizzes})`;
-      } else if (a.type === "assignment" && bestOf.assignment) {
-        notCountedReason = `Not counted (best ${bestOf.assignment} of ${totalAssignments})`;
-      } else {
-        notCountedReason = "Not counted";
-      }
-    }
-
-    const abs = hasScore && isCounted && a.max_marks > 0
-      ? (score / a.max_marks) * a.weight
-      : null;
-
-    const classStats = classAverages.get(a.id);
-    const classAvg = classStats?.avg ?? null;
-    const classHigh = classStats?.high ?? null;
-    const classLow = classStats?.low ?? null;
-    const classAvgAbs = classAvg !== null && a.max_marks > 0
-      ? (classAvg / a.max_marks) * a.weight
-      : null;
-
-    if (hasScore && isCounted && a.max_marks > 0) {
-      totalWeightedScore += (score / a.max_marks) * a.weight;
-      totalWeight += a.weight;
-    }
-
-    return {
-      id: a.id,
-      title: a.title,
-      type: a.type,
-      maxMarks: a.max_marks,
-      weight: a.weight,
-      score: hasScore ? score : null,
-      abs,
-      notCountedReason,
-      classAvg,
-      classHigh,
-      classLow,
-      classAvgAbs,
-    };
+  const report = await loadCourseReport(supabase, {
+    id: enrollment.id,
+    section_id: enrollment.section_id,
+    course_id: enrollment.course_id,
   });
 
-  const overallPct = totalWeight > 0 ? (totalWeightedScore / totalWeight) * 100 : 0;
+  if (!report) {
+    return <p className="text-muted-foreground">This course isn&apos;t set up yet. Ask your TA.</p>;
+  }
+
   const course = enrollment.courses;
   const section = enrollment.sections;
-
-  // Group rows by assessment type
-  const groupedRows = rows.reduce((acc, r) => {
-    const typeLabel = r.type.charAt(0).toUpperCase() + r.type.slice(1);
-    if (!acc[typeLabel]) acc[typeLabel] = [];
-    acc[typeLabel].push(r);
-    return acc;
-  }, {} as Record<string, typeof rows>);
-
-  const bestOfNotes: string[] = [];
-  if (bestOf.quiz) {
-    bestOfNotes.push(`Your best ${bestOf.quiz} of ${totalQuizzes} quizzes count.`);
-  }
-  if (bestOf.assignment) {
-    bestOfNotes.push(`Your best ${bestOf.assignment} of ${totalAssignments} assignments count.`);
-  }
 
   return (
     <div className="space-y-8">
@@ -221,119 +93,8 @@ export default async function CourseDetailPage({ params }: PageProps) {
         </p>
       </div>
 
-      {/* Summary Card */}
-      <Card data-edge>
-        <CardHeader>
-          <CardTitle>Overall Performance</CardTitle>
-          <CardDescription>
-            Weighted average across {rows.filter((r) => r.score !== null).length} graded
-            assessment{rows.filter((r) => r.score !== null).length !== 1 ? "s" : ""}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-baseline gap-2">
-            <span className="text-4xl font-bold">
-              {totalWeight > 0 ? `${Math.round(overallPct * 10) / 10}%` : "—"}
-            </span>
-            <span className="text-sm text-muted-foreground">
-              ({Math.round(totalWeight * 10) / 10}% weight covered of 100%)
-            </span>
-          </div>
-          <div className="mt-3 h-3 w-full max-w-md rounded-full bg-muted overflow-hidden">
-            <div
-              className="h-full rounded-full bg-primary transition-all duration-500"
-              style={{ width: `${Math.min(overallPct, 100)}%` }}
-            />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Marks Accordion */}
-      <Card data-edge>
-        <CardHeader>
-          <CardTitle>Assessment Breakdown</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {bestOfNotes.length > 0 && (
-            <p className="text-xs text-muted-foreground mb-4">
-              {bestOfNotes.join(" ")}
-            </p>
-          )}
-          {rows.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              No assessments have been created for this course yet.
-            </p>
-          ) : (
-            <Accordion type="multiple" className="w-full" defaultValue={Object.keys(groupedRows)}>
-              {Object.entries(groupedRows).map(([type, items]) => (
-                <AccordionItem key={type} value={type}>
-                  <AccordionTrigger className="text-lg font-semibold capitalize hover-float px-2 rounded-md">
-                    {type} ({items.length})
-                  </AccordionTrigger>
-                  <AccordionContent>
-                    <div className="tams-table-wrap mt-2">
-                      <table className="tams-table">
-                        <thead>
-                          <tr>
-                            <th>Assessment</th>
-                            <th className="tams-numeral">Score</th>
-                            <th className="tams-numeral">Total</th>
-                            <th className="tams-numeral">Absolutes</th>
-                            <th className="tams-numeral">Class Avg</th>
-                            <th className="tams-numeral">Max</th>
-                            <th className="tams-numeral">Min</th>
-                            <th className="tams-numeral">Weight</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {items.map((r) => (
-                            <tr
-                              key={r.id}
-                              className="transition-colors"
-                            >
-                              <td>
-                                <div>{r.title}</div>
-                                {r.notCountedReason && (
-                                  <div className="text-xs text-muted-foreground">
-                                    {r.notCountedReason}
-                                  </div>
-                                )}
-                              </td>
-                              <td className="tams-numeral">
-                                {r.score !== null ? r.score : "—"}
-                              </td>
-                              <td className="tams-numeral text-muted-foreground">
-                                {r.maxMarks}
-                              </td>
-                              <td className="tams-numeral">
-                                {r.abs !== null ? `${Math.round(r.abs * 100) / 100}` : "—"}
-                              </td>
-                              <td className="tams-numeral text-muted-foreground">
-                                {r.classAvg !== null
-                                  ? `${Math.round(r.classAvg * 10) / 10} (${Math.round((r.classAvgAbs ?? 0) * 100) / 100} abs)`
-                                  : "—"}
-                              </td>
-                              <td className="tams-numeral text-muted-foreground">
-                                {r.classHigh !== null ? r.classHigh : "—"}
-                              </td>
-                              <td className="tams-numeral text-muted-foreground">
-                                {r.classLow !== null ? r.classLow : "—"}
-                              </td>
-                              <td className="tams-numeral text-muted-foreground">
-                                {formatWeight(r.weight)}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </AccordionContent>
-                </AccordionItem>
-              ))}
-            </Accordion>
-          )}
-        </CardContent>
-      </Card>
+      <FeatureNote id="course-totals" />
+      <CourseReportView report={report} />
     </div>
   );
 }
