@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { KIND_LABELS, type Release, type UpdateKind } from "@/lib/updates";
 import { useUpdates } from "./updates-provider";
 import { MarksEmailToggle } from "./marks-email-toggle";
+import { PushToggle } from "@/components/push-toggle";
 
 const KIND_STYLES: Record<UpdateKind, string> = {
   new: "bg-primary text-primary-foreground",
@@ -77,6 +78,7 @@ export function WhatsNewPopup() {
                         <p className="text-sm text-muted-foreground">{item.body}</p>
                       </div>
                       {item.action === "marks-email" && role === "student" && <MarksEmailToggle variant="card" />}
+                      {item.action === "push" && <PushToggle variant="card" />}
                     </div>
                   </li>
                 ))}

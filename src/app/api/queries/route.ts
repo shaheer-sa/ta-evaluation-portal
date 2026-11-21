@@ -8,6 +8,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import type { Database } from "@/types/database";
 import { sendQueryEmail } from "@/lib/email/gmail";
 import { formatStatus } from "@/lib/format";
+import { pushForNotifications } from "@/lib/push";
 
 import { createRateLimiter } from "@/lib/rate-limit";
 
@@ -191,13 +192,15 @@ export async function POST(request: Request) {
       if (queryData) {
         // Create notification for the student
         try {
-          await supabase.from("notifications").insert({
+          const notice = {
             recipient_id: queryData.student_id,
             type: "query_update",
             title: `Query "${queryData.title}" → ${formatStatus(newStatus)}`,
             body: `Your query has been marked as ${formatStatus(newStatus)} by the TA.`,
             related_id: queryId,
-          });
+          };
+          await supabase.from("notifications").insert(notice);
+          after(() => pushForNotifications(createAdminClient(), [notice]));
         } catch (notifErr) {
           console.error("Failed to insert notification:", notifErr);
         }
@@ -293,6 +296,7 @@ export async function POST(request: Request) {
           related_id: data.id,
         }));
         await supabase.from("notifications").insert(notifications);
+        after(() => pushForNotifications(createAdminClient(), notifications));
 
         // Send emails
         after(async () => {

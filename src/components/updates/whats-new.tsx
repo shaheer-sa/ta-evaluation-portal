@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { formatReleaseDate, KIND_LABELS, type UpdateKind } from "@/lib/updates";
 import { useUpdates } from "@/components/updates/updates-provider";
 import { MarksEmailToggle } from "@/components/updates/marks-email-toggle";
+import { PushToggle } from "@/components/push-toggle";
 import { MailWarning } from "lucide-react";
 
 const KIND_STYLES: Record<UpdateKind, string> = {
@@ -91,6 +92,11 @@ export function WhatsNew() {
                               <p className="text-sm font-medium">{item.title}</p>
                               <p className="text-sm text-muted-foreground">{item.body}</p>
                             </div>
+                            {item.action === "push" && (
+                              <div className="max-w-sm">
+                                <PushToggle variant="card" />
+                              </div>
+                            )}
                             {item.action === "marks-email" && ctx.role === "student" && (
                               <div className="max-w-sm">
                                 <MarksEmailToggle variant="card" />

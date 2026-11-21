@@ -13,7 +13,7 @@ export type ReleaseItem = {
   title: string;
   body: string;
   audience: Audience[];
-  action?: "marks-email"; // shows a setting right under the item
+  action?: "marks-email" | "push"; // shows a setting right under the item
 };
 
 export type Release = {
@@ -29,6 +29,33 @@ export type Release = {
 };
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.6",
+    id: "2026-11-22-push",
+    date: "2026-11-22",
+    title: "Notifications Update",
+    popup: true,
+    summary: {
+      ta: "Get TAMS notifications on your phone or computer.",
+      student: "Get TAMS notifications on your phone or computer.",
+    },
+    items: [
+      {
+        kind: "new",
+        title: "Notifications on your device",
+        body: "Turn on Notifications on this device at the bottom of the notifications panel to get an alert for new marks, query replies and status changes, even when TAMS isn't open. On iPhone, first add TAMS to your Home Screen from the Share menu, then open it from there.",
+        audience: ["student"],
+        action: "push",
+      },
+      {
+        kind: "new",
+        title: "Notifications on your device",
+        body: "Turn on Notifications on this device at the bottom of the notifications panel to get an alert for new queries, replies, issue reports and password reset requests, even when TAMS isn't open. On iPhone, first add TAMS to your Home Screen from the Share menu, then open it from there.",
+        audience: ["ta"],
+        action: "push",
+      },
+    ],
+  },
   {
     version: "1.5",
     id: "2026-11-22-marks",
@@ -219,6 +246,12 @@ export const FEATURE_NOTES: Record<string, { release: string; title: string; bod
     release: "2026-11-22",
     title: "New on this page",
     body: "Assignments and quizzes now have their own totals, with a combined total at the end.",
+    audience: "student",
+  },
+  "bell-push": {
+    release: "2026-11-22",
+    title: "Notifications on your phone",
+    body: "Turn on notifications from the bell to get an alert when new marks are posted or your query gets a reply.",
     audience: "student",
   },
   "bell-updates": {

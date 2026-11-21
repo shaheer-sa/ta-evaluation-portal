@@ -4,7 +4,9 @@ import { NextResponse } from "next/server";
 import { after } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { sendQueryEmail } from "@/lib/email/gmail";
+import { pushForNotifications } from "@/lib/push";
 import { createRateLimiter } from "@/lib/rate-limit";
 
 const replyRateLimit = createRateLimiter({ tokens: 20, window: "10 m" });
@@ -199,13 +201,15 @@ export async function POST(request: Request) {
     if (queryData) {
       if (profile?.role === "ta") {
         // TA replied → notify the student
-        await supabase.from("notifications").insert({
+        const notice = {
           recipient_id: queryData.student_id,
           type: "query_reply",
           title: `New reply on "${queryData.title}"`,
           body: `The TA replied to your query.`,
           related_id: queryId,
-        });
+        };
+        await supabase.from("notifications").insert(notice);
+        after(() => pushForNotifications(createAdminClient(), [notice]));
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const studentProfile = queryData.profiles as any;
@@ -230,17 +234,17 @@ export async function POST(request: Request) {
         const { data: tas } = await (supabase as any).rpc("get_tas");
 
         if (tas && tas.length > 0) {
-          const { error: notifyError } = await supabase.from("notifications").insert(
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            tas.map((ta: any) => ({
-              recipient_id: ta.id,
-              type: "query_reply",
-              title: `Reply on "${queryData.title}"`,
-              body: `${profile?.full_name || "A student"} replied to their query.`,
-              related_id: queryId,
-            }))
-          );
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const taNotices = tas.map((ta: any) => ({
+            recipient_id: ta.id as string,
+            type: "query_reply",
+            title: `Reply on "${queryData.title}"`,
+            body: `${profile?.full_name || "A student"} replied to their query.`,
+            related_id: queryId,
+          }));
+          const { error: notifyError } = await supabase.from("notifications").insert(taNotices);
           if (notifyError) console.error("TA notify failed:", notifyError);
+          else after(() => pushForNotifications(createAdminClient(), taNotices));
 
           // Get emails for all TAs using the SECURITY DEFINER RPC
           // eslint-disable-next-line @typescript-eslint/no-explicit-any

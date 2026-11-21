@@ -5,6 +5,7 @@
 // that class that hasn't been emailed yet, the new assessment names are added
 // to it instead of creating another one (so saving twice doesn't spam).
 import type { createAdminClient } from "@/lib/supabase/admin";
+import { pushForNotifications } from "@/lib/push";
 
 type Admin = ReturnType<typeof createAdminClient>;
 
@@ -52,6 +53,8 @@ export async function notifyMarksUpdated(admin: Admin, changed: ChangedMark[]) {
     related_id: string;
   }[] = [];
   const updates: PromiseLike<unknown>[] = [];
+  // phone notifications (same text as the bell notice)
+  const pushes: typeof inserts = [];
 
   for (const e of (enrollments || []) as unknown as {
     id: string;
@@ -66,13 +69,16 @@ export async function notifyMarksUpdated(admin: Admin, changed: ChangedMark[]) {
 
     const prev = openNotice.get(e.id);
     if (prev) {
-      const merged = [...new Set([...(prev.body || "").split(", ").filter(Boolean), ...titles])];
+      const before = (prev.body || "").split(", ").filter(Boolean);
+      const merged = [...new Set([...before, ...titles])];
+      if (merged.length === before.length) continue; // nothing new for this student
       updates.push(
         admin
           .from("notifications")
           .update({ body: merged.join(", "), created_at: new Date().toISOString() })
           .eq("id", prev.id)
       );
+      pushes.push({ recipient_id: e.student_id, type: "marks_updated", title: `New marks in ${code}`, body: merged.join(", "), related_id: e.id });
     } else {
       inserts.push({
         recipient_id: e.student_id,
@@ -87,6 +93,8 @@ export async function notifyMarksUpdated(admin: Admin, changed: ChangedMark[]) {
   if (inserts.length > 0) {
     const { error } = await admin.from("notifications").insert(inserts);
     if (error) console.error("marks notice insert failed:", error.code, error.message);
+    else pushes.push(...inserts);
   }
   await Promise.allSettled(updates);
+  await pushForNotifications(admin, pushes).catch((err) => console.error("marks push failed:", err));
 }

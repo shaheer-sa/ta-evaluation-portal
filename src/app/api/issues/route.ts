@@ -11,6 +11,7 @@ import {
   sendIssueReportThanksEmail,
   sendIssueResolvedEmail,
 } from "@/lib/email/gmail";
+import { pushForNotifications } from "@/lib/push";
 
 // a few reports per student per hour is plenty, stops spam
 const reportRateLimit = createRateLimiter({ tokens: 5, window: "1 h" });
@@ -174,15 +175,15 @@ export async function POST(request: Request) {
     const rollNumber = profile.roll_number || "";
 
     if (tas && tas.length > 0) {
-      await admin.from("notifications").insert(
-        tas.map((ta) => ({
-          recipient_id: ta.id,
-          type: "issue_report",
-          title: `Issue report: ${issueCategoryLabel(category)}`,
-          body: `${studentName} (${rollNumber}): ${message.slice(0, 120)}${message.length > 120 ? "…" : ""}`,
-          related_id: report.id,
-        }))
-      );
+      const notices = tas.map((ta) => ({
+        recipient_id: ta.id,
+        type: "issue_report",
+        title: `Issue report: ${issueCategoryLabel(category)}`,
+        body: `${studentName} (${rollNumber}): ${message.slice(0, 120)}${message.length > 120 ? "…" : ""}`,
+        related_id: report.id,
+      }));
+      await admin.from("notifications").insert(notices);
+      after(() => pushForNotifications(admin, notices));
     }
 
     // emails go out after the response so the student isn't kept waiting
@@ -270,13 +271,15 @@ export async function PATCH(request: Request) {
         .select("full_name, email")
         .eq("id", updated.reporter_id)
         .single();
-      await admin.from("notifications").insert({
+      const notice = {
         recipient_id: updated.reporter_id,
         type: "issue_resolved",
         title: `Your report #${ref} has been resolved`,
         body: "Thank you for reporting it. The issue has been reviewed and fixed.",
         related_id: updated.id,
-      });
+      };
+      await admin.from("notifications").insert(notice);
+      after(() => pushForNotifications(admin, [notice]));
       if (reporter?.email) {
         after(async () => {
           await sendIssueResolvedEmail({

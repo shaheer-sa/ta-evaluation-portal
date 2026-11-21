@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter, Outfit, JetBrains_Mono } from "next/font/google";
 import { ThemedToaster } from "@/components/themed-toaster";
 import { themeInitScript } from "@/lib/theme";
@@ -17,6 +17,13 @@ export const metadata: Metadata = {
   title: "TAMS — Teaching Assistant Management System",
   description:
     "Course management, marks tracking, and student communication for teaching assistants.",
+  applicationName: "TAMS",
+  icons: { apple: [{ url: "/icons/apple-touch-icon.png", sizes: "180x180" }] },
+  appleWebApp: { capable: true, title: "TAMS", statusBarStyle: "default" },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#0A2947",
 };
 
 export default function RootLayout({

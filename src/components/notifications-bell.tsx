@@ -7,6 +7,7 @@ import Link from "next/link";
 import { Bell, Megaphone } from "lucide-react";
 import { useUpdates } from "@/components/updates/updates-provider";
 import { MarksEmailToggle } from "@/components/updates/marks-email-toggle";
+import { PushToggle } from "@/components/push-toggle";
 import { formatReleaseDate } from "@/lib/updates";
 import { fetchJson } from "@/lib/fetch-json";
 import { Button } from "@/components/ui/button";
@@ -417,6 +418,7 @@ export function NotificationsBell() {
               )}
             </div>
             {updates?.role === "student" && <MarksEmailToggle />}
+            <PushToggle />
             <Link
               href={`/${updates?.role ?? "student"}/updates`}
               onClick={() => setIsOpen(false)}

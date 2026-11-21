@@ -18,6 +18,7 @@ import ClickSpark from "@/components/react-bits/ClickSpark";
 import RouteProgress from "@/components/shell/RouteProgress";
 
 import { TA_NAV, STUDENT_NAV } from "@/components/shell/nav-config";
+import { turnOffPush } from "@/lib/push-client";
 
 // "Report an issue" for students is hidden unless NEXT_PUBLIC_ISSUE_REPORTS=on
 // is set in Vercel (then redeploy). lets it be switched off without code changes.
@@ -47,6 +48,8 @@ export default function DashboardLayout({
     } catch {
       // ignore
     }
+    // stop phone notifications on this device for the account that's leaving
+    await Promise.race([turnOffPush().catch(() => {}), new Promise((r) => setTimeout(r, 2500))]);
     try {
       const res = await fetch("/api/auth/logout", { method: "POST" });
       if (res.ok) {
@@ -152,6 +155,7 @@ export default function DashboardLayout({
             </header>
             
             <main className="tams-main">
+              {isStudent && <FeatureNote id="bell-push" className="mb-6" />}
               {isStudent && <FeatureNote id="bell-updates" className="mb-6" />}
               {children}
             </main>

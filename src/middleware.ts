@@ -134,7 +134,8 @@ export const config = {
      * - _next/image (image optimization)
      * - favicon.ico
      * - static assets (svg, png, jpg, etc.)
+     * - the service worker and app manifest (needed for notifications)
      */
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|sw\\.js|manifest\\.webmanifest|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };
