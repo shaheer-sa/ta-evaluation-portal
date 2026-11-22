@@ -869,6 +869,15 @@ button.tams-stat {
   border-color: hsl(39 40% 90% / 0.35);
   color: var(--sand);
 }
+/* menu items on the navy rail: a faint light tint on hover, not the page's
+   light surface (light text on a light box was unreadable) */
+.tams-rail .rb-line__item:hover {
+  background: hsl(39 40% 90% / 0.1);
+  color: var(--sand);
+}
+.tams-rail .rb-line__item[data-active="true"]:hover {
+  background: transparent;
+}
 .tams-rail .tams-iconbtn:focus-visible,
 .tams-rail .rb-line__item:focus-visible {
   outline-color: var(--sand);

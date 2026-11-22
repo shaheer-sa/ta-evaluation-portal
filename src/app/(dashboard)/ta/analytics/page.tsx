@@ -14,6 +14,8 @@ export default async function AnalyticsPage(props: {
   const supabase = await createClient();
   const searchParams = await props.searchParams;
   const scId = typeof searchParams.sc === "string" ? searchParams.sc : "";
+  // ?student=<roll>: open the page already searched to that student
+  const focusRoll = typeof searchParams.student === "string" ? searchParams.student.trim().slice(0, 40) : "";
 
   // start the class numbers right away (when a class is picked) so they load
   // while the term and sections are fetched, instead of after them
@@ -166,6 +168,7 @@ export default async function AnalyticsPage(props: {
           assignment: selectedSc?.best_of_assignments ?? null,
         })}
         scId={scId}
+        initialStudent={focusRoll || undefined}
         filterNote={
           <div key="analytics-notes" className="space-y-2">
             <FeatureNote id="analytics-filters" />

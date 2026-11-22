@@ -82,6 +82,7 @@ export function PerformanceTable({
   possibleTypes,
   scId,
   filterNote,
+  initialStudent,
 }: {
   students: RankedPerformance[];
   sortedAssessments: AssessmentPerformance[];
@@ -93,6 +94,8 @@ export function PerformanceTable({
   scId: string;
   // optional "new feature" note shown above the filters
   filterNote?: ReactNode;
+  // roll number from the link (?student=...): find that student on load
+  initialStudent?: string;
 }) {
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -115,8 +118,10 @@ export function PerformanceTable({
       });
     };
     window.addEventListener(FOCUS_STUDENT_EVENT, onFocus);
+    // opened from a link for one student (e.g. the at-risk list on Overview)
+    if (initialStudent) onFocus(new CustomEvent<string>(FOCUS_STUDENT_EVENT, { detail: initialStudent }));
     return () => window.removeEventListener(FOCUS_STUDENT_EVENT, onFocus);
-  }, []);
+  }, [initialStudent]);
 
   useEffect(() => {
     if (!highlight) return;

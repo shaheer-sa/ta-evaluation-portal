@@ -118,9 +118,9 @@ export function AtRiskCard({ classes }: { classes: AtRiskClass[] }) {
                     {g.below.slice(0, SHOW).map((s) => (
                       <li key={s.roll}>
                         <Link
-                          href={`/ta/analytics/student?sc=${encodeURIComponent(g.scId)}&roll=${encodeURIComponent(s.roll)}`}
+                          href={`/ta/analytics?sc=${encodeURIComponent(g.scId)}&student=${encodeURIComponent(s.roll)}`}
                           className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                          data-tip={s.missing > 0 ? `${s.missing} marked assessment${s.missing === 1 ? "" : "s"} without a mark` : "View full report"}
+                          data-tip={s.missing > 0 ? `${s.missing} marked assessment${s.missing === 1 ? "" : "s"} without a mark` : "Show in Analytics"}
                         >
                           <span className="font-medium">{s.name}</span>
                           <span className="text-muted-foreground">{s.roll}</span>
