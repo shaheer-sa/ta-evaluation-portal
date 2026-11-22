@@ -5,7 +5,7 @@ import Link from "next/link";
 import { LogOut, Menu, X, GraduationCap } from "lucide-react";
 import { toast } from "sonner";
 import { usePathname } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { NotificationsBell } from "@/components/notifications-bell";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { ReportIssueButton } from "@/components/report-issue";
@@ -47,7 +47,14 @@ export default function DashboardLayout({
     item.exact ? pathname === item.href : pathname.startsWith(item.href)
   );
 
+  // a second click while signing out does nothing (no double "logged out" toast)
+  const signingOutRef = useRef(false);
+  const [signingOut, setSigningOut] = useState(false);
+
   async function handleLogout() {
+    if (signingOutRef.current) return;
+    signingOutRef.current = true;
+    setSigningOut(true);
     // an unsent issue report draft shouldn't stay for the next person on this browser
     try {
       localStorage.removeItem("tams-issue-draft");
@@ -59,15 +66,18 @@ export default function DashboardLayout({
     try {
       const res = await fetch("/api/auth/logout", { method: "POST" });
       if (res.ok) {
-        toast.success("Logged out successfully");
+        toast.success("Logged out successfully", { id: "logout" });
         router.push("/login");
         router.refresh();
-      } else {
-        toast.error("Failed to log out");
+        return; // stays locked: the page is leaving
       }
+      toast.error("Failed to log out", { id: "logout" });
     } catch {
-      toast.error("An error occurred during logout");
+      toast.error("An error occurred during logout", { id: "logout" });
     }
+    // failed: let them try again
+    signingOutRef.current = false;
+    setSigningOut(false);
   }
 
   return (
@@ -126,8 +136,14 @@ export default function DashboardLayout({
             <div className="tams-rail__footer">
               {isStudent && ISSUE_REPORTS_ON && <ReportIssueButton variant="rail" />}
               <InstallButton variant="rail" />
-              <button className="tams-iconbtn w-full" onClick={handleLogout} style={{ width: '100%', padding: '0 1rem', display: 'flex', gap: '0.5rem' }}>
-                <LogOut size={16} /> Sign out
+              <button
+                className="tams-iconbtn w-full"
+                onClick={handleLogout}
+                disabled={signingOut}
+                aria-busy={signingOut}
+                style={{ width: '100%', padding: '0 1rem', display: 'flex', gap: '0.5rem', opacity: signingOut ? 0.6 : 1 }}
+              >
+                <LogOut size={16} /> {signingOut ? "Signing out…" : "Sign out"}
               </button>
               <Link
                 href={isStudent ? "/student/updates" : "/ta/updates"}
