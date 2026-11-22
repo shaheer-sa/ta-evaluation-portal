@@ -121,12 +121,13 @@ export async function POST(request: NextRequest) {
           }));
           await admin.from("notifications").insert(notifs);
           const pushed = startPush(admin, notifs);
+          after(() => pushed);
 
-          // email the TAs the phone notification didn't reach
+          // reset requests always get an email too, even with phone
+          // notifications on (a student is locked out until it's handled)
           after(async () => {
-            const reached = await pushed;
             const emailPromises = tas
-              .filter(ta => ta.email && !reached.has(ta.id))
+              .filter(ta => ta.email)
               .map(ta =>
                 sendResetRequestEmail({
                   to: ta.email,
